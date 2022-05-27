@@ -182,7 +182,7 @@ class PointGenerator(nn.Module):
         self.n_samples = n_samples
         self.sample_dim = 8
         self.hz = 256
-        self.h = 512
+        self.h = 1024
         self.h2 = 256
         self.dbr = DBR4(self.sample_dim, self.h)
         self.map_latent = DbR(z_dim, self.hz)
