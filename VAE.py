@@ -124,6 +124,6 @@ def get_vae(model_name):
         "BaseVAE": Base_VAE,
         "PointNet": PointNet_VAE,
         "VAE_Gen": VAE_Gen,
-        'PCTVAE': PCTVAE
+        #'PCTVAE': PCTVAE
     }
     return model_dict[model_name]()
