@@ -195,8 +195,7 @@ class PointGenerator(nn.Module):
     def forward(self, z):
         batch = z.size()[0]
         device = z.device
-        x = torch.randn(batch, self.n_samples, self.m, self.sample_dim).to(device)
-        x /= torch.linalg.vector_norm(x, dim=3, keepdim=True)
+        x = torch.rand(batch, self.n_samples, self.m, self.sample_dim).to(device)
         x = self.dbr(x, self.n_samples, self.m)
         z = self.map_latent(z)
         trans = torch.tanh(self.map_latent1(z))
