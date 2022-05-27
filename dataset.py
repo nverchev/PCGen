@@ -62,7 +62,8 @@ def get_dataset(batch_size, val_every=6, dirpath="./", minioClient=None, dataset
     test_dataset = PCDDataset(data=test_data)
     num_train = len(train_dataset)
     train_idx = list(range(num_train))  # next line removes indices from train_idx
-    val_idx = [train_idx.pop(i) for i in train_idx[::val_every]]
+    # pop backwards to keep correct indexing
+    val_idx = [train_idx.pop(i) for i in train_idx[::-val_every]]
     initial_train_dataset = Subset(train_dataset, train_idx)
     val_dataset = Subset(train_dataset, val_idx)
 
