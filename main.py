@@ -16,16 +16,15 @@ if __name__ == '__main__':
     batch_size = 64
     initial_learning_rate = 0.001
     weight_decay = 0.00001
-    opt = 'AdamW'
     train_loader, val_loader, train_val_loader, test_loader = get_dataset(batch_size)
     model = get_vae(model_name)
-    optimizer, optimi_args = get_opt()
+    optimizer, optimi_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     train_loader = train_loader if version[:5] != 'final' else train_val_loader
     val_loader = val_loader if version[:5] != 'final' else None
     block_args = {
-        'optim_name': opt,
-        'optim': optimizer[opt],
-        'optim_args': optimi_args[opt],
+        'optim_name': opt_name,
+        'optim': optimizer[opt_name],
+        'optim_args': optimi_args[opt_name],
         'train_loader': train_loader,
         'device': device,
         'val_loader': val_loader,

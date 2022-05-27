@@ -53,7 +53,7 @@ def get_dataset(batch_size, val_split=1/6, dirpath="./", minioClient=None, datas
         minioClient.fget_object('pcdvae', 'train_dataset.npz', 'train_dataset.npz')
         minioClient.fget_object('pcdvae', 'test_dataset.npz', 'test_dataset.npz')
     else:
-        assert os.path.exists('train_dataset.npz'), "Dataset not found"
+        assert os.path.exists(dirpath + 'train_dataset.npz'), "Dataset not found"
 
     pin_memory = torch.cuda.is_available()
     train_data = np.load(dirpath + 'train_dataset.npz', allow_pickle=True)

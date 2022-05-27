@@ -25,10 +25,10 @@ class CosineSchedule:
         return "CosineSchedule"
 
 
-def get_opt(opt, initial_learning_rate, weight_decay = 0):
+def get_opt(opt, initial_learning_rate, weight_decay=0):
     optimizer = {'AdamW': optim.AdamW}
     optimi_args = {'AdamW': {'weight_decay': weight_decay, 'lr': initial_learning_rate}, }
-    return optimizer, optimi_args
+    return optimizer[opt], optimi_args[opt]
 
 
 
