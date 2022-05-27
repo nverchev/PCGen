@@ -169,3 +169,55 @@ class PointNetGenerator(nn.Module):
     @m.setter
     def m(self, m):
         self._m = m
+
+
+class PointGenerator(nn.Module):
+
+    def __init__(self, in_chan, h_chan, z_dim, m, n_samples=1):
+        super().__init__()
+        self.in_chan = in_chan
+        self.h_chan = h_chan
+        self.m_training = m
+        self.m = m
+        self.n_samples = n_samples
+        self.sample_dim = 8
+        self.hz = 256
+        self.h = 512
+        self.h2 = 256
+        self.dbr = DBR4(self.sample_dim, self.h)
+        self.map_latent = DbR(z_dim, self.hz)
+        self.map_latent1 = nn.Linear(self.hz, self.h)
+        self.dbr1 = DBR4(self.h, self.h2)
+        self.dbr2 = DBR4(self.h2, self.h2)
+        self.dbr3 = DBR4(self.h2, self.h2)
+        self.lin = nn.Linear(self.h2, in_chan)
+
+    def forward(self, z):
+        batch = z.size()[0]
+        device = z.device
+        x = torch.randn(batch, self.n_samples, self.m, self.sample_dim).to(device)
+        x /= torch.linalg.vector_norm(x, dim=3, keepdim=True)
+        x = self.dbr(x, self.n_samples, self.m)
+        z = self.map_latent(z)
+        trans = torch.sigmoid(self.map_latent1(z))
+        trans = trans.view(-1, 1, 1, self.h)
+        trans = trans.expand(-1, self.n_samples, -1, -1)
+        x = x * trans
+        x = self.dbr1(x, self.n_samples, self.m)
+        x = self.dbr2(x, self.n_samples, self.m)
+        x = self.dbr3(x, self.n_samples, self.m)
+        x = self.lin(x)
+        x = torch.tanh(x)
+        x = x - x.mean(2, keepdim=True)
+        return x.squeeze()
+
+    @property
+    def m(self):
+        if self.training:
+            return self.m_training
+        else:
+            return self._m
+
+    @m.setter
+    def m(self, m):
+        self._m = m

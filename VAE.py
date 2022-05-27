@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 from abc import ABCMeta, abstractmethod
-from modules import DBR, MaxperChannel, PointNetEncoder, PointNetGenerator, View
+from modules import View, DBR, MaxperChannel, PointNetEncoder, PointNetGenerator, PointGenerator
 #from pointnet_modules import PCT, SPCT
 
 
@@ -106,7 +106,7 @@ class VAE_Gen(Base_VAE):
         super(Base_VAE, self).__init__(in_chan, h_chan, z_dim)
 
     def _decoder(self, m=128):
-        return PointNetGenerator(self.in_chan, self.h_chan,
+        return PointGenerator(self.in_chan, self.h_chan,
                                  self.z_dim, self.m_training)
 
 
