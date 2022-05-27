@@ -26,7 +26,7 @@ def preprocess(path, n_points):
     return cloud.astype(np.float32)
 
 
-def get_dataset(batch_size, val_split=1/6, dirpath="./", minioClient=None, dataset_from_zip=False, n_points=2048):
+def get_dataset(batch_size, val_every=6, dirpath="./", minioClient=None, dataset_from_zip=False, n_points=2048):
     if dataset_from_zip:
         zip_path = os.path.join(dirpath, 'modelnet40_normal_resampled.zip')
         data_path = os.path.join(dirpath, 'modelnet40_normal_resampled')
@@ -62,8 +62,7 @@ def get_dataset(batch_size, val_split=1/6, dirpath="./", minioClient=None, datas
     test_dataset = PCDDataset(data=test_data)
     num_train = len(train_dataset)
     train_idx = list(range(num_train))  # next line removes indices from train_idx
-    val_split_jump = round(1/val_split)
-    val_idx = [train_idx.pop(i) for i in train_idx[::val_split_jump]]
+    val_idx = [train_idx.pop(i) for i in train_idx[::val_every]]
     initial_train_dataset = Subset(train_dataset, train_idx)
     val_dataset = Subset(train_dataset, val_idx)
 

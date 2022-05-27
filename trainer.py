@@ -39,7 +39,7 @@ class Trainer(metaclass=ABCMeta):
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, version, device, optim, train_loader, val_loader=None,
-                 test_loader=None, minio=None, dirpath='./', mp=False, **block_args):
+                 test_loader=None, minioClient=None, dirpath='./', mp=False, **block_args):
 
         torch.manual_seed = 112358
         self.epoch = 0
@@ -60,7 +60,7 @@ class Trainer(metaclass=ABCMeta):
         self.test_losses = {loss: [] for loss in self.losses}
         self.test_targets, self.test_outputs = [], {}
         self.converge = 1  # if 0 kills session
-        self.minio = minio
+        self.minio = minioClient
         self.dirpath = dirpath
         self.miniopath = staticmethod(lambda path: path[len(dirpath):])  # removes dirpath
 
