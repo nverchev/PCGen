@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from abc import ABCMeta, abstractmethod
 from modules import DBR, MaxperChannel, PointNetEncoder, PointNetGenerator, View
-from pointnet_modules import PCT, SPCT
+#from pointnet_modules import PCT, SPCT
 
 
 class Abstract_VAE(nn.Module, metaclass=ABCMeta):
@@ -110,13 +110,13 @@ class VAE_Gen(Base_VAE):
                                  self.z_dim, self.m_training)
 
 
-class PCTVAE(Base_VAE):
-
-    def __init__(self, in_chan=3, h_chan=[64, 128, 128, 256], z_dim=128):
-        super(Base_VAE, self).__init__(in_chan, h_chan, z_dim)
-
-    def _encoder(self):
-        return PCT(enc=self.z_dim)
+# class PCTVAE(Base_VAE):
+#
+#     def __init__(self, in_chan=3, h_chan=[64, 128, 128, 256], z_dim=128):
+#         super(Base_VAE, self).__init__(in_chan, h_chan, z_dim)
+#
+#     def _encoder(self):
+#         return PCT(enc=self.z_dim)
 
 
 def get_vae(model_name):
