@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/VAE.py" beforeDir="false" afterPath="$PROJECT_DIR$/VAE.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules.py" beforeDir="false" afterPath="$PROJECT_DIR$/modules.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -120,7 +119,14 @@
       <option name="project" value="LOCAL" />
       <updated>1653655506139</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="PointGenerator">
+      <created>1653665611917</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1653665611917</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -130,7 +136,8 @@
     <MESSAGE value="first debug" />
     <MESSAGE value="dataset fixed" />
     <MESSAGE value="add comment" />
-    <option name="LAST_COMMIT_MESSAGE" value="add comment" />
+    <MESSAGE value="PointGenerator" />
+    <option name="LAST_COMMIT_MESSAGE" value="PointGenerator" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

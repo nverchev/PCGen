@@ -199,7 +199,7 @@ class PointGenerator(nn.Module):
         x /= torch.linalg.vector_norm(x, dim=3, keepdim=True)
         x = self.dbr(x, self.n_samples, self.m)
         z = self.map_latent(z)
-        trans = torch.sigmoid(self.map_latent1(z))
+        trans = torch.tanh(self.map_latent1(z))
         trans = trans.view(-1, 1, 1, self.h)
         trans = trans.expand(-1, self.n_samples, -1, -1)
         x = x * trans
