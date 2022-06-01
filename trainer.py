@@ -34,7 +34,7 @@ minioClient = Minio(*Your storage name*,
 
 class Trainer(metaclass=ABCMeta):
     losses = []  # defined later with the loss function
-    hypertuning_mode = False  # less output
+    quiet_mode = False  # less output
     max_output = np.inf  # maximum amount of stored evaluated test samples
     bin = 'pcdvae'  # minio bin
 
@@ -104,7 +104,10 @@ class Trainer(metaclass=ABCMeta):
         for _ in range(num_epoch):
             self.update_learning_rate(self.optimizer_settings['params'])
             self.epoch += 1
-            print('====> Epoch:{}'.format(self.epoch))
+            if self.quiet_mode:
+                print('\r====> Epoch:{}'.format(self.epoch), end="")
+            else:
+                print('====> Epoch:{}'.format(self.epoch))
             self._run_session(mode='train')
             if self.val_loader and val_after_train:  # check losses on val
                 self._run_session(mode='val', inference=True)  # best to test instead
@@ -141,7 +144,7 @@ class Trainer(metaclass=ABCMeta):
         len_sess = len(loader.dataset)
         epoch_loss = {loss: 0 for loss in self.losses}
         num_batch = len(loader)
-        iterable = enumerate(loader) if self.hypertuning_mode else \
+        iterable = enumerate(loader) if self.quiet_mode else \
             tqdm(enumerate(loader), total=num_batch)
         for batch_idx, (inputs, targets) in iterable:
             if self.converge == 0:
@@ -166,7 +169,7 @@ class Trainer(metaclass=ABCMeta):
                 self.extend_dict_list(
                     test_outputs, self.to_recursive(outputs, 'detach_cpu'))
                 test_targets.extend(self.to_recursive(targets, 'detach_cpu'))
-            if not self.hypertuning_mode and mode == 'train':
+            if not self.quiet_mode and mode == 'train':
                 if batch_idx % (len(loader) // 10 or 1) == 0:
                     iterable.set_description(
                         'Train [{:4d}/{:4d} ]\tLoss {:4f}'.format(
@@ -181,7 +184,7 @@ class Trainer(metaclass=ABCMeta):
             epoch_loss[loss] /= num_batch
             if not save_outputs:  # do not save history when testing
                 dict_losses[loss].append(epoch_loss[loss])
-        if not self.hypertuning_mode:
+        if not self.quiet_mode:
             print('Average {} losses :'.format(mode))
             for loss in self.losses:
                 print('{}: {:.4f}'.format(loss, epoch_loss[loss]), end='\t')
