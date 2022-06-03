@@ -9,15 +9,13 @@ import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from sklearn import svm
 from dist_losses import get_loss
-
-# @title Trainer
 '''
 This abstract class manages training and general utilites.
 It works together with a class defining the loss.
 This loss returns a dictionary dict with 
-dict["Criterion"] = *list of losses to backprop*
+dict["Criterion"] = loss to backprop
 
-To save and load, it expects a Minio object from the minio library.
+To save and load on a separate sever, it expects a Minio object from the minio library.
 This object downloads and uploads the model to a separate storage.
 In order to get full access to this class utilities,
 set up MinIO on your storage device (https://min.io)
@@ -39,7 +37,7 @@ class Trainer(metaclass=ABCMeta):
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, version, device, optim, train_loader, val_loader=None,
-                 test_loader=None, minioClient=None, dirpath='./', mp=False, **block_args):
+                 test_loader=None, minioClient=None, dir_path='./', mp=False, **block_args):
 
         torch.manual_seed = 112358
         self.epoch = 0
@@ -51,7 +49,7 @@ class Trainer(metaclass=ABCMeta):
         self.optimizer_settings = block_args['optim_args'].copy()
         self.optimizer = optim(**self.optimizer_settings)
         self.mp = mp and device.type == 'cuda'  # mixed precision casting
-        self.scaler = amp.GradScaler(enabled=mp)  # mixed precision backpropa
+        self.scaler = amp.GradScaler(enabled=mp)  # mixed precision backprop
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
@@ -61,8 +59,9 @@ class Trainer(metaclass=ABCMeta):
         self.test_targets, self.test_outputs = [], {}
         self.converge = 1  # if 0 kills session
         self.minio = minioClient
-        self.dirpath = dirpath
-        self.miniopath = staticmethod(lambda path: path[len(dirpath):])  # removes dirpath
+        self.dir_path = dir_path
+        self.minio_path = staticmethod(lambda path: path[len(dir_path):])  # removes dir path
+        self.test_targets, self.test_outputs = [], {}  # stored in RAM
 
     @property
     def optimizer_settings(self):  # settings shown depend on epoch
@@ -115,12 +114,11 @@ class Trainer(metaclass=ABCMeta):
 
     def test(self, on='val'):  # runs and stores evaluated test samples
         print('Version ', self.version)
-        self.test_targets, self.test_outputs = \
-            self._run_session(mode=on, inference=True, save_outputs=True)  # stored in RAM
+        self._run_session(mode=on, inference=True, save_outputs=True)
         return
 
     def _run_session(self, mode='train', inference=False,
-                     save_outputs=False, max_output=None):
+                     save_outputs=False):
         if inference:
             self.model.eval()
             torch.set_grad_enabled(False)
@@ -139,7 +137,7 @@ class Trainer(metaclass=ABCMeta):
         else:
             raise ValueError('mode options are: "train", "val", "test" ')
         if save_outputs:
-            test_targets, test_outputs = [], {}
+            self.test_targets, self.test_outputs = [], {}
 
         len_sess = len(loader.dataset)
         epoch_loss = {loss: 0 for loss in self.losses}
@@ -167,8 +165,8 @@ class Trainer(metaclass=ABCMeta):
             if save_outputs and \
                     self.max_output > (batch_idx + 1) * loader.batch_size:
                 self.extend_dict_list(
-                    test_outputs, self.to_recursive(outputs, 'detach_cpu'))
-                test_targets.extend(self.to_recursive(targets, 'detach_cpu'))
+                    self.test_outputs, self.to_recursive(outputs, 'detach_cpu'))
+                self.test_targets.extend(self.to_recursive(targets, 'detach_cpu'))
             if not self.quiet_mode and mode == 'train':
                 if batch_idx % (len(loader) // 10 or 1) == 0:
                     iterable.set_description(
@@ -189,10 +187,7 @@ class Trainer(metaclass=ABCMeta):
             for loss in self.losses:
                 print('{}: {:.4f}'.format(loss, epoch_loss[loss]), end='\t')
             print()
-        if save_outputs:
-            return test_targets, test_outputs
-        else:
-            return
+        return
 
     def helper_inputs(self, inputs, labels):
         return {'x': inputs}
@@ -264,7 +259,7 @@ class Trainer(metaclass=ABCMeta):
         json.dump(self.val_losses, open(paths['val_hist'], 'w'))
         if self.minio is not None:
             for file in paths.values():
-                self.minio.fput_object(self.bin, self.miniopath(file), file)
+                self.minio.fput_object(self.bin, self.minio_path(file), file)
         print("Model saved at: ", paths['model'])
         return
 
@@ -280,7 +275,7 @@ class Trainer(metaclass=ABCMeta):
                     file_dir, *file_name = file.object_name.split("/")
                     if file_dir == directory and file_name[0][:5] == 'model':
                         past_epochs.append(int(re.sub("\D", "", file_name[0])))
-            local_path = os.path.join(self.dirpath, self.version)
+            local_path = os.path.join(self.dir_path, self.version)
             if os.path.exists(local_path):
                 for file in os.listdir(local_path):
                     if file[:5] == 'model':
@@ -293,7 +288,7 @@ class Trainer(metaclass=ABCMeta):
         paths = self.paths()
         if self.minio is not None:
             for file in paths.values():
-                self.minio.fget_object(self.bin, self.miniopath(file), file)
+                self.minio.fget_object(self.bin, self.minio_path(file), file)
         self.model.load_state_dict(torch.load(paths['model'],
                                               map_location=torch.device(self.device)))
         self.optimizer.load_state_dict(torch.load(paths['optim'],
@@ -305,10 +300,10 @@ class Trainer(metaclass=ABCMeta):
 
     def paths(self, new_version=None):
         if new_version:  # save a parallel version to work with
-            directory = os.path.join(self.dirpath, new_version)
+            directory = os.path.join(self.dir_path, new_version)
             ep = self.epoch
         else:
-            directory = os.path.join(self.dirpath, self.version)
+            directory = os.path.join(self.dir_path, self.version)
             ep = self.epoch
         if not os.path.exists(directory):
             os.mkdir(directory)
@@ -317,7 +312,6 @@ class Trainer(metaclass=ABCMeta):
                  'train_hist': os.path.join(directory, 'train_losses.json'),
                  'val_hist': os.path.join(directory, 'val_losses.json')}
         return paths
-
 
 class VAETrainer(Trainer):
     clf = svm.SVC()

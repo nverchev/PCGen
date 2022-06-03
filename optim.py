@@ -1,6 +1,16 @@
 import numpy as np
 import torch.optim as optim
 
+
+class NoSchedule:
+
+    def __call__(self, base_lr, epoch):
+        return base_lr
+
+    def __repr__(self):
+        return "NoSchedule"
+
+
 class ExponentialSchedule:
     def __init__(self, exp_decay=.975):
         self.exp_decay = exp_decay
@@ -26,9 +36,15 @@ class CosineSchedule:
 
 
 def get_opt(opt, initial_learning_rate, weight_decay=0):
-    optimizer = {'AdamW': optim.AdamW}
-    optimi_args = {'AdamW': {'weight_decay': weight_decay, 'lr': initial_learning_rate}, }
+    optimizer = {'Adam': optim.Adam,
+                 'AdamW': optim.AdamW,
+                 'SGD': optim.SGD,
+                 'SGD_nesterov': optim.SGD
+                 }
+
+    optimi_args = {'Adam': {'weight_decay': weight_decay, 'lr': initial_learning_rate},
+                   'Adam': {'weight_decay': weight_decay, 'lr': initial_learning_rate},
+                   'SGD': {'weight_decay': weight_decay, 'lr': initial_learning_rate},
+                   'SGD_nesterov': {'weight_decay': weight_decay, 'lr': initial_learning_rate,
+                                    'momentum': 0.9, 'nesterov': True}}
     return optimizer[opt], optimi_args[opt]
-
-
-
