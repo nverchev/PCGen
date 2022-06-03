@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     args = parse_args()
     model_name = args.model
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") and args.cuda
+    device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
     recon_loss = args.recon_loss
     experiment = args.experiment
     final = experiment[:5] == 'final'
