@@ -9,7 +9,7 @@ from VAE import get_vae
 pykeops.set_verbose(False)
 
 
-if __name__ == '__main__':
+def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
     parser.add_argument('--model', type=str, default='VAE_Gen', choices=["BaseVAE", "PointNet", "VAE_Gen", "PCTVAE"],
@@ -24,17 +24,21 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=60)
     parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
                         , help='SGD has no momentum, otherwise momentum = 0.9')
-    parser.add_argument('--lr', type=float, default=0.001,  help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.001, help='weight decay')
-    parser.add_argument('--cuda', type=bool, default=True,  help='enables CUDA training')
+    parser.add_argument('--cuda', type=bool, default=True, help='enables CUDA training')
     parser.add_argument('--eval', type=bool, default=False,
                         help='evaluate the model (exp_name needs to start with "final")')
     parser.add_argument('--num_points', type=int, default=2048,
                         help='num of points of the training dataset [currently fixed]')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Default is given by model_recon_loss_exp_name')
-    args = parser.parse_args()
+    return parser.parse_args()
 
+
+if __name__ == '__main__':
+
+    args = parse_args()
     model_name = args.model
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") and args.cuda
     recon_loss = args.recon_loss
