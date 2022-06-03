@@ -36,14 +36,14 @@ class Trainer(metaclass=ABCMeta):
     max_output = np.inf  # maximum amount of stored evaluated test samples
     bin = 'pcdvae'  # minio bin
 
-    def __init__(self, model, version, device, optim, train_loader, val_loader=None,
+    def __init__(self, model, experiment, device, optim, train_loader, val_loader=None,
                  test_loader=None, minioClient=None, dir_path='./', mp=False, **block_args):
 
         torch.manual_seed = 112358
         self.epoch = 0
         self.device = device  # to cuda or not to cuda?
         self.model = model.to(device)  # model is not copied
-        self.version = version  # name used for saving and loading
+        self.version = experiment  # name used for saving and loading
         self.schedule = block_args['schedule']
         self.settings = {**model.settings, **block_args, 'Optimizer': str(optim)}
         self.optimizer_settings = block_args['optim_args'].copy()
@@ -316,8 +316,8 @@ class Trainer(metaclass=ABCMeta):
 class VAETrainer(Trainer):
     clf = svm.SVC()
 
-    def __init__(self, model, version, block_args):
-        super().__init__(model, version, **block_args)
+    def __init__(self, model, experiment, block_args):
+        super().__init__(model, experiment, **block_args)
         return
 
     def test(self, on='val', m=128):
@@ -342,10 +342,10 @@ class VAETrainer(Trainer):
         return (y_hat == y_val).sum() / y_hat.shape[0]
 
 
-def get_trainer(model, trainer_name, recon_loss, block_args):
+def get_trainer(model, experiment, recon_loss, block_args):
     Loss = get_loss(recon_loss)
 
     class FinalTrainer(Loss, VAETrainer):
         pass
 
-    return FinalTrainer(model, trainer_name, block_args)
+    return FinalTrainer(model, experiment, block_args)
