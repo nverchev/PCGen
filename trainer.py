@@ -4,7 +4,7 @@ import os
 import json
 import re
 import torch.cuda.amp as amp
-from tqdm.notebook import tqdm
+from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from sklearn import svm
@@ -99,7 +99,8 @@ class Trainer(metaclass=ABCMeta):
         return
 
     def train(self, num_epoch, val_after_train=False):
-        print('Version ', self.exp_name)
+        if not self.quiet_mode:
+            print('Version ', self.exp_name)
         for _ in range(num_epoch):
             self.update_learning_rate(self.optimizer_settings['params'])
             self.epoch += 1
@@ -113,7 +114,8 @@ class Trainer(metaclass=ABCMeta):
         return
 
     def test(self, on='val'):  # runs and stores evaluated test samples
-        print('Version ', self.exp_name)
+        if not self.quiet_mode:
+            print('Version ', self.exp_name)
         self._run_session(mode=on, inference=True, save_outputs=True)
         return
 
@@ -142,8 +144,7 @@ class Trainer(metaclass=ABCMeta):
         len_sess = len(loader.dataset)
         epoch_loss = {loss: 0 for loss in self.losses}
         num_batch = len(loader)
-        iterable = enumerate(loader) if self.quiet_mode else \
-            tqdm(enumerate(loader), total=num_batch)
+        iterable = tqdm(enumerate(loader), total=num_batch, disable=self.quiet_mode)
         for batch_idx, (inputs, targets) in iterable:
             if self.converge == 0:
                 return
