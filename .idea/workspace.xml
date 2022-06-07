@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="" />
+    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -195,7 +197,14 @@
       <option name="project" value="LOCAL" />
       <updated>1654267339038</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="tsqm">
+      <created>1654267992551</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1654267992551</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -212,7 +221,8 @@
     <MESSAGE value="wd = 0 default" />
     <MESSAGE value="experiment" />
     <MESSAGE value="quiet" />
-    <option name="LAST_COMMIT_MESSAGE" value="quiet" />
+    <MESSAGE value="tsqm" />
+    <option name="LAST_COMMIT_MESSAGE" value="tsqm" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -26,7 +26,9 @@ def preprocess(path, n_points):
     return cloud.astype(np.float32)
 
 
-def get_dataset(batch_size, val_every=6, dirpath="./", minioClient=None, dataset_from_zip=False, n_points=2048):
+def get_dataset(experiment, batch_size, val_every=6, dirpath="./", minioClient=None,
+                dataset_from_zip=False, n_points=2048):
+    final = experiment[:5] == 'final'
     if dataset_from_zip:
         zip_path = os.path.join(dirpath, 'modelnet40_normal_resampled.zip')
         data_path = os.path.join(dirpath, 'modelnet40_normal_resampled')
@@ -66,16 +68,20 @@ def get_dataset(batch_size, val_every=6, dirpath="./", minioClient=None, dataset
     val_idx = [train_idx.pop(i) for i in train_idx[::-val_every]]
     initial_train_dataset = Subset(train_dataset, train_idx)
     val_dataset = Subset(train_dataset, val_idx)
-
-    train_loader = torch.utils.data.DataLoader(initial_train_dataset, drop_last=True,
-                                               batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
-
-    val_loader = torch.utils.data.DataLoader(val_dataset,
-                                             batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
-
-    train_val_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
+    if final:
+        train_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
                                                    batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+
+        val_loader = None
+
+    else:
+        train_loader = torch.utils.data.DataLoader(initial_train_dataset, drop_last=True,
+                                                   batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+
+        val_loader = torch.utils.data.DataLoader(val_dataset,
+                                                 batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
 
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
                                               shuffle=False, pin_memory=pin_memory)
-    return train_loader, val_loader, train_val_loader, test_loader
+
+    return train_loader, val_loader, test_loader

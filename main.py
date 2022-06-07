@@ -43,7 +43,6 @@ if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
     recon_loss = args.recon_loss
     experiment = args.experiment
-    final = experiment[:5] == 'final'
     training_epochs = args.epochs
     opt_name = args.optimizer
     batch_size = args.batch_size
@@ -53,11 +52,9 @@ if __name__ == '__main__':
     num_points = args.num_points
     exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path is "" else args.model_path
 
-    train_loader, val_loader, train_val_loader, test_loader = get_dataset(batch_size)
+    train_loader, val_loader, test_loader = get_dataset(experiment, batch_size)
     model = get_vae(model_name)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
-    train_loader = train_loader if not final else train_val_loader
-    val_loader = val_loader if not final else None
     block_args = {
         'optim_name': opt_name,
         'optim': optimizer[opt_name],
