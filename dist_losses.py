@@ -69,7 +69,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
     c_rec = 1
     c_reg = 0.01
 
-    def loss(self, outputs, inputs, targets):
+    def __call__(self, outputs, inputs, targets):
         recons = outputs['recon']
         if len(recons.size()) == 4:
             n_samples = recons.size()[1]
@@ -163,46 +163,10 @@ class VAELossSinkhorn(AbstractVAELoss):
 
 def get_loss(recon_loss):
     recon_loss_dict = {
-        "Chamfer": VAELossChamfer,
-        "NLL": VAELossNLL,
-        "MMD": VAELossMMD,
-        'Sinkhorn': VAELossSinkhorn,
+        "Chamfer": VAELossChamfer(),
+        "NLL": VAELossNLL(),
+        "MMD": VAELossMMD(),
+        'Sinkhorn': VAELossSinkhorn(),
     }
     return recon_loss_dict[recon_loss]
-
-
-class VAEMetric():
-    # overwrites Trainer method
-    def test(self, on='val', batch_test=64):
-        super().test(on=on)
-        if on == 'val':
-            inputs = self.val_loader.dataset.dataset.pcd
-        elif on == 'test':
-            inputs = self.test_loader.dataset.dataset.pcd
-
-        l_test = len(inputs)
-        recons = self.test_outputs['recon']
-        n = inputs[0].size()[1]
-        m = recons[0].size()[1]
-        sigma6 = torch.tensor(0.01)
-        mu = torch.vstack(self.test_outputs['mu'])
-        logvar = torch.vstack(self.test_outputs['log_var'])
-        if len(recons[0].size()) == 4:
-            n_samples = recons.size()[1]
-            inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
-        KLD, _ = kld_loss(mu, logvar)
-        nll_recon = 0
-        chamfer_recon = 0
-        for i in range(0, l_test, batch_test):
-            batch_inputs = torch.vstack(inputs[i:i + batch_test])
-            batch_recons = torch.vstack(recons[i:i + batch_test])
-            pairwise_dist = square_distance(batch_inputs, batch_recons)
-            chamfer_recon += chamfer(pairwise_dist)
-            nll_recon += nll(pairwise_dist, sigma6, n, m)
-
-        print(f'KLD: {KLD:.4f}', end='\t')
-        print(f'Chamfer: {chamfer_recon / l_test:.4f}', end='\t')
-        print(f'NLL: {nll_recon / l_test:.4f}', end='\t')
-
-
 

@@ -29,6 +29,7 @@ def preprocess(path, n_points):
 def get_dataset(experiment, batch_size, val_every=6, dirpath="./", minioClient=None,
                 dataset_from_zip=False, n_points=2048):
     final = experiment[:5] == 'final'
+    experiment
     if dataset_from_zip:
         zip_path = os.path.join(dirpath, 'modelnet40_normal_resampled.zip')
         data_path = os.path.join(dirpath, 'modelnet40_normal_resampled')

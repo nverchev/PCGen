@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from sklearn import svm
 from dist_losses import get_loss
+
 '''
 This abstract class manages training and general utilites.
 It works together with a class defining the loss.
@@ -314,12 +315,17 @@ class Trainer(metaclass=ABCMeta):
                  'val_hist': os.path.join(directory, 'val_losses.json')}
         return paths
 
+
 class VAETrainer(Trainer):
     clf = svm.SVC()
 
-    def __init__(self, model, exp_name, block_args):
+    def __init__(self, model, recon_loss, exp_name, block_args):
         super().__init__(model, exp_name, **block_args)
+        self._loss = get_loss(recon_loss)
         return
+
+    def loss(self, output, inputs, targets):
+        return self._loss(output, inputs, targets)
 
     def test(self, on='val', m=128):
         self.model.decode.m = m
@@ -343,10 +349,40 @@ class VAETrainer(Trainer):
         return (y_hat == y_val).sum() / y_hat.shape[0]
 
 
-def get_trainer(model, exp_name, recon_loss, block_args):
-    Loss = get_loss(recon_loss)
+def get_trainer(model, recon_loss, exp_name, block_args):
+    return VAETrainer(model, recon_loss, exp_name, block_args)
 
-    class FinalTrainer(Loss, VAETrainer):
-        pass
 
-    return FinalTrainer(model, exp_name, block_args)
+# class VAEMetric():
+#     # overwrites Trainer method
+#     def test(self, on='val', batch_test=64):
+#         super().test(on=on)
+#         if on == 'val':
+#             inputs = self.val_loader.dataset.dataset.pcd
+#         elif on == 'test':
+#             inputs = self.test_loader.dataset.dataset.pcd
+#
+#         l_test = len(inputs)
+#         recons = self.test_outputs['recon']
+#         n = inputs[0].size()[1]
+#         m = recons[0].size()[1]
+#         sigma6 = torch.tensor(0.01)
+#         mu = torch.vstack(self.test_outputs['mu'])
+#         logvar = torch.vstack(self.test_outputs['log_var'])
+#         if len(recons[0].size()) == 4:
+#             n_samples = recons.size()[1]
+#             inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
+#         KLD, _ = kld_loss(mu, logvar)
+#         nll_recon = 0
+#         chamfer_recon = 0
+#         for i in range(0, l_test, batch_test):
+#             batch_inputs = torch.vstack(inputs[i:i + batch_test])
+#             batch_recons = torch.vstack(recons[i:i + batch_test])
+#             pairwise_dist = square_distance(batch_inputs, batch_recons)
+#             chamfer_recon += chamfer(pairwise_dist)
+#             nll_recon += nll(pairwise_dist, sigma6, n, m)
+#
+#         print(f'KLD: {KLD:.4f}', end='\t')
+#         print(f'Chamfer: {chamfer_recon / l_test:.4f}', end='\t')
+#         print(f'NLL: {nll_recon / l_test:.4f}', end='\t')
+

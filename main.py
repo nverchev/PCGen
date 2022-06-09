@@ -67,7 +67,7 @@ if __name__ == '__main__':
         'schedule': CosineSchedule(decay_steps=training_epochs, min_decay=0.1)
     }
 
-    trainer = get_trainer(model, exp_name, recon_loss, block_args)
+    trainer = get_trainer(model, recon_loss, exp_name, block_args)
     for k, v in block_args.items():
         if not isinstance(v, (type, torch.utils.data.dataloader.DataLoader)):
             print(k, ': ', v)
