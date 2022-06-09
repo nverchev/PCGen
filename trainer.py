@@ -11,7 +11,7 @@ from sklearn import svm
 from dist_losses import get_loss
 
 '''
-This abstract class manages training and general utilites.
+This abstract class manages training and general utilities.
 It works together with a class defining the loss.
 This loss returns a dictionary dict with 
 dict["Criterion"] = loss to backprop
@@ -321,6 +321,7 @@ class VAETrainer(Trainer):
 
     def __init__(self, model, recon_loss, exp_name, block_args):
         super().__init__(model, exp_name, **block_args)
+        self.acc = None
         self._loss = get_loss(recon_loss)
         return
 
@@ -329,7 +330,7 @@ class VAETrainer(Trainer):
 
     def test(self, partition='val', m=128):
         self.model.decode.m = m
-        super().test(on=partition)
+        super().test(partition=partition)
         return
 
     def clas_metric(self):

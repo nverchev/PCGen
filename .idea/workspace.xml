@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/trainer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -229,7 +229,14 @@
       <option name="project" value="LOCAL" />
       <updated>1654778628222</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="partition">
+      <created>1654780627954</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1654780627954</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -252,7 +259,8 @@
     <MESSAGE value="tsqm" />
     <MESSAGE value="final in dataset" />
     <MESSAGE value="loss inside the class" />
-    <option name="LAST_COMMIT_MESSAGE" value="loss inside the class" />
+    <MESSAGE value="partition" />
+    <option name="LAST_COMMIT_MESSAGE" value="partition" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
