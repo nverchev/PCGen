@@ -75,9 +75,9 @@ if __name__ == '__main__':
     if not model_eval:
         for _ in range(training_epochs // 10):
             trainer.train(10)
-            if not final:
-                trainer.test(on="val", m=512)
+            if experiment[:5] != 'final':
+                trainer.test(partition="val", m=512)
             trainer.save()
 
-    if final:
-        trainer.test(on=final)
+    if experiment[:5] == 'final':
+        trainer.test(partition='test')

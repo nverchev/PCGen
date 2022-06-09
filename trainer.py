@@ -109,18 +109,18 @@ class Trainer(metaclass=ABCMeta):
                 print('\r====> Epoch:{}'.format(self.epoch), end="")
             else:
                 print('====> Epoch:{}'.format(self.epoch))
-            self._run_session(mode='train')
+            self._run_session(partition='train')
             if self.val_loader and val_after_train:  # check losses on val
-                self._run_session(mode='val', inference=True)  # best to test instead
+                self._run_session(partition='val', inference=True)  # best to test instead
         return
 
-    def test(self, on='val'):  # runs and stores evaluated test samples
+    def test(self, partition='val'):  # runs and stores evaluated test samples
         if not self.quiet_mode:
             print('Version ', self.exp_name)
-        self._run_session(mode=on, inference=True, save_outputs=True)
+        self._run_session(partition=partition, inference=True, save_outputs=True)
         return
 
-    def _run_session(self, mode='train', inference=False,
+    def _run_session(self, partition='train', inference=False,
                      save_outputs=False):
         if inference:
             self.model.eval()
@@ -128,17 +128,17 @@ class Trainer(metaclass=ABCMeta):
         else:
             self.model.train()
             torch.set_grad_enabled(True)
-        if mode == 'train':
+        if partition == 'train':
             loader = self.train_loader
             dict_losses = self.train_losses
-        elif mode == 'val':
+        elif partition == 'val':
             loader = self.val_loader
             dict_losses = self.val_losses
-        elif mode == 'test':
+        elif partition == 'test':
             loader = self.test_loader
             dict_losses = self.test_losses
         else:
-            raise ValueError('mode options are: "train", "val", "test" ')
+            raise ValueError('partition options are: "train", "val", "test" ')
         if save_outputs:
             self.test_targets, self.test_outputs = [], {}
 
@@ -169,7 +169,7 @@ class Trainer(metaclass=ABCMeta):
                 self.extend_dict_list(
                     self.test_outputs, self.to_recursive(outputs, 'detach_cpu'))
                 self.test_targets.extend(self.to_recursive(targets, 'detach_cpu'))
-            if not self.quiet_mode and mode == 'train':
+            if not self.quiet_mode and partition == 'train':
                 if batch_idx % (len(loader) // 10 or 1) == 0:
                     iterable.set_description(
                         'Train [{:4d}/{:4d} ]\tLoss {:4f}'.format(
@@ -185,7 +185,7 @@ class Trainer(metaclass=ABCMeta):
             if not save_outputs:  # do not save history when testing
                 dict_losses[loss].append(epoch_loss[loss])
         if not self.quiet_mode:
-            print('Average {} losses :'.format(mode))
+            print('Average {} losses :'.format(partition))
             for loss in self.losses:
                 print('{}: {:.4f}'.format(loss, epoch_loss[loss]), end='\t')
             print()
@@ -327,13 +327,13 @@ class VAETrainer(Trainer):
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)
 
-    def test(self, on='val', m=128):
+    def test(self, partition='val', m=128):
         self.model.decode.m = m
-        super().test(on=on)
+        super().test(on=partition)
         return
 
     def clas_metric(self):
-        self.test(on="train")
+        self.test(partition="train")
         x_train = np.array([z.numpy() for z in self.test_outputs['z']])
         y_train = np.array([z.numpy() for z in self.test_targets])
         shuffle = np.random.permutation(y_train.shape[0])
@@ -341,7 +341,7 @@ class VAETrainer(Trainer):
         y_train = y_train[shuffle]
         print("Fitting the classifier ...")
         self.clf.fit(x_train, y_train)
-        self.test(on="val")
+        self.test(partition="val")
         x_val = np.array([z.numpy() for z in self.test_outputs['z']])
         y_val = np.array([z.numpy() for z in self.test_targets])
         y_hat = self.clf.predict(x_val)
