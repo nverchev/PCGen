@@ -163,10 +163,10 @@ class VAELossSinkhorn(AbstractVAELoss):
 
 def get_loss(recon_loss):
     recon_loss_dict = {
-        "Chamfer": VAELossChamfer(),
-        "NLL": VAELossNLL(),
-        "MMD": VAELossMMD(),
-        'Sinkhorn': VAELossSinkhorn(),
+        "Chamfer": VAELossChamfer,
+        "NLL": VAELossNLL,
+        "MMD": VAELossMMD,
+        'Sinkhorn': VAELossSinkhorn,
     }
-    return recon_loss_dict[recon_loss]
+    return recon_loss_dict[recon_loss]()
 
