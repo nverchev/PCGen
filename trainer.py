@@ -61,7 +61,7 @@ class Trainer(metaclass=ABCMeta):
         self.converge = 1  # if 0 kills session
         self.minio = minioClient
         self.dir_path = dir_path
-        self.minio_path = staticmethod(lambda path: path[len(dir_path):])  # removes dir path
+        self.minio_path = staticmethod(lambda path: path[len(dir_path):]).__func__  # removes dir path
         self.test_targets, self.test_outputs = [], {}  # stored in RAM
 
     @property
