@@ -1,6 +1,7 @@
 import torch
 import argparse
 import pykeops
+from minio import Minio
 from dataset import get_dataset
 from optim import get_opt, CosineSchedule
 from trainer import get_trainer
@@ -33,6 +34,9 @@ def parse_args():
                         help='num of points of the training dataset [currently fixed]')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Default is given by model_recon_loss_exp_name')
+    parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
+    parser.add_argument('--minio_credential', type=str, default='',
+                        help='path of file with written server.access_key.secret_key')
     return parser.parse_args()
 
 
@@ -43,6 +47,7 @@ if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
     recon_loss = args.recon_loss
     experiment = args.experiment
+    dir_path = args.dir_path
     training_epochs = args.epochs
     opt_name = args.optimizer
     batch_size = args.batch_size
@@ -50,6 +55,13 @@ if __name__ == '__main__':
     weight_decay = args.wd
     model_eval = args.eval
     num_points = args.num_points
+    minio_credential = args.minio_credential
+    if minio_credential:
+        with open(minio_credential) as f:
+            server, access_key, secret_key = f.readline().split('.')
+            minioClient = Minio(server, access_key=access_key, secret_key=secret_key, secure=True)
+    else:
+        minio_credential = None
     exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path is "" else args.model_path
 
     train_loader, val_loader, test_loader = get_dataset(experiment, batch_size)
@@ -64,7 +76,9 @@ if __name__ == '__main__':
         'val_loader': val_loader,
         'test_loader': test_loader,
         'batch_size': batch_size,
-        'schedule': CosineSchedule(decay_steps=training_epochs, min_decay=0.1)
+        'schedule': CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
+        'minioClient': minioClient,
+        'dir_path': dir_path,
     }
 
     trainer = get_trainer(model, recon_loss, exp_name, block_args)

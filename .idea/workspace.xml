@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="partition">
+    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/trainer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -244,7 +245,21 @@
       <option name="project" value="LOCAL" />
       <updated>1654780706577</updated>
     </task>
-    <option name="localTasksCounter" value="24" />
+    <task id="LOCAL-00024" summary="partition">
+      <created>1654855134832</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1654855134832</updated>
+    </task>
+    <task id="LOCAL-00025" summary="dict losses">
+      <created>1654855209057</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1654855209057</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -268,7 +283,8 @@
     <MESSAGE value="final in dataset" />
     <MESSAGE value="loss inside the class" />
     <MESSAGE value="partition" />
-    <option name="LAST_COMMIT_MESSAGE" value="partition" />
+    <MESSAGE value="dict losses" />
+    <option name="LAST_COMMIT_MESSAGE" value="dict losses" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
