@@ -21,6 +21,10 @@ def parse_args():
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40'],
                         help="Currently only one dataset available")
+    parser.add_argument('--download', type=str, default='do not download',
+                        choices=["from zip", "from minio", "do not download"],
+                        help="You can process the dataset from the zip file. Otherwise you can  \
+                                        download an already processed one from a server using minio")
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=60)
     parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
@@ -55,6 +59,7 @@ if __name__ == '__main__':
     weight_decay = args.wd
     model_eval = args.eval
     num_points = args.num_points
+    download = args.download
     minio_credential = args.minio_credential
     if minio_credential:
         with open(minio_credential) as f:
@@ -64,7 +69,7 @@ if __name__ == '__main__':
         minio_credential = None
     exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path is "" else args.model_path
 
-    train_loader, val_loader, test_loader = get_dataset(experiment, batch_size)
+    train_loader, val_loader, test_loader = get_dataset(experiment, batch_size, download, minioClient, num_points)
     model = get_vae(model_name)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     block_args = {

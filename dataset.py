@@ -26,11 +26,10 @@ def preprocess(path, n_points):
     return cloud.astype(np.float32)
 
 
-def get_dataset(experiment, batch_size, val_every=6, dirpath="./", minioClient=None,
-                download = False, dataset_from_zip=False, n_points=2048):
+def get_dataset(experiment, batch_size, val_every=6, dirpath="./", download=False,
+                minioClient=None, n_points=2048):
     final = experiment[:5] == 'final'
-    experiment
-    if dataset_from_zip:
+    if download == "from zip":
         zip_path = os.path.join(dirpath, 'modelnet40_normal_resampled.zip')
         data_path = os.path.join(dirpath, 'modelnet40_normal_resampled')
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -52,7 +51,8 @@ def get_dataset(experiment, batch_size, val_every=6, dirpath="./", minioClient=N
             labels = [label_map[shape] for shape in shapes]
             ds_name = f'{split}_dataset.npz'
             np.savez(ds_name, pcd=pcd, labels=labels, names=names)
-    elif download:
+    elif download == "from minio":
+        assert minioClient is not None, "Please provide minio client"
         minioClient.fget_object('pcdvae', 'train_dataset.npz', 'train_dataset.npz')
         minioClient.fget_object('pcdvae', 'test_dataset.npz', 'test_dataset.npz')
     else:

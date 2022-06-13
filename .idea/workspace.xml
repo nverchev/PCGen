@@ -3,8 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataset.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -259,7 +259,21 @@
       <option name="project" value="LOCAL" />
       <updated>1654855209057</updated>
     </task>
-    <option name="localTasksCounter" value="26" />
+    <task id="LOCAL-00026" summary="dict losses">
+      <created>1654860671248</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1654860671249</updated>
+    </task>
+    <task id="LOCAL-00027" summary="download dataset">
+      <created>1655112532443</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1655112532443</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -284,7 +298,8 @@
     <MESSAGE value="loss inside the class" />
     <MESSAGE value="partition" />
     <MESSAGE value="dict losses" />
-    <option name="LAST_COMMIT_MESSAGE" value="dict losses" />
+    <MESSAGE value="download dataset" />
+    <option name="LAST_COMMIT_MESSAGE" value="download dataset" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
