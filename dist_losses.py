@@ -19,41 +19,58 @@ def self_square_distance(t1):
 
 # tensor_dims = (batch, (samples,) vertices, coordinates )
 def square_distance(t1, t2):
-    t2 = t2.transpose(-1, -2)
-    dist = -2 * torch.matmul(t1, t2)
-    dist += torch.sum(t1 ** 2, -1, keepdim=True)
-    dist += torch.sum(t2 ** 2, -2, keepdim=True)
+    t1 = LazyTensor(t1[:, :, None, :])
+    t2 = LazyTensor(t2[:, None, :, :])
+    dist = ((t1 - t2) ** 2).sum(-1)
     return dist
-
+# def square_distance(t1, t2):
+#     t2 = t2.transpose(-1, -2)
+#     dist = -2 * torch.matmul(t1, t2)
+#     dist += torch.sum(t1 ** 2, -1, keepdim=True)
+#     dist += torch.sum(t2 ** 2, -2, keepdim=True)
+#     return dist
 
 # Chamfer Distance
-def chamfer(dist):
-    return torch.min(dist, axis=-1)[0].sum(-1).mean() \
-           + torch.min(dist, axis=-2)[0].sum(-1).mean()
 
+
+def chamfer(t1, t2, dist):
+    # The following code is currently not supported for backprop
+    # return dist.min(axis = 2).mean(0).sum()\
+    #      + dist.min(axis = 1).mean(0).sum()
+    # We use the retrieved index on torch
+    idx1 = dist.argmin(axis=1).expand(-1, -1, 3)
+    m1 = t1.gather(1, idx1)
+    s1 = ((t2 - m1) ** 2).mean(0).sum()
+    idx2 = dist.argmin(axis=2).expand(-1, -1, 3)
+    m2 = t2.gather(1, idx2)
+    s2 = ((t1 - m2) ** 2).mean(0).sum()
+    # forward + reverse
+    return s1 + s2
+# def chamfer(t1, t2, dist):
+#     return torch.min(dist, axis=-1)[0].sum(-1).mean() \
+#            + torch.min(dist, axis=-2)[0].sum(-1).mean()
 
 # Nll reconstruction
+
 def nll(inputs, recons, pairwise_dist):
     n = inputs.size()[1]
     m = recons.size()[1]
     # 0.1192794 precomputed var of trainval dataset
-    sigma2 = 0.1192794
-    sigma6 = sigma2 ** 3
-    pairwise_dist /= - 2 * sigma2
-    lse = torch.logsumexp(pairwise_dist, axis=2)
-    normalize = 0.5 * np.log(sigma6 * (2 * np.pi) ** 3) + np.log(m)
-    return -lse.sum(1).mean() + n * (normalize)
-
-
-# MMD with Gaussian kernel
-def mmd_gaussian(t2, dist, bandwith=0.01):
-    m = t2.size()[2]
-    dist_t2 = self_square_distance(t2) / (2 * bandwith)
-    pairwise_dist = dist / (2 * bandwith)
-    mmd = -2 * (torch.exp(-pairwise_dist)).mean([1, 2])
-    mmd += (torch.exp(-dist_t2).sum([1, 2]) - m) / (m * (m - 1))
-    return mmd.mean()
-
+    sigma6 = 0.1192794 ** 3
+    pairwise_dist /= - 2 * sigma6
+    lse = pairwise_dist.logsumexp(axis=2)
+    normalize = 0.5 * np.log(sigma6 * 2 * np.pi) + np.log(m)
+    return -lse.sum(1).mean() + n * normalize
+# def nll(inputs, recons, pairwise_dist):
+#     n = inputs.size()[1]
+#     m = recons.size()[1]
+#     # 0.1192794 precomputed var of trainval dataset
+#     sigma2 = 0.1192794
+#     sigma6 = sigma2 ** 3
+#     pairwise_dist /= - 2 * sigma2
+#     lse = torch.logsumexp(pairwise_dist, axis=2)
+#     normalize = 0.5 * np.log(sigma6 * (2 * np.pi) ** 3) + np.log(m)
+#     return -lse.sum(1).mean() + n * normalize
 
 def kld_loss(q_mu, q_logvar, freebits=2):
     KLD_matrix = -1 - q_logvar + q_mu ** 2 + q_logvar.exp()
@@ -111,7 +128,7 @@ class VAELossChamfer(AbstractVAELoss):
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        return {'Chamfer': chamfer(pairwise_dist)}
+        return {'Chamfer': chamfer(inputs, recons, pairwise_dist)}
 
 
 # Negative Log Likelihood Distance
@@ -120,8 +137,8 @@ class VAELossNLL(AbstractVAELoss):
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        chamfer_loss = chamfer(pairwise_dist.detach())
-        return {'NLL': nll(inputs, recons, pairwise_dist),
+        chamfer_loss = chamfer(inputs, recons, pairwise_dist)
+        return {'NLL': nll(inputs.detach(), recons.detach(), pairwise_dist.detach()),
                 'Chamfer': chamfer_loss}
 
 
@@ -134,7 +151,7 @@ class VAELossMMD(AbstractVAELoss):
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        chamfer_loss = chamfer(pairwise_dist.detach())
+        chamfer_loss = chamfer(inputs.detach(), recons.detach(), pairwise_dist.detach())
         mmd = self.mmd_gaussian(inputs, recons)
         return {'MMD': mmd.mean(),
                 'Chamfer': chamfer_loss}
@@ -149,7 +166,7 @@ class VAELossSinkhorn(AbstractVAELoss):
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        chamfer_loss = chamfer(pairwise_dist.detach())
+        chamfer_loss = chamfer(inputs.detach(), recons.detach(), pairwise_dist.detach())
         # need to divide into batches
         inputs_list = inputs.chunk(4, 0)
         recon_list = recons.chunk(4, 0)
@@ -168,4 +185,3 @@ def get_loss(recon_loss):
         'Sinkhorn': VAELossSinkhorn,
     }
     return recon_loss_dict[recon_loss]()
-
