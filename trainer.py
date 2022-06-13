@@ -323,6 +323,7 @@ class VAETrainer(Trainer):
         super().__init__(model, exp_name, **block_args)
         self.acc = None
         self._loss = get_loss(recon_loss)
+        self.losses = self._loss.losses
         return
 
     def loss(self, output, inputs, targets):
