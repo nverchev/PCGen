@@ -4,7 +4,6 @@ import torch
 import torch.nn.functional as F
 import geomloss
 from abc import ABCMeta, abstractmethod
-from sklearn import metrics
 from pykeops.torch import LazyTensor
 
 

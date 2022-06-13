@@ -32,7 +32,7 @@ minioClient = Minio(*Your storage name*,
 
 
 class Trainer(metaclass=ABCMeta):
-    losses = ["Criterion"]  # defined later with the loss function
+    losses = []  # defined later with the loss function
     quiet_mode = False  # less output
     max_output = np.inf  # maximum amount of stored evaluated test samples
     bin = 'pcdvae'  # minio bin
@@ -320,10 +320,10 @@ class VAETrainer(Trainer):
     clf = svm.SVC()
 
     def __init__(self, model, recon_loss, exp_name, block_args):
-        super().__init__(model, exp_name, **block_args)
         self.acc = None
         self._loss = get_loss(recon_loss)
-        self.losses = self._loss.losses
+        self.losses = self._loss.losses  # losses must be defined before super().__init__()
+        super().__init__(model, exp_name, **block_args)
         return
 
     def loss(self, output, inputs, targets):
