@@ -27,7 +27,7 @@ def preprocess(path, n_points):
 
 
 def get_dataset(experiment, batch_size, val_every=6, dirpath="./", minioClient=None,
-                dataset_from_zip=False, n_points=2048):
+                download = False, dataset_from_zip=False, n_points=2048):
     final = experiment[:5] == 'final'
     experiment
     if dataset_from_zip:
@@ -52,7 +52,7 @@ def get_dataset(experiment, batch_size, val_every=6, dirpath="./", minioClient=N
             labels = [label_map[shape] for shape in shapes]
             ds_name = f'{split}_dataset.npz'
             np.savez(ds_name, pcd=pcd, labels=labels, names=names)
-    elif minioClient:
+    elif download:
         minioClient.fget_object('pcdvae', 'train_dataset.npz', 'train_dataset.npz')
         minioClient.fget_object('pcdvae', 'test_dataset.npz', 'test_dataset.npz')
     else:
