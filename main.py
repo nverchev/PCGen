@@ -75,8 +75,8 @@ if __name__ == '__main__':
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     block_args = {
         'optim_name': opt_name,
-        'optim': optimizer[opt_name],
-        'optim_args': optim_args[opt_name],
+        'optim': optimizer,
+        'optim_args': optim_args,
         'train_loader': train_loader,
         'device': device,
         'val_loader': val_loader,
