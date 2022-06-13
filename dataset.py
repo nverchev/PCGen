@@ -26,14 +26,14 @@ def preprocess(path, n_points):
     return cloud.astype(np.float32)
 
 
-def get_dataset(experiment, batch_size, val_every=6, dirpath="./", download=False,
+def get_dataset(experiment, batch_size, val_every=6, dir_path="./", download=False,
                 minioClient=None, n_points=2048):
     final = experiment[:5] == 'final'
     if download == "from zip":
-        zip_path = os.path.join(dirpath, 'modelnet40_normal_resampled.zip')
-        data_path = os.path.join(dirpath, 'modelnet40_normal_resampled')
+        zip_path = os.path.join(dir_path, 'modelnet40_normal_resampled.zip')
+        data_path = os.path.join(dir_path, 'modelnet40_normal_resampled')
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(dirpath)
+            zip_ref.extractall(dir_path)
         for split in ["train", "test"]:
             names = []
             shapes = []
@@ -56,11 +56,11 @@ def get_dataset(experiment, batch_size, val_every=6, dirpath="./", download=Fals
         minioClient.fget_object('pcdvae', 'train_dataset.npz', 'train_dataset.npz')
         minioClient.fget_object('pcdvae', 'test_dataset.npz', 'test_dataset.npz')
     else:
-        assert os.path.exists(dirpath + 'train_dataset.npz'), "Dataset not found"
+        assert os.path.exists(dir_path + 'train_dataset.npz'), "Dataset not found"
 
     pin_memory = torch.cuda.is_available()
-    train_data = np.load(dirpath + 'train_dataset.npz', allow_pickle=True)
-    test_data = np.load(dirpath + 'test_dataset.npz', allow_pickle=True)
+    train_data = np.load(dir_path + 'train_dataset.npz', allow_pickle=True)
+    test_data = np.load(dir_path + 'test_dataset.npz', allow_pickle=True)
     train_dataset = PCDDataset(data=train_data)
     test_dataset = PCDDataset(data=test_data)
     num_train = len(train_dataset)
