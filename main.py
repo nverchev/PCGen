@@ -63,7 +63,8 @@ if __name__ == '__main__':
     minio_credential = args.minio_credential
     if minio_credential:
         with open(minio_credential) as f:
-            server, access_key, secret_key = f.readline().split('.')
+            server, access_key, secret_key = f.readline().split(';')
+            secret_key = secret_key.strip()
             minioClient = Minio(server, access_key=access_key, secret_key=secret_key, secure=True)
     else:
         minio_credential = None
