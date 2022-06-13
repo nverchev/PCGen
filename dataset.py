@@ -4,6 +4,14 @@ import os
 import zipfile
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data import Dataset, Subset
+import requests
+
+try:
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except:
+    pass
 
 
 class PCDDataset(Dataset):
@@ -31,6 +39,10 @@ def get_dataset(experiment, batch_size, val_every=6, dir_path="./", download=Fal
     final = experiment[:5] == 'final'
     if download == "from zip":
         zip_path = os.path.join(dir_path, 'modelnet40_normal_resampled.zip')
+        if not os.path.exists(zip_path):
+            url = 'https://shapenet.cs.stanford.edu/media/modelnet40_normal_resampled.zip'
+            r = requests.get(url, verify=False)
+            open(zip_path, 'wb').write(r.content)
         data_path = os.path.join(dir_path, 'modelnet40_normal_resampled')
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(dir_path)

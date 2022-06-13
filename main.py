@@ -1,7 +1,6 @@
 import torch
 import argparse
 import pykeops
-from minio import Minio
 from dataset import get_dataset
 from optim import get_opt, CosineSchedule
 from trainer import get_trainer
@@ -62,6 +61,7 @@ if __name__ == '__main__':
     download = args.download
     minio_credential = args.minio_credential
     if minio_credential:
+        from minio import Minio
         with open(minio_credential) as f:
             server, access_key, secret_key = f.readline().split(';')
             secret_key = secret_key.strip()
