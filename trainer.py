@@ -32,7 +32,7 @@ minioClient = Minio(*Your storage name*,
 
 
 class Trainer(metaclass=ABCMeta):
-    losses = []  # defined later with the loss function
+    losses = ["Criterion"]  # defined later with the loss function
     quiet_mode = False  # less output
     max_output = np.inf  # maximum amount of stored evaluated test samples
     bin = 'pcdvae'  # minio bin
