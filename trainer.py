@@ -30,12 +30,10 @@ minioClient = Minio(*Your storage name*,
 
 '''
 
-
 class Trainer(metaclass=ABCMeta):
     losses = []  # defined later with the loss function
     quiet_mode = False  # less output
     max_output = np.inf  # maximum amount of stored evaluated test samples
-    bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, exp_name, device, optim, train_loader, val_loader=None,
                  test_loader=None, minioClient=None, dir_path='./', mp=False, **block_args):
@@ -106,9 +104,9 @@ class Trainer(metaclass=ABCMeta):
             self.update_learning_rate(self.optimizer_settings['params'])
             self.epoch += 1
             if self.quiet_mode:
-                print('\r====> Epoch:{}'.format(self.epoch), end="")
+                print('\r====> Epoch:{:3d}'.format(self.epoch), end="")
             else:
-                print('====> Epoch:{}'.format(self.epoch))
+                print('====> Epoch:{:3d}'.format(self.epoch))
             self._run_session(partition='train')
             if self.val_loader and val_after_train:  # check losses on val
                 self._run_session(partition='val', inference=True)  # best to test instead
@@ -120,8 +118,7 @@ class Trainer(metaclass=ABCMeta):
         self._run_session(partition=partition, inference=True, save_outputs=True)
         return
 
-    def _run_session(self, partition='train', inference=False,
-                     save_outputs=False):
+    def _run_session(self, partition='train', inference=False, save_outputs=False):
         if inference:
             self.model.eval()
             torch.set_grad_enabled(False)
@@ -171,12 +168,8 @@ class Trainer(metaclass=ABCMeta):
                 self.test_targets.extend(self.to_recursive(targets, 'detach_cpu'))
             if not self.quiet_mode and partition == 'train':
                 if batch_idx % (len(loader) // 10 or 1) == 0:
-                    iterable.set_description(
-                        'Train [{:4d}/{:4d} ]\tLoss {:4f}'.format(
-                            batch_idx * loader.batch_size,
-                            len_sess,
-                            criterion.item())
-                    )
+                    iterable.set_postfix({'Batch': batch_idx * loader.batch_size,
+                                          'Loss': criterion.item()})
                 if batch_idx == len(loader) - 1:  # clear after last
                     iterable.set_description('')
 
@@ -318,6 +311,7 @@ class Trainer(metaclass=ABCMeta):
 
 class VAETrainer(Trainer):
     clf = svm.SVC()
+    bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, recon_loss, exp_name, block_args):
         self.acc = None
