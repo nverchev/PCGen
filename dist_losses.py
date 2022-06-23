@@ -56,10 +56,10 @@ def nll(inputs, recons, pairwise_dist):
     n = inputs.size()[1]
     m = recons.size()[1]
     # 0.1192794 precomputed var of trainval dataset
-    sigma6 = 0.1192794 ** 3
-    pairwise_dist /= - 2 * sigma6
+    sigma2 = 0.1192794
+    pairwise_dist /= - 2 * sigma2
     lse = pairwise_dist.logsumexp(axis=2)
-    normalize = 0.5 * np.log(sigma6 * 2 * np.pi) + np.log(m)
+    normalize = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(m)
     return -lse.sum(1).mean() + n * normalize
 # def nll(inputs, recons, pairwise_dist):
 #     n = inputs.size()[1]
