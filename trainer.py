@@ -341,8 +341,9 @@ class VAETrainer(Trainer):
         x_val = np.array([z.numpy() for z in self.test_outputs['z']])
         y_val = np.array([z.numpy() for z in self.test_targets])
         y_hat = self.clf.predict(x_val)
+        self.acc = (y_hat == y_val).sum() / y_hat.shape[0]
         print("Accuracy: ", self.acc)
-        return (y_hat == y_val).sum() / y_hat.shape[0]
+        return self.acc
 
 
 def get_trainer(model, recon_loss, exp_name, block_args):
