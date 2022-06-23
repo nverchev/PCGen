@@ -138,7 +138,7 @@ class VAELossNLL(AbstractVAELoss):
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
         chamfer_loss = chamfer(inputs, recons, pairwise_dist)
-        return {'NLL': nll(inputs.detach(), recons.detach(), pairwise_dist.detach()),
+        return {'NLL': nll(inputs, recons, pairwise_dist),
                 'Chamfer': chamfer_loss}
 
 
@@ -151,7 +151,7 @@ class VAELossMMD(AbstractVAELoss):
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        chamfer_loss = chamfer(inputs.detach(), recons.detach(), pairwise_dist.detach())
+        chamfer_loss = chamfer(inputs, recons, pairwise_dist)
         mmd = self.mmd_gaussian(inputs, recons)
         return {'MMD': mmd.mean(),
                 'Chamfer': chamfer_loss}
@@ -166,7 +166,7 @@ class VAELossSinkhorn(AbstractVAELoss):
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        chamfer_loss = chamfer(inputs.detach(), recons.detach(), pairwise_dist.detach())
+        chamfer_loss = chamfer(inputs, recons, pairwise_dist)
         # need to divide into batches
         inputs_list = inputs.chunk(4, 0)
         recon_list = recons.chunk(4, 0)
