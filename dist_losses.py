@@ -55,8 +55,8 @@ def chamfer(t1, t2, dist):
 def nll(inputs, recons, pairwise_dist):
     n = inputs.size()[1]
     m = recons.size()[1]
-    # 0.1192794 precomputed var of trainval dataset
-    sigma2 = 0.1192794
+    # variance of the components (model assumption)
+    sigma2 = 0.0001
     pairwise_dist /= - 2 * sigma2
     lse = pairwise_dist.logsumexp(axis=2)
     normalize = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(m)

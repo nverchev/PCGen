@@ -67,17 +67,19 @@ class Abstract_VAE(nn.Module, metaclass=ABCMeta):
 
 class Base_VAE(Abstract_VAE):
 
-    def __init__(self, in_chan=3, h_chan=[64, 128, 128, 256], z_dim=128):
+    def __init__(self, in_chan=3, h_chan=[64, 64, 64, 128, 128, 512], z_dim=128):
+        self.n_points = 2048
         super().__init__(in_chan, h_chan, z_dim)
 
     def _encoder(self):
         modules = [DBR(self.in_chan, self.h_chan[0])]
-        for i in range(len(self.h_chan) - 1):
+        for i in range(len(self.h_chan) - 2):
             modules.append(DBR(self.h_chan[i], self.h_chan[i + 1]))
-        modules.append(DBR(self.h_chan[-1], 2 * self.z_dim))
         modules.append(MaxperChannel())
-        return nn.Sequential(*modules)
+        modules.append(DbR(self.h_chan[-2], self.h_chan[-1]))
+        modules.append(nn.Linear(self.h_chan[-1], 2 * self.z_dim))
 
+        return nn.Sequential(*modules)
     def _decoder(self):
         net = nn.Sequential(nn.Linear(self.z_dim, 256),
                             nn.ReLU(),
