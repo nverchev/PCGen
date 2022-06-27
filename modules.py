@@ -52,6 +52,9 @@ class DBR4(DBR):
         return x
 
 
+def get_conv2d(in_dim, out_dim):
+    return nn.Sequential(nn.Conv2d(in_dim , out_dim, kernel_size=1, bias=False), nn.BatchNorm2d(out_dim), nn.ReLU())
+
 # Deals with features, no need of transposing
 class DbR(nn.Module):
     # Dense + Batch + Relu
