@@ -4,7 +4,7 @@ import pykeops
 from dataset import get_dataset
 from optim import get_opt, CosineSchedule
 from trainer import get_trainer
-from VAE import get_vae
+from VAE import VAE
 
 pykeops.set_verbose(False)
 
@@ -12,8 +12,8 @@ pykeops.set_verbose(False)
 def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
-    parser.add_argument('--model', type=str, default='VAE_Gen', choices=["BaseVAE", "PointNet", "VAE_Gen", "PCTVAE"],
-                        help='architecture')
+    parser.add_argument('--encoder', type=str, default='MLP', choices=["MLP", "PointNet", "DGCNN", "PCT"])
+    parser.add_argument('--decoder', type=str, default='Gen', choices=["MLP", "Gen"])
     parser.add_argument('--recon_loss', type=str, default='Chamfer', choices=["Chamfer", "Sinkhorn", "NLL", "MMD"],
                         help='reconstruction loss')
     parser.add_argument('--exp_name', type=str, default='',
@@ -46,7 +46,9 @@ def parse_args():
 if __name__ == '__main__':
 
     args = parse_args()
-    model_name = args.model
+    encoder_name = args.encoder
+    decoder_name = args.decoder
+    model_name = encoder_name + "_" + decoder_name
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
     recon_loss = args.recon_loss
     experiment = args.experiment
@@ -72,7 +74,7 @@ if __name__ == '__main__':
 
     train_loader, val_loader, test_loader = get_dataset(experiment, batch_size, dir_path=dir_path, download=download,
                                                         minioClient=minioClient, n_points=num_points)
-    model = get_vae(model_name)
+    model = VAE(encoder_name, decoder_name)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     block_args = {
         'optim_name': opt_name,

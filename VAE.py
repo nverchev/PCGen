@@ -1,23 +1,19 @@
 # @title Libraries
 import torch
 import torch.nn as nn
-from abc import ABCMeta, abstractmethod
-from modules import View, DBR, MaxperChannel, PointNetEncoder, PointNetGenerator, PointGenerator
-#from pointnet_modules import PCT, SPCT
+from encoder import get_encoder
+from decoder import get_decoder
 
 
-class Abstract_VAE(nn.Module, metaclass=ABCMeta):
+class VAE(nn.Module):
     settings = {}
 
-    def __init__(self, in_chan, h_chan, z_dim):
+    def __init__(self, encoder_name, decoder_name):
         super().__init__()
-        self.in_chan = in_chan
-        self.h_chan = h_chan
-        self.z_dim = z_dim
-        self.encode = self._encoder()
-        self.decode = self._decoder()
-        # used for nll
-        self.sigma6 = nn.Parameter(torch.tensor(0.01))
+        self.encoder_name = encoder_name
+        self.decoder_name = decoder_name
+        self.encode = get_encoder(encoder_name)
+        self.decode = get_decoder(decoder_name)
 
     def forward(self, x):
         data = self.encoder(x)
@@ -47,85 +43,9 @@ class Abstract_VAE(nn.Module, metaclass=ABCMeta):
         data['recon'] = x
         return data
 
-    @abstractmethod
-    def _encoder(self):
-        pass
-
-    @abstractmethod
-    def _decoder(self):
-        pass
-
     def print_total_parameters(self):
         num_params = 0
         for param in self.parameters():
             num_params += param.numel()
         print('Total Parameters: {}'.format(num_params))
         return
-
-    # Same architecture from https://arxiv.org/pdf/1707.02392.pdf
-
-
-class Base_VAE(Abstract_VAE):
-
-    def __init__(self, in_chan=3, h_chan=[64, 64, 64, 128, 128, 512], z_dim=128):
-        self.n_points = 2048
-        super().__init__(in_chan, h_chan, z_dim)
-
-    def _encoder(self):
-        modules = [DBR(self.in_chan, self.h_chan[0])]
-        for i in range(len(self.h_chan) - 2):
-            modules.append(DBR(self.h_chan[i], self.h_chan[i + 1]))
-        modules.append(MaxperChannel())
-        modules.append(DbR(self.h_chan[-2], self.h_chan[-1]))
-        modules.append(nn.Linear(self.h_chan[-1], 2 * self.z_dim))
-
-        return nn.Sequential(*modules)
-    def _decoder(self):
-        net = nn.Sequential(nn.Linear(self.z_dim, 256),
-                            nn.ReLU(),
-                            nn.Linear(256, 256),
-                            nn.ReLU(),
-                            nn.Linear(256, self.in_chan * self.n_points),
-                            View(-1, self.n_points, self.in_chan)
-                            )
-        return net
-
-
-class PointNet_VAE(Base_VAE):
-
-    def __init__(self, in_chan=3, h_chan=[64, 128, 128, 256], z_dim=128):
-        super(Base_VAE, self).__init__(in_chan, h_chan, z_dim)
-
-    def _encoder(self):
-        return PointNetEncoder(self.in_chan, self.h_chan, self.z_dim)
-
-
-class VAE_Gen(Base_VAE):
-
-    def __init__(self, in_chan=3, h_chan=[64, 128, 128, 256],
-                 z_dim=128, m_training=2048):
-        self.m_training = m_training
-        super(Base_VAE, self).__init__(in_chan, h_chan, z_dim)
-
-    def _decoder(self, m=128):
-        return PointGenerator(self.in_chan, self.h_chan,
-                                 self.z_dim, self.m_training)
-
-
-# class PCTVAE(Base_VAE):
-#
-#     def __init__(self, in_chan=3, h_chan=[64, 128, 128, 256], z_dim=128):
-#         super(Base_VAE, self).__init__(in_chan, h_chan, z_dim)
-#
-#     def _encoder(self):
-#         return PCT(enc=self.z_dim)
-
-
-def get_vae(model_name):
-    model_dict = {
-        "BaseVAE": Base_VAE,
-        "PointNet": PointNet_VAE,
-        "VAE_Gen": VAE_Gen,
-        #'PCTVAE': PCTVAE
-    }
-    return model_dict[model_name]()
