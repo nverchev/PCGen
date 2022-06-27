@@ -37,7 +37,7 @@ def preprocess(path, n_points):
 def get_dataset(experiment, batch_size, val_every=6, dir_path="./", download=False,
                 minioClient=None, n_points=2048):
     final = experiment[:5] == 'final'
-    if download == "from zip":
+    if download == "from_zip":
         zip_path = os.path.join(dir_path, 'modelnet40_normal_resampled.zip')
         if not os.path.exists(zip_path):
             url = 'https://shapenet.cs.stanford.edu/media/modelnet40_normal_resampled.zip'
@@ -63,7 +63,7 @@ def get_dataset(experiment, batch_size, val_every=6, dir_path="./", download=Fal
             labels = [label_map[shape] for shape in shapes]
             ds_name = f'{split}_dataset.npz'
             np.savez(ds_name, pcd=pcd, labels=labels, names=names)
-    elif download == "from minio":
+    elif download == "from_minio":
         assert minioClient is not None, "Please provide minio client"
         minioClient.fget_object('pcdvae', 'train_dataset.npz', 'train_dataset.npz')
         minioClient.fget_object('pcdvae', 'test_dataset.npz', 'test_dataset.npz')

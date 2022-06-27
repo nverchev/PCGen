@@ -16,12 +16,12 @@ def parse_args():
     parser.add_argument('--decoder', type=str, default='Gen', choices=["MLP", "Gen"])
     parser.add_argument('--recon_loss', type=str, default='Chamfer', choices=["Chamfer", "Sinkhorn", "NLL", "MMD"],
                         help='reconstruction loss')
-    parser.add_argument('--exp_name', type=str, default='',
+    parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40'],
                         help="Currently only one dataset available")
-    parser.add_argument('--download', type=str, default='do not download',
-                        choices=["from zip", "from minio", "do not download"],
+    parser.add_argument('--download', type=str, default='do_not_download',
+                        choices=["from_zip", "from_minio", "do_not_download"],
                         help="You can process the dataset from the zip file. Otherwise you can  \
                                         download an already processed one from a server using minio")
     parser.add_argument('--batch_size', type=int, default=64)
@@ -69,8 +69,8 @@ if __name__ == '__main__':
             secret_key = secret_key.strip()
             minioClient = Minio(server, access_key=access_key, secret_key=secret_key, secure=True)
     else:
-        minio_credential = None
-    exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path is "" else args.model_path
+        minioClient = None
+    exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path == "" else args.model_path
 
     train_loader, val_loader, test_loader = get_dataset(experiment, batch_size, dir_path=dir_path, download=download,
                                                         minioClient=minioClient, n_points=num_points)
@@ -99,8 +99,13 @@ if __name__ == '__main__':
         for _ in range(training_epochs // 10):
             trainer.train(10)
             if experiment[:5] != 'final':
-                trainer.test(partition="val", m=512)
+                trainer.test(partition="val")
             trainer.save()
 
+    #load last model
+    trainer.load()
+    trainer.test(partition='val')
+    trainer.clas_metric()
     if experiment[:5] == 'final':
         trainer.test(partition='test')
+        trainer.clas_metric()

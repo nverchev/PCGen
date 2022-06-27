@@ -4,34 +4,9 @@ import torch
 import torch.nn.functional as F
 import geomloss
 from abc import ABCMeta, abstractmethod
-from pykeops.torch import LazyTensor
-
-
-# tensor_dims = (batch, (samples,) vertices, coordinates )
-def self_square_distance(t1):
-    t2 = t1.transpose(-1, -2)
-    dist = -2 * torch.matmul(t1, t2)
-    sq = torch.sum(t1 ** 2, -1, keepdim=True)
-    dist += sq
-    dist += sq.transpose(-1, -2)
-    return dist
-
-
-# tensor_dims = (batch, (samples,) vertices, coordinates )
-def square_distance(t1, t2):
-    t1 = LazyTensor(t1[:, :, None, :])
-    t2 = LazyTensor(t2[:, None, :, :])
-    dist = ((t1 - t2) ** 2).sum(-1)
-    return dist
-# def square_distance(t1, t2):
-#     t2 = t2.transpose(-1, -2)
-#     dist = -2 * torch.matmul(t1, t2)
-#     dist += torch.sum(t1 ** 2, -1, keepdim=True)
-#     dist += torch.sum(t2 ** 2, -2, keepdim=True)
-#     return dist
+from utils import square_distance
 
 # Chamfer Distance
-
 
 def chamfer(t1, t2, dist):
     # The following code is currently not supported for backprop
@@ -83,7 +58,7 @@ def kld_loss(q_mu, q_logvar, freebits=2):
 class AbstractVAELoss(metaclass=ABCMeta):
     losses = ['Criterion', 'KLD']
     c_rec = 1
-    c_reg = 0.01
+    c_reg = 0.1
 
     def __call__(self, outputs, inputs, targets):
         recons = outputs['recon']

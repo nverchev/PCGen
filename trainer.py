@@ -323,10 +323,13 @@ class VAETrainer(Trainer):
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)
 
-    def test(self, partition='val', m=128):
+    def test(self, partition='val', m=2048):
         self.model.decode.m = m
         super().test(partition=partition)
         return
+
+    def update_m_training(self, m):
+        self.model.decode.m_training = m
 
     def clas_metric(self):
         self.test(partition="train")
@@ -344,6 +347,7 @@ class VAETrainer(Trainer):
         self.acc = (y_hat == y_val).sum() / y_hat.shape[0]
         print("Accuracy: ", self.acc)
         return self.acc
+
 
 
 def get_trainer(model, recon_loss, exp_name, block_args):

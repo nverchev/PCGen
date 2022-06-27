@@ -12,8 +12,8 @@ class VAE(nn.Module):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
-        self.encode = get_encoder(encoder_name)
-        self.decode = get_decoder(decoder_name)
+        self.encode = get_encoder(encoder_name)()
+        self.decode = get_decoder(decoder_name)()
 
     def forward(self, x):
         data = self.encoder(x)
@@ -37,9 +37,6 @@ class VAE(nn.Module):
     def decoder(self, data):
         z = data['z']
         x = self.decode(z)
-        if isinstance(x, list):
-            data['trans'] = x[1]
-            x = x[0]
         data['recon'] = x
         return data
 

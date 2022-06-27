@@ -1,5 +1,5 @@
-import numpy as nn
 import torch
+import torch.nn as nn
 from encoder import Z_DIM, IN_CHAN, N_POINTS
 from modules import DBR, DbR, DBR4, View
 
@@ -11,6 +11,8 @@ def get_mlp_decoder():
                         nn.Linear(256, IN_CHAN * N_POINTS),
                         View(-1, N_POINTS, IN_CHAN)
                         )
+    return net
+
 
 class PointGenerator(nn.Module):
 
@@ -66,7 +68,7 @@ class FoldingNet():
 
 def get_decoder(decoder_name):
     decoder_dict = {
-        "MLP": get_mlp_decoder(),
+        "MLP": get_mlp_decoder,
         "Gen": PointGenerator,
         "FoldingNet": FoldingNet,
     }

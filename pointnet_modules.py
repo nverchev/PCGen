@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from dist_losses import square_distance
 from pointnet2_ops import pointnet2_utils
+
 def knn_point(k, xyz, new_xyz):
     """
     K nearest neighborhood.
