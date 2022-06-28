@@ -99,7 +99,7 @@ if __name__ == '__main__':
         m=128
         for _ in range(training_epochs // 10):
             trainer.update_m_training(m)
-            m *= m
+            m *= 2
             trainer.train(10)
             if experiment[:5] != 'final':
                 trainer.test(partition="val")
