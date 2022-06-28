@@ -96,7 +96,10 @@ if __name__ == '__main__':
             print(k, ': ', v)
 
     if not model_eval:
+        m=128
         for _ in range(training_epochs // 10):
+            trainer.update_m_training(m)
+            m *= m
             trainer.train(10)
             if experiment[:5] != 'final':
                 trainer.test(partition="val")

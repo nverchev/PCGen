@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+act = nn.LeakyReLU
 
 class Transpose(nn.Module):
 
@@ -35,12 +36,12 @@ class DBR(nn.Module):
         super().__init__()
         self.dense = nn.Linear(in_dim, out_dim)
         self.bn = get_points_batch_norm(out_dim)
-        self.relu = nn.ReLU()
+        self.act = act()
         self.in_dim = in_dim
         self.out_dim = out_dim
 
     def forward(self, x):
-        return self.relu(self.bn(self.dense(x)))
+        return self.act(self.bn(self.dense(x)))
 
 
 class DBR4(DBR):
@@ -53,7 +54,7 @@ class DBR4(DBR):
 
 
 def get_conv2d(in_dim, out_dim):
-    return nn.Sequential(nn.Conv2d(in_dim , out_dim, kernel_size=1, bias=False), nn.BatchNorm2d(out_dim), nn.ReLU())
+    return nn.Sequential(nn.Conv2d(in_dim , out_dim, kernel_size=1, bias=False), nn.BatchNorm2d(out_dim), act())
 
 # Deals with features, no need of transposing
 class DbR(nn.Module):
@@ -62,10 +63,10 @@ class DbR(nn.Module):
         super().__init__()
         self.dense = nn.Linear(in_dim, out_dim)
         self.bn = nn.BatchNorm1d(out_dim)
-        self.relu = nn.ReLU()
+        self.act = act()
 
     def forward(self, x):
-        return self.relu(self.bn(self.dense(x)))
+        return self.act(self.bn(self.dense(x)))
 
 
 class STN(nn.Module):
