@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from modules import DBR, DbR, STN, MaxChannel, get_conv2d
+from modules import PointsConvBlock, LinearBlock, STN, MaxChannel, get_conv2d
 from utils import get_graph_features
 from pointnet_modules import PCT, SPCT
 # input feature dimension
@@ -18,9 +18,9 @@ class DGCNN(nn.Module):
         self.conv = get_conv2d(2 * IN_CHAN, h_dim[0])
         modules = []
         for i in range(1, len(h_dim) - 2):
-            modules.append(DBR(h_dim[i], h_dim[i + 1]))
+            modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
         modules.append(MaxChannel())
-        modules.append(DbR(h_dim[-2], h_dim[-1]))
+        modules.append(LinearBlock(h_dim[-2], h_dim[-1]))
         modules.append(nn.Linear(h_dim[-1], 2 * Z_DIM))
         self.encode = nn.Sequential(*modules)
 
@@ -36,11 +36,11 @@ class DGCNN(nn.Module):
 
 def get_mlp_encoder():
     h_dim = [64, 64, 64, 128, 128, 512]
-    modules = [DBR(IN_CHAN, h_dim[0])]
+    modules = [PointsConvBlock(IN_CHAN, h_dim[0])]
     for i in range(len(h_dim) - 2):
-        modules.append(DBR(h_dim[i], h_dim[i + 1]))
+        modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
     modules.append(MaxChannel())
-    modules.append(DbR(h_dim[-2], h_dim[-1]))
+    modules.append(LinearBlock(h_dim[-2], h_dim[-1]))
     modules.append(nn.Linear(h_dim[-1], 2 * Z_DIM))
     return nn.Sequential(*modules)
 
@@ -52,12 +52,12 @@ class PointNetEncoder(nn.Module):
         h_chan = [64, 64, 64, 128, 128, 512]
         self.stn = STN()
         self.stnk = STN(h_chan[0])
-        self.dbr1 = DBR(IN_CHAN, h_chan[0])
+        self.dbr1 = PointsConvBlock(IN_CHAN, h_chan[0])
         modules = []
         for i in range(len(h_chan) - 2):
-            modules.append(DBR(h_chan[i], h_chan[i + 1]))
+            modules.append(PointsConvBlock(h_chan[i], h_chan[i + 1]))
         modules.append(MaxChannel())
-        modules.append(DbR(h_chan[-2], h_chan[-1]))
+        modules.append(LinearBlock(h_chan[-2], h_chan[-1]))
         modules.append(nn.Linear(h_chan[-1], 2 * Z_DIM))
         self.encode = nn.Sequential(*modules)
 

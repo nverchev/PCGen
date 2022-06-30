@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from encoder import Z_DIM, IN_CHAN, N_POINTS
-from modules import DBR, DbR, DBR4, View
+from modules import PointsConvBlock, LinearBlock, PointsConvBlock4, View
 
 def get_mlp_decoder():
     net = nn.Sequential(nn.Linear(Z_DIM, 256),
@@ -26,12 +27,12 @@ class PointGenerator(nn.Module):
         self.hz = 256
         self.h = 1024
         self.h2 = 256
-        self.dbr = DBR4(self.sample_dim, self.h)
-        self.map_latent = DbR(Z_DIM, self.hz)
+        self.dbr = PointsConvBlock4(self.sample_dim, self.h)
+        self.map_latent = LinearBlock(Z_DIM, self.hz)
         self.map_latent1 = nn.Linear(self.hz, self.h)
-        self.dbr1 = DBR4(self.h, self.h2)
-        self.dbr2 = DBR4(self.h2, self.h2)
-        self.dbr3 = DBR4(self.h2, self.h2)
+        self.dbr1 = PointsConvBlock4(self.h, self.h2)
+        self.dbr2 = PointsConvBlock4(self.h2, self.h2)
+        self.dbr3 = PointsConvBlock4(self.h2, self.h2)
         self.lin = nn.Linear(self.h2, IN_CHAN)
 
     def forward(self, z):
@@ -39,6 +40,7 @@ class PointGenerator(nn.Module):
         device = z.device
         x = torch.rand(batch, self.n_samples, self.m, self.sample_dim).to(device)
         x = self.dbr(x, self.n_samples, self.m)
+        x = F.relu(x)
         z = self.map_latent(z)
         trans = torch.tanh(self.map_latent1(z))
         trans = trans.view(-1, 1, 1, self.h)
