@@ -56,10 +56,14 @@ class LinearBlock(PointsConvBlock):
 
 class PointsConvBlock4(PointsConvBlock):
 
-    def forward(self, x, n_samles, m):
-        x = x.view(-1, m, self.in_dim)
+    def forward(self, x, n_samples=1, m=None):
+        if m is not None:
+            x = x.view(-1, m, self.in_dim)
+        else:
+            x = x.squeeze()
         x = super().forward(x)
-        x = x.view(-1, n_samles, m, self.out_dim)
+        if m is not None:
+            x = x.view(-1, n_samples, m, self.out_dim)
         return x
 
 
@@ -68,6 +72,7 @@ def get_conv2d(in_dim, out_dim):
 
 
 class STN(nn.Module):
+
     def __init__(self, channels=3):
         super().__init__()
         self.channels = channels
@@ -85,3 +90,4 @@ class STN(nn.Module):
         x = self.net(x).view(-1, self.channels, self.channels)
         x += self.eye
         return x
+

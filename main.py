@@ -64,6 +64,7 @@ if __name__ == '__main__':
     minio_credential = args.minio_credential
     if minio_credential:
         from minio import Minio
+
         with open(minio_credential) as f:
             server, access_key, secret_key = f.readline().split(';')
             secret_key = secret_key.strip()
@@ -96,7 +97,7 @@ if __name__ == '__main__':
             print(k, ': ', v)
 
     if not model_eval:
-        m=128
+        m = 512
         for _ in range(training_epochs // 10):
             trainer.update_m_training(m)
             m *= 2
@@ -105,7 +106,7 @@ if __name__ == '__main__':
                 trainer.test(partition="val")
             trainer.save()
 
-    #load last model
+    # load last model
     trainer.load()
     trainer.test(partition='val')
     trainer.clas_metric()
