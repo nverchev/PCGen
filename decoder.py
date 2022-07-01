@@ -95,13 +95,13 @@ class PointGenerator(nn.Module):
         modules.append(nn.Linear(h_dim[-1], IN_CHAN))
         self.mlp = nn.Sequential(*modules)
 
-    def forward(self, z):
+    def forward(self, z, s):
         batch = z.size()[0]
         device = z.device
         mul1 = self.map_latent1(z).unsqueeze(1)
         mul2 = self.map_latent2(z).unsqueeze(1)
         add = self.map_latent3(z).unsqueeze(1)
-        x = torch.rand(batch, self.m, self.sample_dim).to(device)
+        x = s if s is not None else torch.rand(batch, self.m, self.sample_dim).to(device)
         x = self.dbr(x)
         x = x * mul1 + add * mul2
         x = self.mlp(x)
