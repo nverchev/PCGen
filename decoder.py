@@ -21,7 +21,7 @@ class MLPDecoder(nn.Module):
 
     def forward(self, z):
         x = torch.tanh(self.mlp(z))
-        return x - x.mean(1, keepdim=True)
+        return x
 
 #
 # class PointGenerator(nn.Module):
@@ -61,7 +61,6 @@ class MLPDecoder(nn.Module):
 #         x = self.mlp(x)
 #         x = self.lin(x)
 #         x = torch.tanh(x)
-#         x = x - x.mean(2, keepdim=True)
 #         return x.squeeze()
 #
 #     @property
@@ -102,12 +101,11 @@ class PointGenerator(nn.Module):
         mul1 = self.map_latent1(z).unsqueeze(1)
         mul2 = self.map_latent2(z).unsqueeze(1)
         add = self.map_latent3(z).unsqueeze(1)
-        x = torch.randn(batch, self.m, self.sample_dim).to(device)
+        x = torch.rand(batch, self.m, self.sample_dim).to(device)
         x = self.dbr(x)
         x = x * mul1 + add * mul2
         x = self.mlp(x)
         x = torch.tanh(x)
-        x = x - x.mean(1, keepdim=True)
         return x
 
     @property
