@@ -95,7 +95,7 @@ class PointGenerator(nn.Module):
         modules.append(nn.Linear(h_dim[-1], IN_CHAN))
         self.mlp = nn.Sequential(*modules)
 
-    def forward(self, z, s):
+    def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
         mul1 = self.map_latent1(z).unsqueeze(1)

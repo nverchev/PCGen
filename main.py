@@ -97,7 +97,7 @@ if __name__ == '__main__':
             print(k, ': ', v)
 
     if not model_eval:
-        m = 512
+        m = 128
         for _ in range(training_epochs // 10):
             trainer.update_m_training(m)
             m *= 2
