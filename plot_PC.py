@@ -10,7 +10,7 @@ def visualize_rotate(data):
         w = x + 1j * y
         return np.real(np.exp(1j * theta) * w), np.imag(np.exp(1j * theta) * w), z
 
-    for t in np.arange(0, 10.26, 0.1):
+    for t in np.arange(0, 5, 0.1):
         xe, ye, ze = rotate_z(x_eye, y_eye, z_eye, -t)
         frames.append(dict(layout=dict(scene=dict(camera=dict(eye=dict(x=xe, y=ye, z=ze))))))
     fig = go.Figure(data=data,
@@ -40,14 +40,21 @@ def visualize_rotate(data):
     return fig
 
 
-def pcshow(pc):
-    pc = pc.cpu().detach().numpy()
-    xs, zs, ys = pc.transpose()
-    data = [go.Scatter3d(x=xs, y=-ys, z=zs,
-                         mode='markers')]
+def pcshow(pcs, colors=None):
+    if not isinstance(pcs, list):
+      pcs = [pcs]
+      colors = [colors]
+    data = []
+    for pc, color in zip(pcs, colors):
+      pc = pc.cpu().detach().numpy()
+      xs, zs, ys = pc.transpose()
+      data.append(go.Scatter3d(x=xs, y=-ys, z=zs,
+                          mode='markers',
+                          marker=dict(color = color, colorscale = 'bluered')))
     fig = visualize_rotate(data)
     fig.update_traces(marker=dict(size=2,
-                                  line=dict(width=2,
+                                  line=dict(width=0.2,
                                             color='DarkSlateGrey')),
                       selector=dict(mode='markers'))
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
