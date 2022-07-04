@@ -331,7 +331,7 @@ class VAETrainer(Trainer):
     def update_m_training(self, m):
         self.model.decode.m_training = m
 
-    def clas_metric(self):
+    def clas_metric(self, final=False):
         self.test(partition="train")
         x_train = np.array([z.numpy() for z in self.test_outputs['z']])
         y_train = np.array([z.numpy() for z in self.test_targets])
@@ -340,7 +340,8 @@ class VAETrainer(Trainer):
         y_train = y_train[shuffle]
         print("Fitting the classifier ...")
         self.clf.fit(x_train, y_train)
-        self.test(partition="val")
+        partition = "test" if final else "val"
+        self.test(partition=partition)
         x_val = np.array([z.numpy() for z in self.test_outputs['z']])
         y_val = np.array([z.numpy() for z in self.test_targets])
         y_hat = self.clf.predict(x_val)
