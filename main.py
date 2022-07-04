@@ -18,18 +18,18 @@ def parse_args():
                         help='reconstruction loss')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
-    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'],
+    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenbatcet'],
                         help="Currently only one dataset available")
     parser.add_argument('--download', type=str, default='do_not_download',
                         choices=["from_zip", "from_minio", "do_not_download"],
                         help="You can process the dataset from the zip file. Otherwise you can  \
                                         download an already processed one from a server using minio")
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--epochs', type=int, default=60)
-    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
+    parser.add_argument('--epochs', type=int, default=250)
+    parser.add_argument('--optimizer', type=str, default='AdamW', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
                         , help='SGD has no momentum, otherwise momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
-    parser.add_argument('--wd', type=float, default=0.000, help='weight decay')
+    parser.add_argument('--wd', type=float, default=0.00001, help='weight decay')
     parser.add_argument('--cuda', type=bool, default=True, help='enables CUDA training')
     parser.add_argument('--eval', type=bool, default=False,
                         help='evaluate the model (exp_name needs to start with "final")')
@@ -98,10 +98,10 @@ if __name__ == '__main__':
             print(k, ': ', v)
 
     if not model_eval:
-        m = 128
+        m = 512
         for _ in range(training_epochs // 10):
-            trainer.update_m_training(m)
-            m *= 2
+            #trainer.update_m_training(m)
+            #m *= 2
             trainer.train(10)
             if experiment[:5] != 'final':
                 trainer.clas_metric()

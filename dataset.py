@@ -41,6 +41,7 @@ def get_dataset(experiment, batch_size, val_every=6, dir_path="./", download=Fal
         zip_path = os.path.join(dir_path, 'modelnet40.zip')
         if not os.path.exists(zip_path):
             url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'
+            "https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097 /?dl=1"
             r = requests.get(url, verify=False)
             open(zip_path, 'wb').write(r.content)
         data_path = os.path.join(dir_path, 'modelnet40')
