@@ -6,6 +6,7 @@ import geomloss
 from abc import ABCMeta, abstractmethod
 from utils import square_distance
 
+
 # Chamfer Distance
 
 def chamfer(t1, t2, dist):
@@ -15,15 +16,17 @@ def chamfer(t1, t2, dist):
     # We use the retrieved index on torch
     idx1 = dist.argmin(axis=1).expand(-1, -1, 3)
     m1 = t1.gather(1, idx1)
-    s1 = ((t2 - m1) ** 2).mean(0).sum()
+    s1 = torch.sqrt(((t2 - m1) ** 2).sum(-1)).mean()
     idx2 = dist.argmin(axis=2).expand(-1, -1, 3)
     m2 = t2.gather(1, idx2)
-    s2 = ((t1 - m2) ** 2).mean(0).sum()
+    s2 = torch.sqrt(((t1 - m2) ** 2).sum(-1)).mean()
     # forward + reverse
     return s1 + s2
+
+
 # def chamfer(t1, t2, dist):
-#     return torch.min(dist, axis=-1)[0].sum(-1).mean() \
-#            + torch.min(dist, axis=-2)[0].sum(-1).mean()
+#     return torch.sqrt(torch.min(dist, axis=-1)[0]).sum(-1).mean() \
+#            +  torch.sqrt(torch.min(dist, axis=-2)[0]).sum(-1).mean()
 
 # Nll reconstruction
 
@@ -36,6 +39,8 @@ def nll(inputs, recons, pairwise_dist):
     lse = pairwise_dist.logsumexp(axis=2)
     normalize = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(m)
     return -lse.sum(1).mean() + n * normalize
+
+
 # def nll(inputs, recons, pairwise_dist):
 #     n = inputs.size()[1]
 #     m = recons.size()[1]
@@ -99,7 +104,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
 
 class VAELossChamfer(AbstractVAELoss):
     losses = AbstractVAELoss.losses + ['Chamfer']
-    c_rec = 100
+    c_rec = 10000
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)

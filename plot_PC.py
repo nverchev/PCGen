@@ -40,17 +40,17 @@ def visualize_rotate(data):
     return fig
 
 
-def pcshow(pcs, colors=None):
+def pc_show(pcs, colors=None):
     if not isinstance(pcs, list):
-      pcs = [pcs]
-      colors = [colors]
+        pcs = [pcs]
+        colors = [colors]
     data = []
     for pc, color in zip(pcs, colors):
-      pc = pc.cpu().detach().numpy()
-      xs, zs, ys = pc.transpose()
-      data.append(go.Scatter3d(x=xs, y=-ys, z=zs,
-                          mode='markers',
-                          marker=dict(color = color, colorscale = 'bluered')))
+        pc = pc.cpu().detach().numpy()
+        xs, zs, ys = pc.transpose()
+        data.append(go.Scatter3d(x=xs, y=-ys, z=zs,
+                                 mode='markers',
+                                 marker=dict(color=color, colorscale='bluered')))
     fig = visualize_rotate(data)
     fig.update_traces(marker=dict(size=2,
                                   line=dict(width=0.2,
