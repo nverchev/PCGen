@@ -18,7 +18,7 @@ def parse_args():
                         help='reconstruction loss')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
-    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40'],
+    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'],
                         help="Currently only one dataset available")
     parser.add_argument('--download', type=str, default='do_not_download',
                         choices=["from_zip", "from_minio", "do_not_download"],
@@ -50,6 +50,7 @@ if __name__ == '__main__':
     decoder_name = args.decoder
     model_name = encoder_name + "_" + decoder_name
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
+    dataset = args.dataset
     recon_loss = args.recon_loss
     experiment = args.experiment
     dir_path = args.dir_path

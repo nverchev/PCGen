@@ -62,7 +62,6 @@ class MLPDecoder(nn.Module):
 #         x = x * mul + add
 #         x = self.mlp(x)
 #         x = self.lin(x)
-#         x = torch.tanh(x)
 #         return x.squeeze()
 #
 #     @property
@@ -171,11 +170,7 @@ class FoldingLayer(nn.Module):
         self.layers = nn.Sequential(*layers)
 
     def forward(self, grids, x):
-        """
-        Parameters
-        ----------
-            grids: reshaped 2D grids or intermediam reconstructed point clouds
-        """
+
         # concatenate
         x = torch.cat([grids, x], dim=1)
         # shared mlp

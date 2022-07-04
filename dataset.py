@@ -38,12 +38,12 @@ def get_dataset(experiment, batch_size, val_every=6, dir_path="./", download=Fal
                 minioClient=None, n_points=2048):
     final = experiment[:5] == 'final'
     if download == "from_zip":
-        zip_path = os.path.join(dir_path, 'modelnet40_normal_resampled.zip')
+        zip_path = os.path.join(dir_path, 'modelnet40.zip')
         if not os.path.exists(zip_path):
-            url = 'https://shapenet.cs.stanford.edu/media/modelnet40_normal_resampled.zip'
+            url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'
             r = requests.get(url, verify=False)
             open(zip_path, 'wb').write(r.content)
-        data_path = os.path.join(dir_path, 'modelnet40_normal_resampled')
+        data_path = os.path.join(dir_path, 'modelnet40')
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(dir_path)
         for split in ["train", "test"]:
