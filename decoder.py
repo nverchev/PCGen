@@ -21,7 +21,7 @@ class MLPDecoder(nn.Module):
         self.mlp = nn.Sequential(*modules)
 
     def forward(self, z):
-        x = torch.tanh(self.mlp(z))
+        x = self.mlp(z)
         return x
 
 
@@ -107,7 +107,6 @@ class PointGenerator(nn.Module):
         x = self.dbr(x)
         x = x * mul1 + add * mul2
         x = self.mlp(x)
-        x = torch.tanh(x)
         return x
 
     @property
