@@ -13,7 +13,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
     parser.add_argument('--encoder', type=str, default='DGCNN', choices=["MLP", "PointNet", "DGCNN", "PCT"])
-    parser.add_argument('--decoder', type=str, default='Gen', choices=["MLP", "Gen"])
+    parser.add_argument('--decoder', type=str, default='Gen', choices=["MLP", "Gen, FoldingNet"])
     parser.add_argument('--recon_loss', type=str, default='Chamfer', choices=["Chamfer", "Sinkhorn", "NLL", "MMD"],
                         help='reconstruction loss')
     parser.add_argument('--experiment', type=str, default='',
