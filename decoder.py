@@ -127,7 +127,7 @@ class FoldingNet(nn.Module):
         self.in_chan = IN_CHAN
         # Sample the grids in 2D space
         num_grid = 45
-        self.m = num_grid ** 2
+        self.m_grid = num_grid ** 2
         xx = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
         self.grid = torch.stack(torch.meshgrid(xx, yy, indexing="ij")).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
@@ -142,7 +142,7 @@ class FoldingNet(nn.Module):
         grid = grid.unsqueeze(0).repeat(batch_size, 1, 1)  # (B, 2, 45 * 45)
 
         # repeat codewords
-        x = z.unsqueeze(2).repeat(1, 1, self.m)
+        x = z.unsqueeze(2).repeat(1, 1, self.m_grid)
 
         # two folding operations
         recon1 = self.fold1(grid, x)
