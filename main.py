@@ -103,13 +103,13 @@ if __name__ == '__main__':
             m *= 2
             trainer.train(10)
             if experiment[:5] != 'final':
-                trainer.test(partition="val")
+                trainer.clas_metric()
             trainer.save()
 
-    # load last model
+    # loads last model
     trainer.load()
-    trainer.test(partition='val')
-    trainer.clas_metric()
     if experiment[:5] == 'final':
-        trainer.test(partition='test')
+        trainer.clas_metric(final=True)
+    else:
         trainer.clas_metric()
+
