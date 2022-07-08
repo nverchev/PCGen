@@ -139,7 +139,6 @@ class Trainer(metaclass=ABCMeta):
         if save_outputs:
             self.test_targets, self.test_outputs = [], {}
 
-        len_sess = len(loader.dataset)
         epoch_loss = {loss: 0 for loss in self.losses}
         num_batch = len(loader)
         iterable = tqdm(enumerate(loader), total=num_batch, disable=self.quiet_mode)
@@ -168,7 +167,7 @@ class Trainer(metaclass=ABCMeta):
                 self.test_targets.extend(self.to_recursive(targets, 'detach_cpu'))
             if not self.quiet_mode and partition == 'train':
                 if batch_idx % (len(loader) // 10 or 1) == 0:
-                    iterable.set_postfix({'Batch': batch_idx * loader.batch_size,
+                    iterable.set_postfix({'Seen': batch_idx * loader.batch_size,
                                           'Loss': criterion.item()})
                 if batch_idx == len(loader) - 1:  # clear after last
                     iterable.set_description('')

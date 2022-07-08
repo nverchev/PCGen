@@ -119,6 +119,44 @@ class PointGenerator(nn.Module):
     def m(self, m):
         self._m = m
 
+#
+# class PointGenerator(nn.Module):
+#
+#     def __init__(self):
+#         super().__init__()
+#         self.in_chan = IN_CHAN
+#         h_dim = [256, 1024, 128, 256, 128]
+#         self.m = 2048
+#         self.m_training = 128
+#         self.sample_dim = 16
+#         self.h = h_dim[1]
+#         self.dbr = PointsConvBlock(self.sample_dim + Z_DIM, h_dim[1], act=None)
+#         modules = []
+#         for i in range(1, len(h_dim) - 1):
+#             modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
+#         modules.append(nn.Linear(h_dim[-1], IN_CHAN))
+#         self.mlp = nn.Sequential(*modules)
+#
+#     def forward(self, z, s=None):
+#         batch = z.size()[0]
+#         device = z.device
+#         z = z.unsqueeze(1).expand(-1, self.m, -1)
+#         x = s if s is not None else torch.rand(batch, self.m, self.sample_dim).to(device)
+#         x = torch.cat([x, z], dim=2).contiguous()
+#         x = self.dbr(x)
+#         x = self.mlp(x)
+#         return x
+#
+#     @property
+#     def m(self):
+#         if self.training:
+#             return self.m_training
+#         else:
+#             return self._m
+#
+#     @m.setter
+#     def m(self, m):
+#         self._m = m
 
 class FoldingNet(nn.Module):
     def __init__(self):
@@ -149,6 +187,33 @@ class FoldingNet(nn.Module):
 
         return recon2.transpose(2, 1)
 
+class FoldingNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.in_chan = IN_CHAN
+        # Sample the grids in 2D space
+        num_grid = 45
+        self.m_grid = num_grid ** 2
+        xx = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
+        yy = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
+        self.grid = torch.stack(torch.meshgrid(xx, yy, indexing="ij")).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
+        self.fold1 = FoldingLayer(Z_DIM + 2, [512, 512, 3])
+        self.fold2 = FoldingLayer(Z_DIM + 3, [512, 512, 3])
+
+    def forward(self, z):
+        batch_size = z.shape[0]
+        device = z.device
+        # repeat grid for batch operation
+        grid = torch.rand(batch_size, 2, self.m_grid).to(device)
+
+        # repeat codewords
+        x = z.unsqueeze(2).repeat(1, 1, self.m_grid)
+
+        # two folding operations
+        recon1 = self.fold1(grid, x)
+        recon2 = self.fold2(recon1, x)
+
+        return recon2.transpose(2, 1)
 
 class FoldingLayer(nn.Module):
     """
