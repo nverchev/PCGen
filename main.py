@@ -23,11 +23,6 @@ def parse_args():
     parser.add_argument('--m_training', type=int, default=512,
                         help="Points  generated when training, 0 for  increasing sequence  \
                             128 -> 4096 ")
-
-    parser.add_argument('--download', type=str, default='do_not_download',
-                        choices=["from_zip", "from_minio", "do_not_download"],
-                        help="You can process the dataset from the zip file. Otherwise you can  \
-                                        download an already processed one from a server using minio")
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=250)
     parser.add_argument('--optimizer', type=str, default='AdamW', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
@@ -43,7 +38,7 @@ def parse_args():
                         help='Default is given by model_recon_loss_exp_name')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--minio_credential', type=str, default='',
-                        help='path of file with written server.access_key.secret_key')
+                        help='path of file with written server;access_key;secret_key')
     return parser.parse_args()
 
 
@@ -79,8 +74,7 @@ if __name__ == '__main__':
         minioClient = None
     exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path == "" else args.model_path
 
-    train_loader, val_loader, test_loader = get_dataset(experiment, dataset, batch_size, dir_path=dir_path, download=download,
-                                                        minioClient=minioClient, n_points=num_points)
+    train_loader, val_loader, test_loader = get_dataset(experiment, dataset, batch_size, dir_path=dir_path, n_points=num_points)
     model = VAE(encoder_name, decoder_name)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     block_args = {
