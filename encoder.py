@@ -7,7 +7,7 @@ from utils import get_graph_features
 # input feature dimension
 IN_CHAN = 3
 N_POINTS = 2048
-Z_DIM = 128
+Z_DIM = 512
 
 
 class DGCNN_sim(nn.Module):

@@ -20,6 +20,10 @@ def parse_args():
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenbatcet'],
                         help="Currently only one dataset available")
+    parser.add_argument('--m_training', type=int, default=512,
+                        help="Points  generated when training, 0 for  increasing sequence  \
+                            128 -> 4096 ")
+
     parser.add_argument('--download', type=str, default='do_not_download',
                         choices=["from_zip", "from_minio", "do_not_download"],
                         help="You can process the dataset from the zip file. Otherwise you can  \
@@ -63,6 +67,7 @@ if __name__ == '__main__':
     num_points = args.num_points
     download = args.download
     minio_credential = args.minio_credential
+    m_training = args.m_training
     if minio_credential:
         from minio import Minio
 
@@ -98,10 +103,12 @@ if __name__ == '__main__':
             print(k, ': ', v)
 
     if not model_eval:
-        m = 512
-        for _ in range(training_epochs // 10):
+        for ep in range(training_epochs // 10):
+            if m_training == 0:
+                m = max(128, (4096 * ep) // training_epochs)
+            else:
+                m = m_training
             trainer.update_m_training(m)
-            #m *= 2
             trainer.train(10)
             if experiment[:5] != 'final':
                 trainer.clas_metric()
