@@ -2,12 +2,12 @@ import torch
 import torch.nn as nn
 from modules import PointsConvBlock, LinearBlock, STN, MaxChannel, EdgeConvBlock
 from utils import get_graph_features
-#from pointnet_modules import PCT, SPCT
+
+# from pointnet_modules import PCT, SPCT
 # input feature dimension
 IN_CHAN = 3
 N_POINTS = 2048
 Z_DIM = 128
-
 
 
 class DGCNN_sim(nn.Module):
@@ -34,7 +34,7 @@ class DGCNN_sim(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, feat_dim=1024,  k=40):
+    def __init__(self, feat_dim=1024, k=40):
         super().__init__()
         self.k = k
         h_dim = [64, 64, 64, 128, 128, 512]
@@ -55,6 +55,7 @@ class DGCNN(nn.Module):
         x = x.transpose(2, 1).contiguous()
         return self.encode(x)
 
+
 def get_mlp_encoder():
     h_dim = [64, 64, 128, 256, 128, 512]
     modules = [PointsConvBlock(IN_CHAN, h_dim[0])]
@@ -66,13 +67,11 @@ def get_mlp_encoder():
     return nn.Sequential(*modules)
 
 
-
-
 def get_encoder(encoder_name):
     dict_encoder = {
         "MLP": get_mlp_encoder,
         "DGCNN_sim": DGCNN_sim,
         "DGCNN": DGCNN,
-        #"PCT": PCT
+        # "PCT": PCT
     }
     return dict_encoder[encoder_name]

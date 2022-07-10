@@ -35,7 +35,7 @@ def get_points_batch_norm(dim):
 class LinearBlock(nn.Module):
 
     # Dense + Batch + Act
-    def __init__(self, in_dim, out_dim, act=act()):
+    def __init__(self, in_dim, out_dim, act=act):
         super().__init__()
         self.dense = nn.Linear(in_dim, out_dim, bias=False)
         self.bn = nn.BatchNorm1d(out_dim)
@@ -51,7 +51,7 @@ class LinearBlock(nn.Module):
 # Input (Batch, Points, Features)
 class PointsConvBlock(LinearBlock):
     # Dense + Batch + Relu
-    def __init__(self, in_dim, out_dim, act=act()):
+    def __init__(self, in_dim, out_dim, act=act):
         super().__init__(in_dim, out_dim, act)
         self.bn = get_points_batch_norm(out_dim)
 
@@ -73,7 +73,7 @@ class PointsConvBlock4(PointsConvBlock):
 # Input (Batch, Channels, Edge_start, Edge_end)
 class EdgeConvBlock(LinearBlock):
 
-    def __init__(self, in_dim, out_dim, act=act()):
+    def __init__(self, in_dim, out_dim, act=act):
         super().__init__(in_dim, out_dim, act)
         self.dense = nn.Conv2d(in_dim, out_dim, kernel_size=1, bias=False)
         self.bn = nn.BatchNorm2d(out_dim)
