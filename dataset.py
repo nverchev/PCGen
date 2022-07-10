@@ -38,32 +38,37 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", dow
                 minioClient=None, n_points=2048):
     final = experiment[:5] == 'final'
     if download == "from_zip":
-        zip_path = os.path.join(dir_path, 'modelnet40.zip')
-        if not os.path.exists(zip_path):
-            url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'
-            #"https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097 /?dl=1"
-            r = requests.get(url, verify=False)
-            open(zip_path, 'wb').write(r.content)
-        data_path = os.path.join(dir_path, 'modelnet40')
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(dir_path)
-        for split in ["train", "test"]:
-            names = []
-            shapes = []
-            pcd = []
-            with open(os.path.join(data_path, f'modelnet40_{split}.txt'), 'r') as f:
-                for line in f.readlines():
-                    line = line.strip()
-                    names.append(line)
-                    shape = "_".join(line.split("_")[:-1])
-                    shapes.append(shape)
-                    path = os.path.join(data_path, shape, line) + ".txt"
-                    pcd.append(preprocess(path, n_points))
-            sorted_shapes = sorted(set(shapes))  # both dataset have the same shapes
-            label_map = {name: label for label, name in enumerate(sorted_shapes)}
-            labels = [label_map[shape] for shape in shapes]
-            ds_name = f'{split}_dataset.npz'
-            np.savez(ds_name, pcd=pcd, labels=labels, names=names)
+        if dataset == "modelnet40":
+            dataset_path = os.path.join(dir_path, 'dataset')
+            if not os.path.exists(dataset_path):
+                os.mkdir(dataset_path)
+            zip_path = os.path.join(dataset_path, 'modelnet40.zip')
+            if not os.path.exists(zip_path):
+                url = "https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097 /?dl=1"
+                # url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'
+                # "https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097 /?dl=1"
+                r = requests.get(url, verify=False)
+                open(zip_path, 'wb').write(r.content)
+            # data_path = os.path.join(dir_path, 'modelnet40')
+            # with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            #     zip_ref.extractall(dir_path)
+            # for split in ["train", "test"]:
+            #     names = []
+            #     shapes = []
+            #     pcd = []
+            #     with open(os.path.join(data_path, f'modelnet40_{split}.txt'), 'r') as f:
+            #         for line in f.readlines():
+            #             line = line.strip()
+            #             names.append(line)
+            #             shape = "_".join(line.split("_")[:-1])
+            #             shapes.append(shape)
+            #             path = os.path.join(data_path, shape, line) + ".txt"
+            #             pcd.append(preprocess(path, n_points))
+            #     sorted_shapes = sorted(set(shapes))  # both dataset have the same shapes
+            #     label_map = {name: label for label, name in enumerate(sorted_shapes)}
+            #     labels = [label_map[shape] for shape in shapes]
+            #     ds_name = f'{split}_dataset.npz'
+            #     np.savez(ds_name, pcd=pcd, labels=labels, names=names)
     elif download == "from_minio":
         assert minioClient is not None, "Please provide minio client"
         minioClient.fget_object('pcdvae', 'train_dataset.npz', 'train_dataset.npz')
