@@ -60,7 +60,6 @@ if __name__ == '__main__':
     weight_decay = args.wd
     model_eval = args.eval
     num_points = args.num_points
-    download = args.download
     minio_credential = args.minio_credential
     m_training = args.m_training
     if minio_credential:
