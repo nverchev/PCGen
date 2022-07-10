@@ -309,7 +309,7 @@ class Trainer(metaclass=ABCMeta):
 
 
 class VAETrainer(Trainer):
-    clf = svm.SVC()
+    clf = svm.LinearSVC()
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, recon_loss, exp_name, block_args):
