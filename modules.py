@@ -31,8 +31,9 @@ def get_points_batch_norm(dim):
     return nn.Sequential(TransposeLast(), nn.BatchNorm1d(dim), TransposeLast())
 
 
-# Deals with features, no need of transposing during batch normalization
+# Input (Batch, Features)
 class LinearBlock(nn.Module):
+
     # Dense + Batch + Act
     def __init__(self, in_dim, out_dim, act=act()):
         super().__init__()
@@ -47,13 +48,15 @@ class LinearBlock(nn.Module):
         return x if self.act is None else self.act(x)
 
 
+# Input (Batch, Points, Features)
 class PointsConvBlock(LinearBlock):
     # Dense + Batch + Relu
     def __init__(self, in_dim, out_dim, act=act()):
-        super().__init__()
+        super().__init__(in_dim, out_dim, act)
         self.bn = get_points_batch_norm(out_dim)
 
 
+# Input (Batch, Samples, Points, Features)
 class PointsConvBlock4(PointsConvBlock):
 
     def forward(self, x, n_samples=1, m=None):
@@ -66,16 +69,15 @@ class PointsConvBlock4(PointsConvBlock):
             x = x.view(-1, n_samples, m, self.out_dim)
         return x
 
+
+# Input (Batch, Channels, Edge_start, Edge_end)
 class EdgeConvBlock(LinearBlock):
 
     def __init__(self, in_dim, out_dim, act=act()):
-        super().__init__()
+        super().__init__(in_dim, out_dim, act)
         self.dense = nn.Conv2d(in_dim, out_dim, kernel_size=1, bias=False)
-
         self.bn = nn.BatchNorm2d(out_dim)
 
-def get_conv2d(in_dim, out_dim):
-    return nn.Sequential(, , act())
 
 
 class STN(nn.Module):
