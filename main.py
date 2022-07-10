@@ -18,7 +18,7 @@ def parse_args():
                         help='reconstruction loss')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
-    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenbatcet'],
+    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'],
                         help="Currently only one dataset available")
     parser.add_argument('--m_training', type=int, default=512,
                         help="Points  generated when training, 0 for  increasing sequence  \
