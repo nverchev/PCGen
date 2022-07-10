@@ -16,17 +16,17 @@ def chamfer(t1, t2, dist):
     # We use the retrieved index on torch
     idx1 = dist.argmin(axis=1).expand(-1, -1, 3)
     m1 = t1.gather(1, idx1)
-    s1 = torch.sqrt(((t2 - m1) ** 2).sum(-1)).mean()
+    s1 = ((t2 - m1) ** 2).sum(-1).mean()
     idx2 = dist.argmin(axis=2).expand(-1, -1, 3)
     m2 = t2.gather(1, idx2)
-    s2 = torch.sqrt(((t1 - m2) ** 2).sum(-1)).mean()
+    s2 = ((t1 - m2) ** 2).sum(-1).mean()
     # forward + reverse
     return s1 + s2
 
 
 # def chamfer(t1, t2, dist):
-#     return torch.sqrt(torch.min(dist, axis=-1)[0]).sum(-1).mean() \
-#            +  torch.sqrt(torch.min(dist, axis=-2)[0]).sum(-1).mean()
+#     return torch.min(dist, axis=-1)[0].sum(-1).mean() \
+#            +  torch.min(dist, axis=-2)[0].sum(-1).mean()
 
 # Nll reconstruction
 
