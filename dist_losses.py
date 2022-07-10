@@ -16,20 +16,20 @@ def chamfer(t1, t2, dist):
     # We use the retrieved index on torch
     idx1 = dist.argmin(axis=1).expand(-1, -1, 3)
     m1 = t1.gather(1, idx1)
-    s1 = ((t2 - m1) ** 2).sum(-1).mean()
+    s1 = ((t2 - m1) ** 2).sum(axis=[-1, -2]).mean()
     idx2 = dist.argmin(axis=2).expand(-1, -1, 3)
     m2 = t2.gather(1, idx2)
-    s2 = ((t1 - m2) ** 2).sum(-1).mean()
+    s2 = ((t1 - m2) ** 2).sum(axis=[-1, -2]).mean()
     # forward + reverse
     return s1 + s2
 
-
+# # Works with distance in torch
 # def chamfer(t1, t2, dist):
 #     return torch.min(dist, axis=-1)[0].sum(-1).mean() \
 #            +  torch.min(dist, axis=-2)[0].sum(-1).mean()
 
-# Nll reconstruction
 
+# Nll reconstruction
 def nll(inputs, recons, pairwise_dist):
     n = inputs.size()[1]
     m = recons.size()[1]
@@ -104,7 +104,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
 
 class VAELossChamfer(AbstractVAELoss):
     losses = AbstractVAELoss.losses + ['Chamfer']
-    c_rec = 10000
+    c_rec = 100
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
