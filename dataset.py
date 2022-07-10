@@ -21,22 +21,19 @@ def preprocess(path, n_points):
 
     return cloud.astype(np.float32)
 
-class Modelnet40Dataset(Dataset):
+
+class BaseDataset(Dataset):
+
     def __init__(self, split, data_dir, n_points=2048):
+        self.data_name = None
         self.split = split
         self.data_dir = data_dir
         self.n_points = n_points
-        self.pcd, self.labels = self.load()
-        self.pcd = torch.from_numpy(self.pcd)
-        assert len(self) == len(self.labels)
 
-    def __len__(self):
-        return self.pcd.shape[0]
-
-    def load(self):
+    def load(self, split):
         pcs = []
         labels = []
-        for h5_name in glob2.glob(os.path.join(self.data_dir, 'modelnet40_hdf5_2048', f'*{self.split}*.h5')):
+        for h5_name in glob2.glob(os.path.join(self.data_dir, self.data_name, f'*{split}*.h5')):
             with h5py.File(h5_name, 'r+') as f:
                 pc = f['data'][:].astype('float32')
                 pc = pc[:self.n_points]
@@ -47,31 +44,74 @@ class Modelnet40Dataset(Dataset):
             pcs.append(pc)
             labels.append(label)
         pcs = np.concatenate(pcs, axis=0)
-        labels = np.concatenate(labels, axis=0).ravel()
+        labels = np.concatenate(labels, axis=0)
         return pcs, labels
+
+    def __len__(self):
+        return self.pcd.shape[0]
 
     def __getitem__(self, index):
         return self.pcd[index], self.labels[index]
 
 
+class Modelnet40Dataset(BaseDataset):
+
+    def __init__(self, split, data_dir, n_points=2048):
+        super().__init__(split, data_dir, n_points)
+        self.data_name = 'modelnet40_hdf5_2048'
+        self.pcd, self.labels = self.load(split)
+        self.pcd = torch.from_numpy(self.pcd)
+        self.labels = self.labels.ravel()
+        assert len(self) == len(self.labels)
+
+    def load(self, split):
+        # validation is inside the train split
+        if split == "trainval":
+            split = "train"
+        return super().load(split)
+
+
+class ShapeNetDataset(BaseDataset):
+
+    def __init__(self, split, data_dir, n_points=2048):
+        super().__init__(split, data_dir, n_points)
+        self.data_name = 'shapenetcorev2_hdf5_2048'
+        self.pcd, self.labels = self.load(split)
+        self.pcd = torch.from_numpy(self.pcd)
+        self.labels = self.labels.ravel()
+        assert len(self) == len(self.labels)
+
+    def load(self, split):
+        if split == "trainval":
+            pcd1, labels1 = super().load(split="train")
+            pcd2, labels2 = super().load(split="val")
+            return np.concatenate([pcd1, pcd2], axis=0), np.concatenate([labels1, labels2], axis=0),
+        else:
+            return super().load(split=split)
+
+
 def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_points=2048):
     data_dir = os.path.join(dir_path, 'dataset')
+    if not os.path.exists(data_dir):
+        os.mkdir(data_dir)
+
     if dataset == "modelnet40":
-        if not os.path.exists(data_dir):
-            os.mkdir(data_dir)
         zip_path = os.path.join(data_dir, 'modelnet40_hdf5_2048.zip')
+        url = "https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097/?dl=1"
+        PCDataset = Modelnet40Dataset
+    else:
+        assert dataset == "shapenet"
+        zip_path = os.path.join(data_dir, 'shapenetcorev2_hdf5_2048.zip')
+        url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'
+        PCDataset = ShapeNetDataset
         if not os.path.exists(zip_path):
-            url = "https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097/?dl=1"
-            # url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'
-            # "https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097 /?dl=1"
             r = requests.get(url, verify=False)
             open(zip_path, 'wb').write(r.content)
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(data_dir)
-        PCDataset = Modelnet40Dataset
     pin_memory = torch.cuda.is_available()
-    train_dataset = PCDataset(data_dir=data_dir, split="train", n_points=n_points)
     if experiment[:5] == 'final':
+        train_dataset = PCDataset(data_dir=data_dir, split="trainval", n_points=n_points)
         test_dataset = PCDataset(data_dir=data_dir, split="test", n_points=n_points)
         train_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
                                                    batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
@@ -81,13 +121,19 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
                                                   shuffle=False, pin_memory=pin_memory)
 
     else:
-        num_train = len(train_dataset)
-        train_idx = list(range(num_train))  # next line removes indices from train_idx
-        # pop backwards to keep correct indexing
-        val_idx = [train_idx.pop(i) for i in train_idx[::-val_every]]
-        initial_train_dataset = Subset(train_dataset, train_idx)
-        val_dataset = Subset(train_dataset, val_idx)
-        train_loader = torch.utils.data.DataLoader(initial_train_dataset, drop_last=True,
+        train_dataset = PCDataset(data_dir=data_dir, split="train", n_points=n_points)
+
+        if dataset == "modelnet40":
+            num_train = len(train_dataset)
+            train_idx = list(range(num_train))  # next line removes indices from train_idx
+            # pop backwards to keep correct indexing
+            val_idx = [train_idx.pop(i) for i in train_idx[::-val_every]]
+            val_dataset = Subset(train_dataset, val_idx)
+            train_dataset = Subset(train_dataset, train_idx)
+        else:
+            val_dataset = PCDataset(data_dir=data_dir, split="val", n_points=n_points)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
                                                    batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
 
         val_loader = torch.utils.data.DataLoader(val_dataset,
@@ -97,7 +143,7 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
 
     return train_loader, val_loader, test_loader
 
-#Old preproc
+# Old preproc
 
 #
 #
