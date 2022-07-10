@@ -3,6 +3,8 @@ import torch
 import os
 import json
 import re
+import warnings
+from sklearn.exceptions import ConvergenceWarning
 import torch.cuda.amp as amp
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
@@ -29,6 +31,7 @@ minioClient = Minio(*Your storage name*,
                   secure=True)
 
 '''
+
 
 class Trainer(metaclass=ABCMeta):
     losses = []  # defined later with the loss function
@@ -309,7 +312,7 @@ class Trainer(metaclass=ABCMeta):
 
 
 class VAETrainer(Trainer):
-    clf = svm.LinearSVC(max_iter=10000)
+    clf = svm.LinearSVC()
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, recon_loss, exp_name, block_args):
@@ -338,7 +341,10 @@ class VAETrainer(Trainer):
         x_train = x_train[shuffle]
         y_train = y_train[shuffle]
         print("Fitting the classifier ...")
-        self.clf.fit(x_train, y_train)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn")
+            # Does not fully converge
+            self.clf.fit(x_train, y_train)
         partition = "test" if final else "val"
         self.test(partition=partition)
         x_val = np.array([z.numpy() for z in self.test_outputs['z']])
@@ -349,10 +355,8 @@ class VAETrainer(Trainer):
         return self.acc
 
 
-
 def get_trainer(model, recon_loss, exp_name, block_args):
     return VAETrainer(model, recon_loss, exp_name, block_args)
-
 
 # class VAEMetric():
 #     # overwrites Trainer method
@@ -386,4 +390,3 @@ def get_trainer(model, recon_loss, exp_name, block_args):
 #         print(f'KLD: {KLD:.4f}', end='\t')
 #         print(f'Chamfer: {chamfer_recon / l_test:.4f}', end='\t')
 #         print(f'NLL: {nll_recon / l_test:.4f}', end='\t')
-

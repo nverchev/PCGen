@@ -34,7 +34,7 @@ def preprocess(path, n_points):
     return cloud.astype(np.float32)
 
 
-def get_dataset(experiment, batch_size, val_every=6, dir_path="./", download=False,
+def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", download=False,
                 minioClient=None, n_points=2048):
     final = experiment[:5] == 'final'
     if download == "from_zip":

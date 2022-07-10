@@ -79,7 +79,7 @@ if __name__ == '__main__':
         minioClient = None
     exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path == "" else args.model_path
 
-    train_loader, val_loader, test_loader = get_dataset(experiment, batch_size, dir_path=dir_path, download=download,
+    train_loader, val_loader, test_loader = get_dataset(experiment, dataset, batch_size, dir_path=dir_path, download=download,
                                                         minioClient=minioClient, n_points=num_points)
     model = VAE(encoder_name, decoder_name)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
