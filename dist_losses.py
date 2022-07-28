@@ -104,7 +104,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
 
 class VAELossChamfer(AbstractVAELoss):
     losses = AbstractVAELoss.losses + ['Chamfer']
-    c_rec = 100000
+    c_rec = 10000
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
