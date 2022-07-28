@@ -16,10 +16,10 @@ def chamfer(t1, t2, dist):
     # We use the retrieved index on torch
     idx1 = dist.argmin(axis=1).expand(-1, -1, 3)
     m1 = t1.gather(1, idx1)
-    s1 = ((t2 - m1) ** 2).sum(-1).mean()
+    s1 = ((t2 - m1) ** 2).mean(0).sum()
     idx2 = dist.argmin(axis=2).expand(-1, -1, 3)
     m2 = t2.gather(1, idx2)
-    s2 = ((t1 - m2) ** 2).sum(-1).mean()
+    s2 = ((t1 - m2) ** 2).mean(0).sum()
     # forward + reverse
     return s1 + s2
 
@@ -104,7 +104,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
 
 class VAELossChamfer(AbstractVAELoss):
     losses = AbstractVAELoss.losses + ['Chamfer']
-    c_rec = 2048000
+    c_rec = 100000
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
