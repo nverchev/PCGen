@@ -48,15 +48,17 @@ class DGCNN(nn.Module):
         x = x.transpose(2, 1).contiguous()
         xs = []
         for conv in self.edge_convs:
-            x = get_graph_features(x, k=self.k)
+            x = get_graph_feature(x, k=self.k)
+            torch.cuda.synchronize()
+            print("Memory:", torch.cuda.memory_allocated())
             x = conv(x)
             x = x.max(dim=-1, keepdim=False)[0]
             xs.append(x)
         x = torch.cat(xs, dim=1).transpose(2, 1).contiguous()
         x = self.final_conv(x)
         x = x.max(dim=1, keepdim=False)[0]
-
         return x
+
 
 def get_mlp_encoder():
     h_dim = [64, 64, 128, 256, 128, 512]
