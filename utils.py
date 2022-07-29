@@ -63,7 +63,7 @@ def get_graph_feature(x, k=20, idx=None):
     num_points = x.size(2)
     x = x.view(batch_size, -1, num_points)  # (batch_size, num_dims, num_points)
     if idx is None:
-        idx = knn1(x, k=k)  # (batch_size, num_points, k)
+        idx = knn(x, k=k)  # (batch_size, num_points, k)
 
     _, num_dims, _ = x.size()
 
