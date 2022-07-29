@@ -62,7 +62,7 @@ class DGCNN(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, args):
+    def __init__(self):
         super().__init__()
         self.k = 40
 
