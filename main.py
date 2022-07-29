@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--m_training', type=int, default=2048,
                         help="Points  generated when training, 0 for  increasing sequence  \
                             128 -> 4096 ")
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--epochs', type=int, default=250)
     parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
                         , help='SGD has no momentum, otherwise momentum = 0.9')
