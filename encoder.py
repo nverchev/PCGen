@@ -34,26 +34,29 @@ class DGCNN_sim(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, feat_dim=1024, k=40):
+    def __init__(self, feat_dim=512, k=40):
         super().__init__()
         self.k = k
-        h_dim = [64, 64, 128, 128, 512]
-        self.conv = EdgeConvBlock(2 * IN_CHAN, h_dim[0])
-        modules = []
-        for i in range(1, len(h_dim) - 2):
-            modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
-        modules.append(MaxChannel())
-        modules.append(LinearBlock(h_dim[-2], h_dim[-1]))
-        modules.append(nn.Linear(h_dim[-1], 2 * Z_DIM))
-        self.encode = nn.Sequential(*modules)
+        h_dim = [64, 64, 128, 256]
+        edge_conv_list = [EdgeConvBlock(2 * IN_CHAN, h_dim[0])]
+        for i in range(len(h_dim) - 3):
+            edge_conv_list.append(EdgeConvBlock(2 * h_dim[i], h_dim[i + 1]))
+        self.edge_convs = nn.Sequential(*edge_conv_list)
+        self.final_edge_conv = EdgeConvBlock(sum(h_dim), feat_dim)
+
 
     def forward(self, x):
         x = x.transpose(2, 1).contiguous()
-        x = get_graph_features(x, k=self.k)
-        x = self.conv(x)
+        xs = []
+        for conv in self.edge_convs:
+            x = get_graph_features(x, k=self.k)
+            x = conv(x)
+            x = x.max(dim=-1, keepdim=False)[0]
+            xs.append(x)
+        x = self.final_edge_conv(torch.cat(xs, dim=1))
         x = x.max(dim=-1, keepdim=False)[0]
-        x = x.transpose(2, 1).contiguous()
-        return self.encode(x)
+
+        return x
 
 
 def get_mlp_encoder():

@@ -85,7 +85,7 @@ if __name__ == '__main__':
         'val_loader': val_loader,
         'test_loader': test_loader,
         'batch_size': batch_size,
-        'schedule': CosineSchedule(decay_steps=training_epochs, min_decay=0.01),
+        'schedule': CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
         'minioClient': minioClient,
         'dir_path': dir_path,
     }
