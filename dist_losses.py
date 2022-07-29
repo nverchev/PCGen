@@ -79,7 +79,6 @@ class AbstractVAELoss(metaclass=ABCMeta):
         return {
             'Criterion': criterion,
             'KLD': KLD,
-            'reg': reg_lss,
             **recon_loss_dict
         }
 
