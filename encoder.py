@@ -39,7 +39,7 @@ class DGCNN(nn.Module):
         self.k = k
         h_dim = [64, 64, 128, 256]
         edge_conv_list = [EdgeConvBlock(2 * IN_CHAN, h_dim[0])]
-        for i in range(len(h_dim) - 3):
+        for i in range(len(h_dim) - 1):
             edge_conv_list.append(EdgeConvBlock(2 * h_dim[i], h_dim[i + 1]))
         self.edge_convs = nn.Sequential(*edge_conv_list)
         self.final_conv = nn.Linear(sum(h_dim), 2 * Z_DIM)
