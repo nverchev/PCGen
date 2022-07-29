@@ -20,12 +20,12 @@ def parse_args():
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'],
                         help="Currently only one dataset available")
-    parser.add_argument('--m_training', type=int, default=512,
+    parser.add_argument('--m_training', type=int, default=2048,
                         help="Points  generated when training, 0 for  increasing sequence  \
                             128 -> 4096 ")
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epochs', type=int, default=250)
-    parser.add_argument('--optimizer', type=str, default='AdamW', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
+    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
                         , help='SGD has no momentum, otherwise momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.00001, help='weight decay')

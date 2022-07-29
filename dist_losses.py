@@ -74,7 +74,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
         recon_loss_dict = self.get_recon_loss(inputs, recons)
         recon_loss = recon_loss_dict[self.losses[2]]
         reg_lss = self.regularization(outputs)
-        criterion = self.c_rec * recon_loss + KLD_free + self.c_reg * reg_lss
+        criterion = self.c_rec * recon_loss
         if torch.isnan(criterion):
             print(outputs)
             raise
@@ -89,22 +89,11 @@ class AbstractVAELoss(metaclass=ABCMeta):
     def get_recon_loss(self, inputs, recons):
         pass
 
-    def regularization(self, outputs):
-        if 'trans' not in outputs.keys():
-            loss = 0
-        else:
-            trans = outputs["trans"]
-            trans_dim = trans.size()[-1]
-            device = trans.device
-            eye = torch.eye(trans_dim, device=device)
-            diff = torch.bmm(trans, trans.transpose(2, 1)) - eye
-            loss = torch.norm(diff, keepdim=True).mean(dim=(1, 2))
-        return loss
 
 
 class VAELossChamfer(AbstractVAELoss):
     losses = AbstractVAELoss.losses + ['Chamfer']
-    c_rec = 10000
+    c_rec = 1
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)

@@ -37,7 +37,7 @@ class DGCNN(nn.Module):
     def __init__(self, feat_dim=1024, k=40):
         super().__init__()
         self.k = k
-        h_dim = [64, 64, 64, 128, 128, 512]
+        h_dim = [64, 64, 128, 128, 512]
         self.conv = EdgeConvBlock(2 * IN_CHAN, h_dim[0])
         modules = []
         for i in range(1, len(h_dim) - 2):
