@@ -49,8 +49,6 @@ class DGCNN(nn.Module):
         xs = []
         for conv in self.edge_convs:
             x = get_graph_features(x, k=self.k)
-            torch.cuda.synchronize()
-            print("Memory:", torch.cuda.memory_allocated())
             x = conv(x)
             x = x.max(dim=-1, keepdim=False)[0]
             xs.append(x)
