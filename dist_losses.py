@@ -63,7 +63,6 @@ def kld_loss(q_mu, q_logvar, freebits=2):
 class AbstractVAELoss(metaclass=ABCMeta):
     losses = ['Criterion', 'KLD']
     c_rec = 1
-    c_reg = 0.1
 
     def __call__(self, outputs, inputs, targets):
         recons = outputs['recon']
@@ -73,7 +72,6 @@ class AbstractVAELoss(metaclass=ABCMeta):
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
         recon_loss_dict = self.get_recon_loss(inputs, recons)
         recon_loss = recon_loss_dict[self.losses[2]]
-        reg_lss = self.regularization(outputs)
         criterion = self.c_rec * recon_loss
         if torch.isnan(criterion):
             print(outputs)
