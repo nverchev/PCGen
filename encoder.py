@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from modules import PointsConvBlock, LinearBlock, STN, MaxChannel, EdgeConvBlock
-from utils import get_graph_features, get_graph_feature
+from utils import get_graph_feature, get_graph_feature
 
 # from pointnet_modules import PCT, SPCT
 # input feature dimension
@@ -49,8 +49,6 @@ class DGCNN(nn.Module):
         xs = []
         for conv in self.edge_convs:
             x = get_graph_feature(x, k=self.k)
-            torch.cuda.synchronize()
-            print("Memory:", torch.cuda.memory_allocated())
             x = conv(x)
             x = x.max(dim=-1, keepdim=False)[0]
             xs.append(x)
