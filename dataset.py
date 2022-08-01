@@ -104,11 +104,11 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
         zip_path = os.path.join(data_dir, 'shapenetcorev2_hdf5_2048.zip')
         url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'
         PCDataset = ShapeNetDataset
-        if not os.path.exists(zip_path):
-            r = requests.get(url, verify=False)
-            open(zip_path, 'wb').write(r.content)
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(data_dir)
+    if not os.path.exists(zip_path):
+        r = requests.get(url, verify=False)
+        open(zip_path, 'wb').write(r.content)
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(data_dir)
     pin_memory = torch.cuda.is_available()
     if experiment[:5] == 'final':
         train_dataset = PCDataset(data_dir=data_dir, split="trainval", n_points=n_points)
