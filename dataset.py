@@ -100,7 +100,7 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
         url = "https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097/?dl=1"
         PCDataset = Modelnet40Dataset
     else:
-        assert dataset == "shapenet"
+        assert dataset == "shapenet", "wrong dataset name"
         zip_path = os.path.join(data_dir, 'shapenetcorev2_hdf5_2048.zip')
         url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'
         PCDataset = ShapeNetDataset
