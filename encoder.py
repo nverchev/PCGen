@@ -48,7 +48,7 @@ class DGCNN(nn.Module):
         x = x.transpose(2, 1).contiguous()
         xs = []
         for conv in self.edge_convs:
-            x = get_graph_feature(x, k=self.k)
+            x = get_graph_features(x, k=self.k)
             x = conv(x)
             x = x.max(dim=-1, keepdim=False)[0]
             xs.append(x)
