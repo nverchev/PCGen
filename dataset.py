@@ -17,19 +17,28 @@ except:
     pass
 
 
-def normalize(path, n_points):
-    cloud = np.loadtxt(path, delimiter=',', max_rows=n_points, usecols=(0, 1, 2))
+def normalize(cloud):
     cloud -= cloud.mean(axis=0)
     cloud /= np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
     return cloud.astype(np.float32)
 
+def random_rotation(cloud):
+    theta = torch.pi * 2 * torch.rand(1)
+    s = torch.sin(theta)
+    rotation_matrix = torch.eye(2) * torch.cos(theta)
+    rotation_matrix[0, 1] = -s
+    rotation_matrix[1, 0] = s
+    cloud[:, [0, 2]] = cloud[:, [0, 2]].mm(rotation_matrix)
+    return cloud
+
 class BaseDataset(Dataset):
 
-    def __init__(self, split, data_dir, n_points=2048):
+    def __init__(self, split, data_dir, n_points=2048, rotations=False):
         self.data_name = None
         self.split = split
         self.data_dir = data_dir
         self.n_points = n_points
+        self.rotations = rotations
 
 
     def load(self, split):
@@ -51,7 +60,10 @@ class BaseDataset(Dataset):
         return self.pcd.shape[0]
 
     def __getitem__(self, index):
-        return self.pcd[index], self.labels[index]
+        cloud, label = self.pcd[index], self.labels[index]
+        if self.rotation:
+            random_rotation(cloud)
+        return cloud, label
 
 
 class Modelnet40Dataset(BaseDataset):
