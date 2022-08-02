@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from sklearn import svm
-from dist_losses import get_loss
+from losses import get_loss
 from plot_PC import pc_show
 
 '''
