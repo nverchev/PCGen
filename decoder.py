@@ -184,9 +184,8 @@ class FoldingNet(nn.Module):
         # two folding operations
         recon1 = self.fold1(grid, x)
         recon2 = self.fold2(recon1, x)
-
         return recon2.transpose(2, 1)
-#
+
 # class FoldingNet(nn.Module):
 #     def __init__(self):
 #         super().__init__()
@@ -194,9 +193,6 @@ class FoldingNet(nn.Module):
 #         # Sample the grids in 2D space
 #         num_grid = 45
 #         self.m_grid = num_grid ** 2
-#         xx = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
-#         yy = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
-#         self.grid = torch.stack(torch.meshgrid(xx, yy, indexing="ij")).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
 #         self.fold1 = FoldingLayer(Z_DIM + 2, [512, 512, 3])
 #         self.fold2 = FoldingLayer(Z_DIM + 3, [512, 512, 3])
 #
