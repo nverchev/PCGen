@@ -16,11 +16,11 @@ except:
     pass
 
 
-def preprocess(path, n_points):
+def normalize(path, n_points):
     cloud = np.loadtxt(path, delimiter=',', max_rows=n_points, usecols=(0, 1, 2))
-
+    cloud -= cloud.mean(axis=0)
+    cloud /= np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
     return cloud.astype(np.float32)
-
 
 class BaseDataset(Dataset):
 
@@ -30,16 +30,15 @@ class BaseDataset(Dataset):
         self.data_dir = data_dir
         self.n_points = n_points
 
+
     def load(self, split):
         pcs = []
         labels = []
         for h5_name in glob2.glob(os.path.join(self.data_dir, self.data_name, f'*{split}*.h5')):
             with h5py.File(h5_name, 'r+') as f:
+                # Dataset is already normalized
                 pc = f['data'][:].astype('float32')
                 pc = pc[:self.n_points]
-                pc -= pc.mean(axis=0)
-                pc /= np.max(np.sqrt(np.sum(pc ** 2, axis=1)))
-
                 label = f['label'][:].astype('int64')
             pcs.append(pc)
             labels.append(label)
@@ -106,11 +105,7 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
             def __getitem__(self, index):
                 return self.pcd[index], self.labels[index]
 
-        def preprocess(path, n_points):
-            cloud = np.loadtxt(path, delimiter=',', max_rows=n_points, usecols=(0, 1, 2))
-            cloud -= cloud.mean(axis=0)
-            cloud /= np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
-            return cloud.astype(np.float32)
+
 
         final = experiment[:5] == 'final'
         pin_memory = torch.cuda.is_available()
