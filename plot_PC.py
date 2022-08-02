@@ -1,5 +1,6 @@
 import plotly.graph_objects as go
 import numpy as np
+import torch
 
 
 def visualize_rotate(data):
@@ -40,17 +41,18 @@ def visualize_rotate(data):
     return fig
 
 
-def pc_show(pcs, colors=None):
+def pc_show(pcs, colors=None, colorscale='bluered'):
     if not isinstance(pcs, list):
         pcs = [pcs]
         colors = [colors]
     data = []
     for pc, color in zip(pcs, colors):
-        pc = pc.cpu().detach().numpy()
+        if isinstance(pc, torch.Tensor):
+            pc = pc.cpu().detach().numpy()
         xs, zs, ys = pc.transpose()
         data.append(go.Scatter3d(x=xs, y=-ys, z=zs,
                                  mode='markers',
-                                 marker=dict(color=color, colorscale='bluered')))
+                                 marker=dict(color=color, colorscale=colorscale)))
     fig = visualize_rotate(data)
     fig.update_traces(marker=dict(size=2,
                                   line=dict(width=0.2,
@@ -58,3 +60,4 @@ def pc_show(pcs, colors=None):
                       selector=dict(mode='markers'))
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
+

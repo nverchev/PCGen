@@ -92,6 +92,56 @@ class ShapeNetDataset(BaseDataset):
 
 def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_points=2048):
     data_dir = os.path.join(dir_path, 'dataset')
+    # To be removed
+    if dataset == "old":
+        class PCDDataset(Dataset):
+            def __init__(self, data):
+                self.pcd = [torch.tensor(cloud) for cloud in data["pcd"]]
+                self.labels = data["labels"]
+                assert len(self) == len(self.labels)
+
+            def __len__(self):
+                return len(self.pcd)
+
+            def __getitem__(self, index):
+                return self.pcd[index], self.labels[index]
+
+        def preprocess(path, n_points):
+            cloud = np.loadtxt(path, delimiter=',', max_rows=n_points, usecols=(0, 1, 2))
+            cloud -= cloud.mean(axis=0)
+            cloud /= np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
+            return cloud.astype(np.float32)
+
+        final = experiment[:5] == 'final'
+        pin_memory = torch.cuda.is_available()
+        train_data = np.load(dir_path + 'train_dataset.npz', allow_pickle=True)
+        test_data = np.load(dir_path + 'test_dataset.npz', allow_pickle=True)
+        train_dataset = PCDDataset(data=train_data)
+        test_dataset = PCDDataset(data=test_data)
+        num_train = len(train_dataset)
+        train_idx = list(range(num_train))  # next line removes indices from train_idx
+        # pop backwards to keep correct indexing
+        val_idx = [train_idx.pop(i) for i in train_idx[::-val_every]]
+        initial_train_dataset = Subset(train_dataset, train_idx)
+        val_dataset = Subset(train_dataset, val_idx)
+        if final:
+            train_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
+                                                       batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+
+            val_loader = None
+
+        else:
+            train_loader = torch.utils.data.DataLoader(initial_train_dataset, drop_last=True,
+                                                       batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+
+            val_loader = torch.utils.data.DataLoader(val_dataset,
+                                                     batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
+
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
+                                                  shuffle=False, pin_memory=pin_memory)
+
+        return train_loader, val_loader, test_loader
+
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
 
