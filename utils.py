@@ -46,7 +46,7 @@ def get_graph_features(x, k=20):
     idx = idx.view(batch, k * n_points, 1).expand(-1, -1,  n_feat)
     feature = torch.gather(x, 1, idx).view(batch, n_points, k, n_feat)
     x_feat = x.unsqueeze(2).expand(-1, -1, k, -1)
-    feature = torch.cat((feature - x_feat, x_feat), dim=3).permute(0, 3, 1, 2)
+    feature = torch.cat((feature - x_feat, x_feat), dim=3).permute(0, 3, 1, 2).contiguous()
     # (batch_size, num_points, k, 2*num_dims) -> (batch_size, 2*num_dims, num_points, k)
     return feature  # (batch_size, 2*num_dims, num_points, k)
 
