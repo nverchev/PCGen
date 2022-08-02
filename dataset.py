@@ -8,7 +8,6 @@ import requests
 import h5py
 import glob2
 
-
 try:
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
@@ -22,6 +21,7 @@ def normalize(cloud):
     cloud /= np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
     return cloud.astype(np.float32)
 
+
 def random_rotation(cloud):
     theta = torch.pi * 2 * torch.rand(1)
     s = torch.sin(theta)
@@ -31,15 +31,15 @@ def random_rotation(cloud):
     cloud[:, [0, 2]] = cloud[:, [0, 2]].mm(rotation_matrix)
     return cloud
 
+
 class BaseDataset(Dataset):
 
-    def __init__(self, split, data_dir, n_points=2048, rotations=False):
+    def __init__(self, split, data_dir, n_points=2048, rotation=False):
         self.data_name = None
         self.split = split
         self.data_dir = data_dir
         self.n_points = n_points
-        self.rotations = rotations
-
+        self.rotations = rotation
 
     def load(self, split):
         pcs = []
@@ -117,8 +117,6 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
 
             def __getitem__(self, index):
                 return self.pcd[index], self.labels[index]
-
-
 
         final = experiment[:5] == 'final'
         pin_memory = torch.cuda.is_available()

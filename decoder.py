@@ -186,34 +186,34 @@ class FoldingNet(nn.Module):
         recon2 = self.fold2(recon1, x)
 
         return recon2.transpose(2, 1)
-
-class FoldingNet(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.in_chan = IN_CHAN
-        # Sample the grids in 2D space
-        num_grid = 45
-        self.m_grid = num_grid ** 2
-        xx = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
-        yy = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
-        self.grid = torch.stack(torch.meshgrid(xx, yy, indexing="ij")).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
-        self.fold1 = FoldingLayer(Z_DIM + 2, [512, 512, 3])
-        self.fold2 = FoldingLayer(Z_DIM + 3, [512, 512, 3])
-
-    def forward(self, z):
-        batch_size = z.shape[0]
-        device = z.device
-        # repeat grid for batch operation
-        grid = torch.rand(batch_size, 2, self.m_grid).to(device)
-
-        # repeat codewords
-        x = z.unsqueeze(2).repeat(1, 1, self.m_grid)
-
-        # two folding operations
-        recon1 = self.fold1(grid, x)
-        recon2 = self.fold2(recon1, x)
-
-        return recon2.transpose(2, 1)
+#
+# class FoldingNet(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+#         self.in_chan = IN_CHAN
+#         # Sample the grids in 2D space
+#         num_grid = 45
+#         self.m_grid = num_grid ** 2
+#         xx = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
+#         yy = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
+#         self.grid = torch.stack(torch.meshgrid(xx, yy, indexing="ij")).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
+#         self.fold1 = FoldingLayer(Z_DIM + 2, [512, 512, 3])
+#         self.fold2 = FoldingLayer(Z_DIM + 3, [512, 512, 3])
+#
+#     def forward(self, z):
+#         batch_size = z.shape[0]
+#         device = z.device
+#         # repeat grid for batch operation
+#         grid = torch.rand(batch_size, 2, self.m_grid).to(device)
+#
+#         # repeat codewords
+#         x = z.unsqueeze(2).repeat(1, 1, self.m_grid)
+#
+#         # two folding operations
+#         recon1 = self.fold1(grid, x)
+#         recon2 = self.fold2(recon1, x)
+#
+#         return recon2.transpose(2, 1)
 
 class FoldingLayer(nn.Module):
     """
