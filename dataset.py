@@ -39,7 +39,7 @@ class BaseDataset(Dataset):
         self.split = split
         self.data_dir = data_dir
         self.n_points = n_points
-        self.rotations = rotation
+        self.rotation = rotation
 
     def load(self, split):
         pcs = []
