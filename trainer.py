@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from sklearn import svm
 from dist_losses import get_loss
+from plot_PC import pc_show
 
 '''
 This abstract class manages training and general utilities.
@@ -353,6 +354,16 @@ class VAETrainer(Trainer):
         self.acc = (y_hat == y_val).sum() / y_hat.shape[0]
         print("Accuracy: ", self.acc)
         return self.acc
+
+    def latent_visualisation(self, highlight_label):
+        from sklearn.decomposition import PCA
+        z = torch.stack(self.test_outputs['z'])
+        pca = PCA(3)
+        z_np = z.numpy()
+        z_red = pca.fit_transform(z_np)
+        labels = torch.stack(self.test_targets).cpu().numpy()
+        highlight_z = z_red[(self == labels)]
+        pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
 
 
 def get_trainer(model, recon_loss, exp_name, block_args):
