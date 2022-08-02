@@ -315,7 +315,7 @@ class Trainer(metaclass=ABCMeta):
 
 
 class VAETrainer(Trainer):
-    clf = make_pipeline(StandardScaler(), svm.LinearSVC(gamma='auto'))
+    clf = make_pipeline(StandardScaler(), svm.LinearSVC(dual=False))
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, recon_loss, exp_name, block_args):
