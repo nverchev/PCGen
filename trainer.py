@@ -5,6 +5,8 @@ import json
 import re
 import warnings
 from sklearn.exceptions import ConvergenceWarning
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
 import torch.cuda.amp as amp
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
@@ -313,7 +315,7 @@ class Trainer(metaclass=ABCMeta):
 
 
 class VAETrainer(Trainer):
-    clf = svm.LinearSVC()
+    clf = make_pipeline(StandardScaler(), svm.LinearSVC(gamma='auto'))
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, recon_loss, exp_name, block_args):
