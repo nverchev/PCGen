@@ -95,6 +95,8 @@ if __name__ == '__main__':
         if not isinstance(v, (type, torch.utils.data.dataloader.DataLoader)):
             print(k, ': ', v)
 
+    # loads last model
+    trainer.load()
     if not model_eval:
         while training_epochs >= trainer.epoch:
             if m_training == 0:
