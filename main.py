@@ -96,9 +96,9 @@ if __name__ == '__main__':
             print(k, ': ', v)
 
     if not model_eval:
-        for ep in range(training_epochs // 10):
+        while training_epochs >= trainer.epoch:
             if m_training == 0:
-                m = max(128, (4096 * ep) // training_epochs)
+                m = max(128, (4096 * trainer.epoch) // training_epochs)
             else:
                 m = m_training
             trainer.update_m_training(m)
