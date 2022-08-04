@@ -1,16 +1,17 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
 import os
 import json
 import re
 import warnings
 from sklearn.exceptions import ConvergenceWarning
+from sklearn import svm, metrics
 import torch.cuda.amp as amp
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
-from sklearn import svm
-from losses import get_vae_loss
+from losses import get_vae_loss, cal_loss
 from plot_PC import pc_show
 
 '''
@@ -366,58 +367,59 @@ class VAETrainer(Trainer):
         pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
 
 
-class VAETrainer(Trainer):
-    clf = svm.LinearSVC(dual=False)
+class ClassificationTrainer(Trainer):
+    _metrics = {}
+    average = "macro"
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, recon_loss, exp_name, block_args):
-        self.acc = None
-        self._loss = get_vae_loss(recon_loss)
-        self.losses = self._loss.losses  # losses must be defined before super().__init__()
+        self._metrics = None
         super().__init__(model, exp_name, **block_args)
         return
 
     def loss(self, output, inputs, targets):
-        return self._loss(output, inputs, targets)
+        return cal_loss(output['y', targets])
 
-    def test(self, partition='val', m=2048):
-        self.model.decode.m = m
-        super().test(partition=partition)
+    # overwrites Trainer method
+    def test(self, partition='test'):
+        super().test(partition=partition)  # stored in RAM
+        y = torch.stack(self.test_outputs['y'])
+        self.test_probs = F.softmax(y, dim=-1)
+        self.test_pred = torch.argmax(self.test_probs, dim=1)
+        self.targets = torch.stack(self.test_targets)
+        right_pred = (self.test_pred == self.targets)
+        self.wrong_indices = torch.nonzero(~right_pred).squeeze()
+        self.calculate_metrics()
         return
 
-    def update_m_training(self, m):
-        self.model.decode.m_training = m
+    @property
+    def metrics(self):
+        self.test(partition='val')
+        return self._metrics
 
-    def clas_metric(self, final=False):
-        self.test(partition="train")
-        x_train = np.array([z.numpy() for z in self.test_outputs['z']])
-        y_train = np.array([z.numpy() for z in self.test_targets])
-        shuffle = np.random.permutation(y_train.shape[0])
-        x_train = x_train[shuffle]
-        y_train = y_train[shuffle]
-        print("Fitting the classifier ...")
-        with warnings.catch_warnings():
-            # warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn")
-            # Does not fully converge
-            self.clf.fit(x_train, y_train)
-        partition = "test" if final else "val"
-        self.test(partition=partition)
-        x_val = np.array([z.numpy() for z in self.test_outputs['z']])
-        y_val = np.array([z.numpy() for z in self.test_targets])
-        y_hat = self.clf.predict(x_val)
-        self.acc = (y_hat == y_val).sum() / y_hat.shape[0]
-        print("Accuracy: ", self.acc)
-        return self.acc
+    def calculate_metrics(self, print_flag=True):
 
-    def latent_visualisation(self, highlight_label):
-        from sklearn.decomposition import PCA
-        z = torch.stack(self.test_outputs['z'])
-        pca = PCA(3)
-        z_np = z.numpy()
-        z_red = pca.fit_transform(z_np)
-        labels = torch.stack(self.test_targets).cpu().numpy()
-        highlight_z = z_red[(highlight_label == labels)]
-        pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
+        avg_type = self.average.capitalize() + ' ' if self.test_probs.size(1) > 1 else ""
+        # calculates common and also gives back the indices of the wrong guesses
+
+        self._metrics['Accuracy'] = \
+            metrics.accuracy_score(self.targets, self.test_pred)
+        self._metrics[avg_type + 'F1 Score'] = \
+            metrics.f1_score(self.targets, self.test_pred, average=self.average)
+        self._metrics[avg_type + 'Jaccard Score'] = \
+            metrics.jaccard_score(self.targets,
+                                  self.test_pred, average=self.average)
+        self._metrics[avg_type + 'AUC ROC'] = \
+            metrics.roc_auc_score(self.targets, self.test_probs,
+                                  average=self.average, multi_class='ovr')
+        if print_flag:
+            for metric, value in self._metrics.items():
+                print(metric + f' : {value:.4f}', end='\t')
+            print('')
+        return
+
+
+get_class_trainer
 
 
 def get_vae_trainer(model, recon_loss, exp_name, block_args):
