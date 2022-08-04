@@ -364,7 +364,7 @@ class VAETrainer(Trainer):
         z_np = z.numpy()
         z_red = pca.fit_transform(z_np)
         labels = torch.stack(self.test_targets).cpu().numpy()
-        highlight_z = z_red[(self == labels)]
+        highlight_z = z_red[(highlight_label == labels)]
         pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
 
 
