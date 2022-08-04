@@ -12,7 +12,7 @@ pykeops.set_verbose(False)
 def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
-    parser.add_argument('--encoder', type=str, default='DGCNN', choices=["MLP", "DGCNN_sim", "DGCNN", "PCT"])
+    parser.add_argument('--encoder', type=str, default='DGCNN', choices=["DGCNN_sim", "DGCNN", "PCT"])
     parser.add_argument('--decoder', type=str, default='Gen', choices=["MLP", "Gen", "FoldingNet"])
     parser.add_argument('--recon_loss', type=str, default='Chamfer', choices=["Chamfer", "Sinkhorn", "NLL", "MMD"],
                         help='reconstruction loss')
@@ -25,6 +25,9 @@ def parse_args():
                             128 -> 4096 ")
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--epochs', type=int, default=250)
+    parser.add_argument('--load', type=int, default=0,
+                        help='load a saved model with the same settings. -1 for starting from scratch,'
+                             '0 for most recent, otherwise epoch after which the model was saved')
     parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
                         , help='SGD has no momentum, otherwise momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
@@ -32,6 +35,10 @@ def parse_args():
     parser.add_argument('--cuda', type=bool, default=True, help='enables CUDA training')
     parser.add_argument('--eval', type=bool, default=False,
                         help='evaluate the model (exp_name needs to start with "final")')
+    parser.add_argument('--classify', default=False, action='store_true',
+                        help='(trained) DGCNN encoder is finetuned for classification")')
+    parser.add_argument('--k', type=int, default=20,
+                        help='number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--num_points', type=int, default=2048,
                         help='num of points of the training dataset [currently fixed]')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
@@ -56,12 +63,15 @@ if __name__ == '__main__':
     training_epochs = args.epochs
     opt_name = args.optimizer
     batch_size = args.batch_size
+    load = args.load
     initial_learning_rate = args.lr
     weight_decay = args.wd
     model_eval = args.eval
+    k = args.k
     num_points = args.num_points
     minio_credential = args.minio_credential
     m_training = args.m_training
+    final = experiment[:5] == 'final'
     if minio_credential:
         from minio import Minio
 
@@ -73,8 +83,9 @@ if __name__ == '__main__':
         minioClient = None
     exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path == "" else args.model_path
 
-    train_loader, val_loader, test_loader = get_dataset(experiment, dataset, batch_size, dir_path=dir_path, n_points=num_points)
-    model = VAE(encoder_name, decoder_name)
+    train_loader, val_loader, test_loader = get_dataset(experiment, dataset, batch_size, dir_path=dir_path,
+                                                        n_points=num_points)
+    model = VAE(encoder_name, decoder_name, k=k)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     block_args = {
         'optim_name': opt_name,
@@ -96,7 +107,8 @@ if __name__ == '__main__':
             print(k, ': ', v)
 
     # loads last model
-    trainer.load()
+    if load >= 0:
+        trainer.load(load)
     if not model_eval:
         while training_epochs >= trainer.epoch:
             if m_training == 0:
@@ -105,14 +117,9 @@ if __name__ == '__main__':
                 m = m_training
             trainer.update_m_training(m)
             trainer.train(10)
-            if experiment[:5] != 'final':
+            print(trainer.model.encode.conv)
+            if final:
                 trainer.clas_metric()
             trainer.save()
 
-    # loads last model
-    trainer.load()
-    if experiment[:5] == 'final':
-        trainer.clas_metric(final=True)
-    else:
-        trainer.clas_metric()
-
+    trainer.clas_metric(final=final)

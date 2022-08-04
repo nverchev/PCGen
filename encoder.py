@@ -58,20 +58,10 @@ class DGCNN(nn.Module):
         return x
 
 
-def get_mlp_encoder():
-    h_dim = [64, 64, 128, 256, 128, 512]
-    modules = [PointsConvBlock(IN_CHAN, h_dim[0])]
-    for i in range(len(h_dim) - 2):
-        modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
-    modules.append(MaxChannel())
-    modules.append(LinearBlock(h_dim[-2], h_dim[-1]))
-    modules.append(nn.Linear(h_dim[-1], 2 * Z_DIM))
-    return nn.Sequential(*modules)
 
 
 def get_encoder(encoder_name):
     dict_encoder = {
-        "MLP": get_mlp_encoder,
         "DGCNN_sim": DGCNN_sim,
         "DGCNN": DGCNN,
         # "PCT": PCT

@@ -8,12 +8,12 @@ from decoder import get_decoder
 class VAE(nn.Module):
     settings = {}
 
-    def __init__(self, encoder_name, decoder_name):
+    def __init__(self, encoder_name, decoder_name, k=20):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
         self.encode = get_encoder(encoder_name)()
-        self.decode = get_decoder(decoder_name)()
+        self.decode = get_decoder(decoder_name)(k)
 
     def forward(self, x):
         data = self.encoder(x)
