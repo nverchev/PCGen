@@ -107,8 +107,11 @@ if __name__ == '__main__':
             print(k, ': ', v)
 
     # loads last model
-    if load >= 0:
+    if load == 0:
+        trainer.load()
+    elif load > 0:
         trainer.load(load)
+
     if not model_eval:
         while training_epochs >= trainer.epoch:
             if m_training == 0:
