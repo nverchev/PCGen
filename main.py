@@ -117,7 +117,6 @@ if __name__ == '__main__':
                 m = m_training
             trainer.update_m_training(m)
             trainer.train(10)
-            print(trainer.model.encode.conv)
             if not final:
                 trainer.clas_metric()
             trainer.save()
