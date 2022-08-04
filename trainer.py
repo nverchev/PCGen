@@ -419,8 +419,6 @@ class ClassificationTrainer(Trainer):
         return
 
 
-get_class_trainer
-
 
 def get_vae_trainer(model, recon_loss, exp_name, block_args):
     return VAETrainer(model, recon_loss, exp_name, block_args)
