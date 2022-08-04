@@ -34,7 +34,7 @@ def random_rotation(cloud):
 
 class BaseDataset(Dataset):
 
-    def __init__(self, split, data_dir, n_points=2048, rotation=False):
+    def __init__(self, split, data_dir, n_points=2048, rotation=True):
         self.data_name = None
         self.split = split
         self.data_dir = data_dir
