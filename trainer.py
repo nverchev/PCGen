@@ -5,8 +5,6 @@ import json
 import re
 import warnings
 from sklearn.exceptions import ConvergenceWarning
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
 import torch.cuda.amp as amp
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
@@ -315,7 +313,7 @@ class Trainer(metaclass=ABCMeta):
 
 
 class VAETrainer(Trainer):
-    clf = make_pipeline(StandardScaler(), svm.LinearSVC(dual=False))
+    clf = svm.LinearSVC(dual=False)
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, recon_loss, exp_name, block_args):
@@ -345,7 +343,7 @@ class VAETrainer(Trainer):
         y_train = y_train[shuffle]
         print("Fitting the classifier ...")
         with warnings.catch_warnings():
-            #warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn")
+            # warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn")
             # Does not fully converge
             self.clf.fit(x_train, y_train)
         partition = "test" if final else "val"
