@@ -366,7 +366,61 @@ class VAETrainer(Trainer):
         pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
 
 
-def get_trainer(model, recon_loss, exp_name, block_args):
+class VAETrainer(Trainer):
+    clf = svm.LinearSVC(dual=False)
+    bin = 'pcdvae'  # minio bin
+
+    def __init__(self, model, recon_loss, exp_name, block_args):
+        self.acc = None
+        self._loss = get_vae_loss(recon_loss)
+        self.losses = self._loss.losses  # losses must be defined before super().__init__()
+        super().__init__(model, exp_name, **block_args)
+        return
+
+    def loss(self, output, inputs, targets):
+        return self._loss(output, inputs, targets)
+
+    def test(self, partition='val', m=2048):
+        self.model.decode.m = m
+        super().test(partition=partition)
+        return
+
+    def update_m_training(self, m):
+        self.model.decode.m_training = m
+
+    def clas_metric(self, final=False):
+        self.test(partition="train")
+        x_train = np.array([z.numpy() for z in self.test_outputs['z']])
+        y_train = np.array([z.numpy() for z in self.test_targets])
+        shuffle = np.random.permutation(y_train.shape[0])
+        x_train = x_train[shuffle]
+        y_train = y_train[shuffle]
+        print("Fitting the classifier ...")
+        with warnings.catch_warnings():
+            # warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn")
+            # Does not fully converge
+            self.clf.fit(x_train, y_train)
+        partition = "test" if final else "val"
+        self.test(partition=partition)
+        x_val = np.array([z.numpy() for z in self.test_outputs['z']])
+        y_val = np.array([z.numpy() for z in self.test_targets])
+        y_hat = self.clf.predict(x_val)
+        self.acc = (y_hat == y_val).sum() / y_hat.shape[0]
+        print("Accuracy: ", self.acc)
+        return self.acc
+
+    def latent_visualisation(self, highlight_label):
+        from sklearn.decomposition import PCA
+        z = torch.stack(self.test_outputs['z'])
+        pca = PCA(3)
+        z_np = z.numpy()
+        z_red = pca.fit_transform(z_np)
+        labels = torch.stack(self.test_targets).cpu().numpy()
+        highlight_z = z_red[(highlight_label == labels)]
+        pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
+
+
+def get_vae_trainer(model, recon_loss, exp_name, block_args):
     return VAETrainer(model, recon_loss, exp_name, block_args)
 
 # class VAEMetric():

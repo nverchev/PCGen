@@ -3,7 +3,7 @@ import argparse
 import pykeops
 from dataset import get_dataset
 from optim import get_opt, CosineSchedule
-from trainer import get_trainer
+from trainer import get_vae_trainer
 from VAE import VAE
 
 pykeops.set_verbose(False)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
         'dir_path': dir_path,
     }
 
-    trainer = get_trainer(model, recon_loss, exp_name, block_args)
+    trainer = get_vae_trainer(model, recon_loss, exp_name, block_args)
     for k, v in block_args.items():
         if not isinstance(v, (type, torch.utils.data.dataloader.DataLoader)):
             print(k, ': ', v)
