@@ -32,14 +32,29 @@ def random_rotation(cloud):
     return cloud
 
 
+def random_scale_translate(cloud):
+    scale = torch.rand(1, 3) * 5 / 6 + 2 / 3
+    translate = torch.rand(1, 3) * 0.4 - 0.2
+    cloud *= scale
+    cloud += translate
+    return cloud
+
+
+def jitter(cloud, sigma=0.01, clip=0.02):
+    jitter = torch.randn(cloud.shape) * sigma
+    cloud += torch.clamp(jitter, min=-clip, max=clip)
+    return cloud
+
+
 class BaseDataset(Dataset):
 
-    def __init__(self, split, data_dir, n_points=2048, rotation=True):
+    def __init__(self, split, data_dir, n_points, rotation, noise):
         self.data_name = None
         self.split = split
         self.data_dir = data_dir
         self.n_points = n_points
         self.rotation = rotation
+        self.noise = noise
 
     def load(self, split):
         pcs = []
@@ -63,13 +78,16 @@ class BaseDataset(Dataset):
         cloud, label = self.pcd[index], self.labels[index]
         if self.rotation:
             random_rotation(cloud)
+        if self.noise:
+            cloud = random_scale_translate(cloud)
+            cloud = jitter(cloud)
         return cloud, label
 
 
 class Modelnet40Dataset(BaseDataset):
 
-    def __init__(self, split, data_dir, n_points=2048):
-        super().__init__(split, data_dir, n_points)
+    def __init__(self, split, data_dir, n_points=2048, rotation=False, noise=False):
+        super().__init__(split, data_dir, n_points, rotation, noise)
         self.data_name = 'modelnet40_hdf5_2048'
         self.pcd, self.labels = self.load(split)
         self.pcd = torch.from_numpy(self.pcd)
@@ -85,8 +103,8 @@ class Modelnet40Dataset(BaseDataset):
 
 class ShapeNetDataset(BaseDataset):
 
-    def __init__(self, split, data_dir, n_points=2048):
-        super().__init__(split, data_dir, n_points)
+    def __init__(self, split, data_dir, n_points=2048, rotation=False, noise=False):
+        super().__init__(split, data_dir, n_points, rotation, noise)
         self.data_name = 'shapenetcorev2_hdf5_2048'
         self.pcd, self.labels = self.load(split)
         self.pcd = torch.from_numpy(self.pcd)
@@ -102,52 +120,8 @@ class ShapeNetDataset(BaseDataset):
             return super().load(split=split)
 
 
-def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_points=2048):
+def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_points=2048, noise=True):
     data_dir = os.path.join(dir_path, 'dataset')
-    # To be removed
-    if dataset == "old":
-        class PCDDataset(Dataset):
-            def __init__(self, data):
-                self.pcd = [torch.tensor(cloud) for cloud in data["pcd"]]
-                self.labels = data["labels"]
-                assert len(self) == len(self.labels)
-
-            def __len__(self):
-                return len(self.pcd)
-
-            def __getitem__(self, index):
-                return self.pcd[index], self.labels[index]
-
-        final = experiment[:5] == 'final'
-        pin_memory = torch.cuda.is_available()
-        train_data = np.load(dir_path + 'train_dataset.npz', allow_pickle=True)
-        test_data = np.load(dir_path + 'test_dataset.npz', allow_pickle=True)
-        train_dataset = PCDDataset(data=train_data)
-        test_dataset = PCDDataset(data=test_data)
-        num_train = len(train_dataset)
-        train_idx = list(range(num_train))  # next line removes indices from train_idx
-        # pop backwards to keep correct indexing
-        val_idx = [train_idx.pop(i) for i in train_idx[::-val_every]]
-        initial_train_dataset = Subset(train_dataset, train_idx)
-        val_dataset = Subset(train_dataset, val_idx)
-        if final:
-            train_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
-                                                       batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
-
-            val_loader = None
-
-        else:
-            train_loader = torch.utils.data.DataLoader(initial_train_dataset, drop_last=True,
-                                                       batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
-
-            val_loader = torch.utils.data.DataLoader(val_dataset,
-                                                     batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
-
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
-                                                  shuffle=False, pin_memory=pin_memory)
-
-        return train_loader, val_loader, test_loader
-
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
 
@@ -167,7 +141,7 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
             zip_ref.extractall(data_dir)
     pin_memory = torch.cuda.is_available()
     if experiment[:5] == 'final':
-        train_dataset = PCDataset(data_dir=data_dir, split="trainval", n_points=n_points)
+        train_dataset = PCDataset(data_dir=data_dir, split="trainval", n_points=n_points, rotation=True, noise=noise)
         test_dataset = PCDataset(data_dir=data_dir, split="test", n_points=n_points)
         train_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
                                                    batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
