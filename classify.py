@@ -12,24 +12,19 @@ pykeops.set_verbose(False)
 def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
-    parser.add_argument('--encoder', type=str, default='DGCNN', choices=["DGCNN_sim", "DGCNN", "PCT"])
-    parser.add_argument('--decoder', type=str, default='Gen', choices=["MLP", "Gen", "FoldingNet"])
-    parser.add_argument('--recon_loss', type=str, default='Chamfer', choices=["Chamfer", "Sinkhorn", "NLL", "MMD"],
+    parser.add_argument('--model', type=str, default='DGCNN', choices=["DGCNN"])
+    parser.add_argument('--loss', type=str, default='CE', choices=["CE"],
                         help='reconstruction loss')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
-    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'],
-                        help="Currently only one dataset available")
-    parser.add_argument('--m_training', type=int, default=2048,
-                        help="Points  generated when training, 0 for  increasing sequence  \
-                            128 -> 4096 ")
+    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--epochs', type=int, default=250)
     parser.add_argument('--load', type=int, default=0,
                         help='load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
-    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
-                        , help='SGD has no momentum, otherwise momentum = 0.9')
+    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
+                        help='SGD has no momentum, otherwise momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.00001, help='weight decay')
     parser.add_argument('--cuda', type=bool, default=True, help='enables CUDA training')
@@ -40,7 +35,7 @@ def parse_args():
     parser.add_argument('--num_points', type=int, default=2048,
                         help='num of points of the training dataset [currently fixed]')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
-                        help='Default is given by model_recon_loss_exp_name')
+                        help='Default is given by model_exp_name')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--minio_credential', type=str, default='',
                         help='path of file with written server;access_key;secret_key')

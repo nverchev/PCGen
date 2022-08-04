@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from sklearn import svm
-from losses import get_loss
+from losses import get_vae_loss
 from plot_PC import pc_show
 
 '''
@@ -318,7 +318,7 @@ class VAETrainer(Trainer):
 
     def __init__(self, model, recon_loss, exp_name, block_args):
         self.acc = None
-        self._loss = get_loss(recon_loss)
+        self._loss = get_vae_loss(recon_loss)
         self.losses = self._loss.losses  # losses must be defined before super().__init__()
         super().__init__(model, exp_name, **block_args)
         return

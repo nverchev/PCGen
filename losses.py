@@ -7,6 +7,26 @@ from abc import ABCMeta, abstractmethod
 from utils import square_distance
 
 
+def cal_loss(pred, gold, smoothing=True):
+    ''' Calculate cross entropy loss, apply label smoothing if needed. '''
+
+    gold = gold.contiguous().view(-1)
+
+    if smoothing:
+        eps = 0.2
+        n_class = pred.size(1)
+
+        one_hot = torch.zeros_like(pred).scatter(1, gold.view(-1, 1), 1)
+        one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
+        log_prb = F.log_softmax(pred, dim=1)
+
+        loss = -(one_hot * log_prb).sum(dim=1).mean()
+    else:
+        loss = F.cross_entropy(pred, gold, reduction='mean')
+
+    return loss
+
+
 # Chamfer Distance
 
 def chamfer(t1, t2, dist):
@@ -22,6 +42,7 @@ def chamfer(t1, t2, dist):
     s2 = ((t1 - m2) ** 2).mean(0).sum()
     # forward + reverse
     return s1 + s2
+
 
 # # Works with distance in torch
 # def chamfer(t1, t2, dist):
@@ -88,7 +109,6 @@ class AbstractVAELoss(metaclass=ABCMeta):
         pass
 
 
-
 class VAELossChamfer(AbstractVAELoss):
     losses = AbstractVAELoss.losses + ['Chamfer']
     c_rec = 1
@@ -144,7 +164,7 @@ class VAELossSinkhorn(AbstractVAELoss):
                 'Chamfer': chamfer_loss}
 
 
-def get_loss(recon_loss):
+def get_vae_loss(recon_loss):
     recon_loss_dict = {
         "Chamfer": VAELossChamfer,
         "NLL": VAELossNLL,

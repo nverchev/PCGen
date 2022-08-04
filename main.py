@@ -18,8 +18,7 @@ def parse_args():
                         help='reconstruction loss')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
-    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'],
-                        help="Currently only one dataset available")
+    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--m_training', type=int, default=2048,
                         help="Points  generated when training, 0 for  increasing sequence  \
                             128 -> 4096 ")
@@ -28,8 +27,8 @@ def parse_args():
     parser.add_argument('--load', type=int, default=0,
                         help='load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
-    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"]
-                        , help='SGD has no momentum, otherwise momentum = 0.9')
+    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
+                        help='SGD has no momentum, otherwise momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.00001, help='weight decay')
     parser.add_argument('--cuda', type=bool, default=True, help='enables CUDA training')

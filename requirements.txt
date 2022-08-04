@@ -9,3 +9,7 @@ scikit-learn~=1.1.1
 
 # can be removed
 minio~=7.1.8
+geomloss~=0.2.5
+requests~=2.27.1
+h5py~=3.7.0
+glob2~=0.7
