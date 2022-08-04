@@ -4,7 +4,6 @@ import pykeops
 from dataset import get_dataset
 from optim import get_opt, CosineSchedule
 from trainer import get_vae_trainer
-from VAE import VAE
 
 pykeops.set_verbose(False)
 

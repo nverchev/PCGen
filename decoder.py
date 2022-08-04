@@ -81,17 +81,16 @@ class PointGenerator(nn.Module):
     def __init__(self):
         super().__init__()
         self.in_chan = IN_CHAN
-        h_dim = [256, 1024, 128, 256, 128]
+        h_dim = [1024, 512, 256, 256, 128]
         self.m = 2048
         self.m_training = 128
         self.sample_dim = 16
-        self.h = h_dim[1]
-        self.map_latent1 = LinearBlock(Z_DIM, h_dim[1], act=nn.ReLU())
-        self.map_latent2 = LinearBlock(Z_DIM, h_dim[1], act=nn.Sigmoid())
-        self.map_latent3 = LinearBlock(Z_DIM, h_dim[1])
-        self.dbr = PointsConvBlock(self.sample_dim, h_dim[1], act=None)
+        self.map_latent_add = LinearBlock(Z_DIM, h_dim[0], act=nn.ReLU())
+        self.map_latent_mul = LinearBlock(Z_DIM, h_dim[0], act=nn.Sigmoid())
+        self.map_latent3 = LinearBlock(Z_DIM, h_dim[0])
+        self.dbr = PointsConvBlock(self.sample_dim, h_dim[0], act=None)
         modules = []
-        for i in range(1, len(h_dim) - 1):
+        for i in range(len(h_dim) - 1):
             modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
         modules.append(nn.Linear(h_dim[-1], IN_CHAN))
         self.mlp = nn.Sequential(*modules)
@@ -99,12 +98,11 @@ class PointGenerator(nn.Module):
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
-        mul1 = self.map_latent1(z).unsqueeze(1)
-        mul2 = self.map_latent2(z).unsqueeze(1)
-        add = self.map_latent3(z).unsqueeze(1)
+        mul = self.map_latent_mul(z).unsqueeze(1)
+        add = self.map_latent_add(z).unsqueeze(1)
         x = s if s is not None else torch.rand(batch, self.m, self.sample_dim).to(device)
         x = self.dbr(x)
-        x = x * mul1 + add * mul2
+        x = x * mul + add
         x = self.mlp(x)
         return x
 
