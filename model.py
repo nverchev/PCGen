@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from encoder import get_encoder
 from decoder import get_decoder
+from modules import LinearBlock
 
 
 class VAE(nn.Module):
@@ -46,3 +47,19 @@ class VAE(nn.Module):
             num_params += param.numel()
         print('Total Parameters: {}'.format(num_params))
         return
+
+
+class Classifier(nn.Module):
+    settings = {}
+
+    def __init__(self, encoder_name, k=20):
+        super().__init__()
+        self.encode = get_encoder(encoder_name)(k)
+        self.dense = nn.Sequential(nn.Dropout(0.5),
+                                   LinearBlock(1024, 512),
+                                   nn.Dropout(0.5),
+                                   LinearBlock(512, 256, act=None))
+
+    def forward(self, x):
+        features = self.encode(x)
+        return {'y':self.dense(features)}

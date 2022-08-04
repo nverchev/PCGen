@@ -372,13 +372,13 @@ class ClassificationTrainer(Trainer):
     average = "macro"
     bin = 'pcdvae'  # minio bin
 
-    def __init__(self, model, recon_loss, exp_name, block_args):
+    def __init__(self, model, loss, exp_name, block_args):
         self._metrics = None
         super().__init__(model, exp_name, **block_args)
         return
 
     def loss(self, output, inputs, targets):
-        return cal_loss(output['y', targets])
+        return {'Criterion': cal_loss(output['y'], targets)}
 
     # overwrites Trainer method
     def test(self, partition='test'):
@@ -419,6 +419,8 @@ class ClassificationTrainer(Trainer):
         return
 
 
+def get_class_trainer(model, loss, exp_name, block_args):
+    return ClassificationTrainer(model, loss, exp_name, block_args)
 
 def get_vae_trainer(model, recon_loss, exp_name, block_args):
     return VAETrainer(model, recon_loss, exp_name, block_args)

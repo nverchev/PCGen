@@ -3,8 +3,8 @@ import argparse
 import pykeops
 from dataset import get_dataset
 from optim import get_opt, CosineSchedule
-from trainer import get_vae_trainer
-
+from trainer import get_class_trainer
+from model import Classifier
 pykeops.set_verbose(False)
 
 
@@ -12,20 +12,20 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
     parser.add_argument('--model', type=str, default='DGCNN', choices=["DGCNN"])
-    parser.add_argument('--loss', type=str, default='CE', choices=["CE"],
+    parser.add_argument('--loss', type=str, default='cal', choices=["cal"],
                         help='reconstruction loss')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
-    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--epochs', type=int, default=250)
     parser.add_argument('--load', type=int, default=0,
                         help='load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
-    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
+    parser.add_argument('--optimizer', type=str, default='SGD', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
                         help='SGD has no momentum, otherwise momentum = 0.9')
-    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
-    parser.add_argument('--wd', type=float, default=0.00001, help='weight decay')
+    parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
+    parser.add_argument('--wd', type=float, default=0.00000, help='weight decay')
     parser.add_argument('--cuda', type=bool, default=True, help='enables CUDA training')
     parser.add_argument('--eval', type=bool, default=False,
                         help='evaluate the model (exp_name needs to start with "final")')
@@ -44,12 +44,10 @@ def parse_args():
 if __name__ == '__main__':
 
     args = parse_args()
-    encoder_name = args.encoder
-    decoder_name = args.decoder
-    model_name = encoder_name + "_" + decoder_name
+    model = args.model
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
     dataset = args.dataset
-    recon_loss = args.recon_loss
+    loss = args.loss
     experiment = args.experiment
     dir_path = args.dir_path
     training_epochs = args.epochs
@@ -62,7 +60,6 @@ if __name__ == '__main__':
     k = args.k
     num_points = args.num_points
     minio_credential = args.minio_credential
-    m_training = args.m_training
     final = experiment[:5] == 'final'
     if minio_credential:
         from minio import Minio
@@ -73,11 +70,11 @@ if __name__ == '__main__':
             minioClient = Minio(server, access_key=access_key, secret_key=secret_key, secure=True)
     else:
         minioClient = None
-    exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path == "" else args.model_path
+    exp_name = '_'.join([model, loss, experiment]) if args.model_path == "" else args.model_path
 
     train_loader, val_loader, test_loader = get_dataset(experiment, dataset, batch_size, dir_path=dir_path,
                                                         n_points=num_points)
-    model = VAE(encoder_name, decoder_name, k=k)
+    model = Classifier(model, k=k)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     block_args = {
         'optim_name': opt_name,
@@ -88,12 +85,12 @@ if __name__ == '__main__':
         'val_loader': val_loader,
         'test_loader': test_loader,
         'batch_size': batch_size,
-        'schedule': CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
+        'schedule': CosineSchedule(decay_steps=training_epochs, min_decay=0.01),
         'minioClient': minioClient,
         'dir_path': dir_path,
     }
 
-    trainer = get_vae_trainer(model, recon_loss, exp_name, block_args)
+    trainer = get_class_trainer(model, loss, exp_name, block_args)
     for k, v in block_args.items():
         if not isinstance(v, (type, torch.utils.data.dataloader.DataLoader)):
             print(k, ': ', v)
@@ -106,15 +103,9 @@ if __name__ == '__main__':
 
     if not model_eval:
         while training_epochs >= trainer.epoch:
-            if m_training == 0:
-                m = max(128, (4096 * trainer.epoch) // training_epochs)
-            else:
-                m = m_training
-            trainer.update_m_training(m)
             trainer.train(10)
-            print(trainer.model.encode.conv)
             if not final:
-                trainer.clas_metric()
+                trainer.calculate_metrics()
             trainer.save()
 
-    trainer.clas_metric(final=final)
+    trainer.calculate_metrics(final=final)

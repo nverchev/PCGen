@@ -120,7 +120,7 @@ class ShapeNetDataset(BaseDataset):
             return super().load(split=split)
 
 
-def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_points=2048, noise=True):
+def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_points=2048, noise=False):
     data_dir = os.path.join(dir_path, 'dataset')
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
