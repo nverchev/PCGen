@@ -147,7 +147,7 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
                                                    batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
 
         val_loader = None
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, drop_last=False,
                                                   shuffle=False, pin_memory=pin_memory)
 
     else:
@@ -166,7 +166,7 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
         train_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
                                                    batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
 
-        val_loader = torch.utils.data.DataLoader(val_dataset,
+        val_loader = torch.utils.data.DataLoader(val_dataset, drop_last=False,
                                                  batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
 
         test_loader = None
