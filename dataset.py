@@ -123,7 +123,7 @@ class ShapeNetDataset(BaseDataset):
             return super().load(split=split)
 
 
-def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_points=2048, noise=False):
+def get_dataset(dataset, final, batch_size, val_every=6, dir_path="./", n_points=2048, noise=False):
     data_dir = os.path.join(dir_path, 'dataset')
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
@@ -143,7 +143,7 @@ def get_dataset(experiment, dataset, batch_size, val_every=6, dir_path="./", n_p
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(data_dir)
     pin_memory = torch.cuda.is_available()
-    if experiment[:5] == 'final':
+    if final:
         train_dataset = PCDataset(data_dir=data_dir, split="trainval", n_points=n_points, rotation=True, noise=noise)
         test_dataset = PCDataset(data_dir=data_dir, split="test", n_points=n_points)
         train_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
