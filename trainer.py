@@ -373,6 +373,10 @@ class ClassificationTrainer(Trainer):
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, loss, exp_name, block_args):
+        self.wrong_indices = None
+        self.targets = None
+        self.test_pred = None
+        self.test_probs = None
         self._metrics = None
         super().__init__(model, exp_name, **block_args)
         return
@@ -400,7 +404,6 @@ class ClassificationTrainer(Trainer):
         return self._metrics
 
     def calculate_metrics(self, print_flag=True):
-
         avg_type = self.average.capitalize() + ' ' if self.test_probs.size(1) > 1 else ""
         # calculates common and also gives back the indices of the wrong guesses
 
