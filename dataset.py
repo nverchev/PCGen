@@ -66,7 +66,7 @@ class BaseDataset(Dataset):
             with h5py.File(h5_name, 'r+') as f:
                 # Dataset is already normalized
                 pc = f['data'][:].astype('float32')
-                pc = pc[:, self.n_points, :]
+                pc = pc[:, :self.n_points, :]
                 label = f['label'][:].astype('int64')
             pcs.append(pc)
             labels.append(label)
