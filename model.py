@@ -61,7 +61,7 @@ class Classifier(nn.Module):
             nn.Dropout(0.5),
             LinearBlock(512, 256),
             nn.Dropout(0.5),
-            LinearBlock(256, num_classes, act=None))
+            nn.Linear(256, num_classes))
 
     def forward(self, x):
         features = self.encode(x)
