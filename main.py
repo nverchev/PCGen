@@ -116,7 +116,7 @@ if __name__ == '__main__':
             else:
                 m = m_training
             trainer.update_m_training(m)
-            trainer.train(1)
+            trainer.train(10)
             if not final:
                 trainer.clas_metric()
             trainer.save()

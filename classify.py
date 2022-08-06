@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument('--load', type=int, default=0,
                         help='load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
-    parser.add_argument('--optimizer', type=str, default='SGD', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
+    parser.add_argument('--optimizer', type=str, default='SGD_nesterov', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
                         help='SGD has no momentum, otherwise momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.00000, help='weight decay')
