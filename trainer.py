@@ -380,7 +380,6 @@ class ClassificationTrainer(Trainer):
         self.targets = None
         self.test_pred = None
         self.test_probs = None
-        self._metrics = None
         super().__init__(model, exp_name, **block_args)
         return
 
@@ -410,13 +409,10 @@ class ClassificationTrainer(Trainer):
         avg_type = self.average.capitalize() + ' ' if self.test_probs.size(1) > 1 else ""
         # calculates common and also gives back the indices of the wrong guesses
 
-        self._metrics['Accuracy'] = \
-            metrics.accuracy_score(self.targets, self.test_pred)
-        self._metrics[avg_type + 'F1 Score'] = \
-            metrics.f1_score(self.targets, self.test_pred, average=self.average)
-        self._metrics[avg_type + 'Jaccard Score'] = \
-            metrics.jaccard_score(self.targets,
-                                  self.test_pred, average=self.average)
+        self._metrics['Accuracy'] = metrics.accuracy_score(self.targets, self.test_pred)
+        self._metrics[avg_type + 'F1 Score'] = metrics.f1_score(self.targets, self.test_pred, average=self.average)
+        self._metrics[avg_type + 'Jaccard Score'] = metrics.jaccard_score(self.targets,
+                                                                          self.test_pred, average=self.average)
         self._metrics[avg_type + 'AUC ROC'] = \
             metrics.roc_auc_score(self.targets, self.test_probs,
                                   average=self.average, multi_class='ovr')
@@ -429,6 +425,7 @@ class ClassificationTrainer(Trainer):
 
 def get_class_trainer(model, loss, exp_name, block_args):
     return ClassificationTrainer(model, loss, exp_name, block_args)
+
 
 def get_vae_trainer(model, recon_loss, exp_name, block_args):
     return VAETrainer(model, recon_loss, exp_name, block_args)
