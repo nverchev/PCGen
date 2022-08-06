@@ -31,7 +31,7 @@ def parse_args():
                         help='evaluate the model (exp_name needs to start with "final")')
     parser.add_argument('--k', type=int, default=20,
                         help='number of neighbours of a point (counting the point itself) in DGCNN]')
-    parser.add_argument('--num_points', type=int, default=2048,
+    parser.add_argument('--num_points', type=int, default=1024,
                         help='num of points of the training dataset [currently fixed]')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Default is given by model_exp_name')
