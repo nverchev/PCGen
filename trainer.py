@@ -336,7 +336,10 @@ class VAETrainer(Trainer):
         self.model.decode.m_training = m
 
     def clas_metric(self, final=False):
+        # No rotation here
+        self.train_loader.dataset.rotation = False
         self.test(partition="train")
+        self.train_loader.dataset.rotation = True
         x_train = np.array([z.numpy() for z in self.test_outputs['z']])
         y_train = np.array([z.numpy() for z in self.test_targets])
         shuffle = np.random.permutation(y_train.shape[0])
