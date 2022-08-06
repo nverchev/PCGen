@@ -103,9 +103,8 @@ if __name__ == '__main__':
 
     if not model_eval:
         while training_epochs >= trainer.epoch:
-            trainer.train(10)
-            if not final:
-                trainer.calculate_metrics()
+            trainer.train(1)
+            trainer.calculate_metrics()
             trainer.save()
 
     trainer.calculate_metrics(final=final)
