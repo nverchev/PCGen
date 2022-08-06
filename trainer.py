@@ -378,7 +378,9 @@ class ClassificationTrainer(Trainer):
         return
 
     def loss(self, output, inputs, targets):
-        return {'Criterion': cal_loss(output['y'], targets)}
+        cal_loss_variable = cal_loss(output['y'], targets)
+        return {'Criterion': cal_loss_variable,
+                'Criterion': cal_loss_variable}
 
     # overwrites Trainer method
     def test(self, partition='test'):

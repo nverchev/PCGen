@@ -105,7 +105,7 @@ class PointGenerator(nn.Module):
         x = s if s is not None else torch.randn(batch, self.m, self.sample_dim).to(device)
         # x = self.dbr(x)
         # x = x * mul1 + add * mul2
-        z = z.unsqueeze(0)
+        z = z.unsqueeze(0).contiguous()
         x = self.gru(x, z)[0]
         x = self.mlp(x)
         return x
