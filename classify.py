@@ -105,7 +105,6 @@ if __name__ == '__main__':
         while training_epochs >= trainer.epoch:
             trainer.train(1)
             trainer.test()
-            trainer.calculate_metrics()
             trainer.save()
 
     trainer.calculate_metrics(final=final)
