@@ -31,8 +31,8 @@ def parse_args():
                         help='SGD has no momentum, otherwise momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.00001, help='weight decay')
-    parser.add_argument('--cuda', type=bool, default=True, help='enables CUDA training')
-    parser.add_argument('--eval', type=bool, default=False,
+    parser.add_argument('--cuda', action='store_false', default=True, help='enables CUDA training')
+    parser.add_argument('--eval', action='store_true', default=False,
                         help='evaluate the model (exp_name needs to start with "final")')
     parser.add_argument('--k', type=int, default=20,
                         help='number of neighbours of a point (counting the point itself) in DGCNN]')
