@@ -52,14 +52,17 @@ class VAE(nn.Module):
 class Classifier(nn.Module):
     settings = {}
 
-    def __init__(self, encoder_name, k=20):
+    def __init__(self, encoder_name, num_classes=40, k=20):
         super().__init__()
+        self.num_classes = num_classes
         self.encode = get_encoder(encoder_name)(k)
-        self.dense = nn.Sequential(nn.Dropout(0.5),
-                                   LinearBlock(1024, 512),
-                                   nn.Dropout(0.5),
-                                   LinearBlock(512, 256, act=None))
+        self.dense = nn.Sequential(
+            LinearBlock(1024, 512),
+            nn.Dropout(0.5),
+            LinearBlock(512, 256),
+            nn.Dropout(0.5),
+            LinearBlock(256, num_classes, act=None))
 
     def forward(self, x):
         features = self.encode(x)
-        return {'y':self.dense(features)}
+        return {'y': self.dense(features)}
