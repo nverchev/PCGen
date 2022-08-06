@@ -28,22 +28,25 @@ def random_rotation(cloud):
     rotation_matrix = torch.eye(2) * torch.cos(theta)
     rotation_matrix[0, 1] = -s
     rotation_matrix[1, 0] = s
-    cloud[:, [0, 2]] = cloud[:, [0, 2]].mm(rotation_matrix)
-    return cloud
+    new_cloud = cloud.clone()
+    new_cloud[:, [0, 2]] = cloud[:, [0, 2]].mm(rotation_matrix)
+    return new_cloud
 
 
 def random_scale_translate(cloud):
     scale = torch.rand(1, 3) * 5 / 6 + 2 / 3
     translate = torch.rand(1, 3) * 0.4 - 0.2
-    cloud *= scale
-    cloud += translate
-    return cloud
+    new_cloud = cloud.clone()
+    new_cloud *= scale
+    new_cloud += translate
+    return new_cloud
 
 
 def jitter(cloud, sigma=0.01, clip=0.02):
     jitter = torch.randn(cloud.shape) * sigma
-    cloud += torch.clamp(jitter, min=-clip, max=clip)
-    return cloud
+    new_cloud = cloud.clone()
+    new_cloud += torch.clamp(jitter, min=-clip, max=clip)
+    return new_cloud
 
 
 class BaseDataset(Dataset):
