@@ -72,7 +72,7 @@ if __name__ == '__main__':
         minioClient = None
     exp_name = '_'.join([model, loss, experiment]) if args.model_path == "" else args.model_path
 
-    train_loader, val_loader, test_loader = get_dataset(experiment, dataset, batch_size, dir_path=dir_path,
+    train_loader, val_loader, test_loader = get_dataset(dataset, final, batch_size, dir_path=dir_path,
                                                         n_points=num_points, noise=True)
     model = Classifier(model, k=k)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
