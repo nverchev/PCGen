@@ -7,26 +7,6 @@ from abc import ABCMeta, abstractmethod
 from utils import square_distance
 
 
-def cal_loss(pred, gold, smoothing=True):
-    ''' Calculate cross entropy loss, apply label smoothing if needed. '''
-
-    gold = gold.contiguous().view(-1)
-
-    if smoothing:
-        eps = 0.2
-        n_class = pred.size(1)
-
-        one_hot = torch.zeros_like(pred).scatter(1, gold.view(-1, 1), 1)
-        one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
-        log_prb = F.log_softmax(pred, dim=1)
-
-        loss = -(one_hot * log_prb).sum(dim=1).mean()
-    else:
-        loss = F.cross_entropy(pred, gold, reduction='mean')
-
-    return loss
-
-
 # Chamfer Distance
 
 def chamfer(t1, t2, dist):
@@ -79,6 +59,23 @@ def kld_loss(q_mu, q_logvar, freebits=2):
     KLD = 0.5 * KLD_matrix.mean(0).sum()
     KLD_free = 0.5 * KLD_free_bits.mean(0).sum()
     return KLD, KLD_free
+
+
+class CalLoss:
+    eps = 0.2
+    losses = ['Criterion', "Calib Loss"]
+
+    def __init__(self, num_classes):
+        self.num_classes = num_classes
+
+    def __call__(self, outputs, inputs, targets):
+        logits = outputs['y']
+        one_hot = torch.zeros_like(logits).scatter(1, targets.view(-1, 1), 1)
+        one_hot = one_hot * (1 - self.eps) + (1 - one_hot) * self.eps / (self.num_classes - 1)
+        log_prb = F.log_softmax(logits, dim=1)
+        loss = -(one_hot * log_prb).sum(dim=1).mean()
+        return {'Criterion': loss,
+                'Calib Loss': loss}
 
 
 class AbstractVAELoss(metaclass=ABCMeta):
@@ -162,6 +159,13 @@ class VAELossSinkhorn(AbstractVAELoss):
             sk_loss += self.sinkhorn(inp, rec).mean()
         return {'Sinkhorn': sk_loss,
                 'Chamfer': chamfer_loss}
+
+
+def get_classification_loss(loss):
+    classification_loss_dict = {
+        "cal": CalLoss,
+    }
+    return classification_loss_dict[loss]
 
 
 def get_vae_loss(recon_loss):

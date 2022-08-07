@@ -11,7 +11,7 @@ import torch.cuda.amp as amp
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
-from losses import get_vae_loss, cal_loss
+from losses import get_vae_loss, get_classification_loss
 from plot_PC import pc_show
 
 '''
@@ -376,17 +376,17 @@ class ClassificationTrainer(Trainer):
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, loss, exp_name, block_args):
+        self._loss = get_classification_loss(loss)(model.num_classes)
+        self.losses = self._loss.losses  # losses must be defined before super().__init__()
+        super().__init__(model, exp_name, **block_args)
         self.wrong_indices = None
         self.targets = None
         self.test_pred = None
         self.test_probs = None
-        super().__init__(model, exp_name, **block_args)
         return
 
     def loss(self, output, inputs, targets):
-        cal_loss_variable = cal_loss(output['y'], targets)
-        return {'Criterion': cal_loss_variable,
-                'Cal_Loss': cal_loss_variable}
+        return self._loss(output, inputs, targets)
 
     # overwrites Trainer method
     def test(self, partition='test'):

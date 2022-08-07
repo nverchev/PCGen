@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
                         help='SGD has no momentum, otherwise momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
-    parser.add_argument('--wd', type=float, default=0.00001, help='weight decay')
+    parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
     parser.add_argument('--cuda', action='store_false', default=True, help='enables CUDA training')
     parser.add_argument('--eval', action='store_true', default=False,
                         help='evaluate the model (exp_name needs to start with "final")')
