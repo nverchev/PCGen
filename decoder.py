@@ -109,7 +109,40 @@ class PointGenerator(nn.Module):
         x = self.gru(x, z)[0]
         x = self.mlp(x)
         return x
-
+#
+# class PointGenerator(nn.Module):
+#
+#     def __init__(self):
+#         super().__init__()
+#         self.in_chan = IN_CHAN
+#         h_dim = [Z_DIM, 512, 256, 256, 128]
+#         self.m = 2048
+#         self.m_training = 128
+#         self.sample_dim = 16
+#         self.sample_z = nn.Linear(self.sample_dim, Z_DIM, bias=False)
+#         self.hidden_z = nn.Linear(Z_DIM, Z_DIM)
+#         self.sample_r = nn.Linear(self.sample_dim, Z_DIM, bias=False)
+#         self.hidden_r = nn.Linear(Z_DIM, Z_DIM, bias=False)
+#         self.sample_h = nn.Linear(self.sample_dim, Z_DIM, bias=False)
+#         self.hidden_h = nn.Linear(Z_DIM, Z_DIM)
+#         modules = []
+#         for i in range(len(h_dim) - 1):
+#             modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
+#         modules.append(nn.Linear(h_dim[-1], IN_CHAN))
+#         self.mlp = nn.Sequential(*modules)
+#
+#     def forward(self, latent, s=None):
+#         batch = latent.size()[0]
+#         device = latent.device
+#         s = s if s is not None else torch.randn(batch, self.m, self.sample_dim).to(device)
+#         latent = latent.unsqueeze(1)
+#         z = torch.sigmoid(self.sample_z(s) + self.hidden_z(latent))
+#         r = torch.sigmoid(self.sample_r(s) + self.hidden_r(latent))
+#         h = torch.tanh(self.sample_h(s) + self.hidden_h(r * latent))
+#         x = z * h + (1 - z) * latent
+#         x = self.mlp(x)
+#         return x
+# #
 
 
 class FoldingNet(nn.Module):

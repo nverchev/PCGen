@@ -34,7 +34,7 @@ class DGCNN_sim(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, k=40):
+    def __init__(self, k=40, task='reconstruct'):
         super().__init__()
         self.k = k
         h_dim = [64, 64, 128, 256]
@@ -43,6 +43,7 @@ class DGCNN(nn.Module):
             edge_conv_list.append(EdgeConvBlock(2 * h_dim[i], h_dim[i + 1]))
         self.edge_convs = nn.Sequential(*edge_conv_list)
         self.final_conv = nn.Linear(sum(h_dim), 2 * Z_DIM)
+        self.task = task
 
     def forward(self, x):
         x = x.transpose(2, 1).contiguous()
@@ -54,7 +55,12 @@ class DGCNN(nn.Module):
             xs.append(x)
         x = torch.cat(xs, dim=1).transpose(2, 1).contiguous()
         x = self.final_conv(x)
-        x = x.max(dim=1, keepdim=False)[0]
+        x_max = x.max(dim=1, keepdim=False)[0]
+        if self.task == 'reconstruct':
+            x = x_max
+        if self.task == 'classify':
+            x_avg = x.mean(dim=1)
+            x = torch.cat([x_max, x_avg], dim=1)
         return x
 
 

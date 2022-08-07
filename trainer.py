@@ -405,7 +405,7 @@ class ClassificationTrainer(Trainer):
         self.test(partition='val')
         return self._metrics
 
-    def calculate_metrics(self, print_flag=True):
+    def calculate_metrics(self):
         avg_type = self.average.capitalize() + ' ' if self.test_probs.size(1) > 1 else ""
         # calculates common and also gives back the indices of the wrong guesses
 
@@ -416,10 +416,9 @@ class ClassificationTrainer(Trainer):
         self._metrics[avg_type + 'AUC ROC'] = \
             metrics.roc_auc_score(self.targets, self.test_probs,
                                   average=self.average, multi_class='ovr')
-        if print_flag:
-            for metric, value in self._metrics.items():
-                print(metric + f' : {value:.4f}', end='\t')
-            print('')
+        for metric, value in self._metrics.items():
+            print(metric + f' : {value:.4f}', end='\t')
+        print('')
         return
 
 

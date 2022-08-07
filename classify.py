@@ -107,4 +107,4 @@ if __name__ == '__main__':
             trainer.test()
             trainer.save()
 
-    trainer.calculate_metrics(final=final)
+    trainer.test(partition="test")

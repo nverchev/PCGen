@@ -55,9 +55,10 @@ class Classifier(nn.Module):
     def __init__(self, encoder_name, num_classes=40, k=20):
         super().__init__()
         self.num_classes = num_classes
-        self.encode = get_encoder(encoder_name)(k)
+        self.encode = get_encoder(encoder_name)(k, task='classify')
+        num_features = 2048
         self.dense = nn.Sequential(
-            LinearBlock(1024, 512),
+            LinearBlock(num_features, 512),
             nn.Dropout(0.5),
             LinearBlock(512, 256),
             nn.Dropout(0.5),
