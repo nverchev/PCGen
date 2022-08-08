@@ -21,9 +21,10 @@ class VAE(nn.Module):
         return self.decoder(data)
 
     def sampling(self, mu, log_var):
-        std = torch.exp(0.5 * log_var)
-        eps = torch.randn_like(std)
-        return eps.mul(std).add_(mu) if self.training else mu
+        return mu
+        # std = torch.exp(0.5 * log_var)
+        # eps = torch.randn_like(std)
+        # return eps.mul(std).add_(mu) if self.training else mu
 
     def encoder(self, x):
         data = {}

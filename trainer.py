@@ -53,7 +53,6 @@ class Trainer(metaclass=ABCMeta):
         self.optimizer_settings = block_args['optim_args'].copy()
         self.optimizer = optim(**self.optimizer_settings)
         self.mp = mp and device.type == 'cuda'  # mixed precision casting
-        self.scaler = amp.GradScaler(enabled=mp)  # mixed precision backprop
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
@@ -161,9 +160,8 @@ class Trainer(metaclass=ABCMeta):
             if not inference:
                 if torch.isinf(criterion) or torch.isnan(criterion):
                     self.converge = 0
-                self.scaler.scale(criterion).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
+                criterion.backward()
+                self.optimizer.step()
                 self.optimizer.zero_grad()
             if save_outputs and \
                     self.max_output > (batch_idx + 1) * loader.batch_size:
