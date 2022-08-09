@@ -30,6 +30,7 @@ class PointBatch1D(nn.Module):
         x = self.batchnorm(x)
         return x.transpose(-1, -2)
 
+
 class PointBatch2D(nn.Module):
     def __init__(self, out_dim):
         super().__init__()
@@ -39,6 +40,7 @@ class PointBatch2D(nn.Module):
         x = x.transpose(-1, -3)
         x = self.batchnorm(x)
         return x.transpose(-1, -3)
+
 
 # Input (Batch, Features)
 class LinearBlock(nn.Module):
@@ -85,6 +87,7 @@ class EdgeConvBlock(LinearBlock):
     def __init__(self, in_dim, out_dim, act=act):
         super().__init__(in_dim, out_dim, act)
         self.bn = PointBatch2D(out_dim)
+
 
 class STN(nn.Module):
 

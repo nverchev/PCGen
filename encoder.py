@@ -63,8 +63,6 @@ class DGCNN(nn.Module):
         return x
 
 
-
-
 def get_encoder(encoder_name):
     dict_encoder = {
         "DGCNN_sim": DGCNN_sim,
