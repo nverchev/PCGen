@@ -4,12 +4,6 @@ import torch.nn as nn
 act = nn.LeakyReLU(negative_slope=0.2)
 
 
-class TransposeLast(nn.Module):
-
-    def forward(self, x):
-        return x.transpose(-1, -2)
-
-
 class View(nn.Module):
 
     def __init__(self, *shape):
@@ -26,10 +20,25 @@ class MaxChannel(nn.Module):
         return torch.max(x, 1)[0]
 
 
-# function pretending to be a class
-def get_points_batch_norm(dim):
-    return nn.Sequential(TransposeLast(), nn.BatchNorm1d(dim), TransposeLast())
+class PointBatch1D(nn.Module):
+    def __init__(self, out_dim):
+        super().__init__()
+        self.batchnorm = nn.BatchNorm1d(out_dim)
 
+    def forward(self, x):
+        x.transpose(-1, -2)
+        x = self.batchnorm(x)
+        return x.transpose(-1, -2)
+
+class PointBatch2D(nn.Module):
+    def __init__(self, out_dim):
+        super().__init__()
+        self.batchnorm = nn.BatchNorm2d(out_dim)
+
+    def forward(self, x):
+        x = x.transpose(-1, -3)
+        x = self.batchnorm(x)
+        return x.transpose(-1, -3)
 
 # Input (Batch, Features)
 class LinearBlock(nn.Module):
@@ -53,7 +62,7 @@ class PointsConvBlock(LinearBlock):
     # Dense + Batch + Relu
     def __init__(self, in_dim, out_dim, act=act):
         super().__init__(in_dim, out_dim, act)
-        self.bn = get_points_batch_norm(out_dim)
+        self.bn = PointBatch1D(out_dim)
 
 
 # Input (Batch, Samples, Points, Features)
@@ -75,10 +84,7 @@ class EdgeConvBlock(LinearBlock):
 
     def __init__(self, in_dim, out_dim, act=act):
         super().__init__(in_dim, out_dim, act)
-        self.dense = nn.Conv2d(in_dim, out_dim, kernel_size=1, bias=False)
-        self.bn = nn.BatchNorm2d(out_dim)
-
-
+        self.bn = PointBatch2D(out_dim)
 
 class STN(nn.Module):
 

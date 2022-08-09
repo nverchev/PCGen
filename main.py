@@ -27,8 +27,8 @@ def parse_args():
     parser.add_argument('--load', type=int, default=0,
                         help='load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
-    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
-                        help='SGD has no momentum, otherwise momentum = 0.9')
+    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_momentum", "Adam", "AdamW"],
+                        help='SGD_momentum, has momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
     parser.add_argument('--cuda', action='store_false', default=True, help='enables CUDA training')

@@ -46,14 +46,13 @@ class DGCNN(nn.Module):
         self.task = task
 
     def forward(self, x):
-        x = x.transpose(2, 1).contiguous()
         xs = []
         for conv in self.edge_convs:
-            x = get_graph_features(x, k=self.k)
+            x = get_graph_features(x, k=self.k) #[batch, num_points, k, features]
             x = conv(x)
-            x = x.max(dim=-1, keepdim=False)[0]
+            x = x.max(dim=2, keepdim=False)[0] #[batch, num_points, features]
             xs.append(x)
-        x = torch.cat(xs, dim=1).transpose(2, 1).contiguous()
+        x = torch.cat(xs, dim=2).contiguous()
         x = self.final_conv(x)
         x_max = x.max(dim=1, keepdim=False)[0]
         if self.task == 'reconstruct':
