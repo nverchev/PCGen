@@ -5,6 +5,7 @@ from dataset import get_dataset
 from optim import get_opt, CosineSchedule
 from trainer import get_class_trainer
 from model import Classifier
+from collections import OrderedDict
 
 pykeops.set_verbose(False)
 
@@ -106,8 +107,12 @@ if __name__ == '__main__':
     elif load > 0:
         trainer.load(load)
     elif finetune != '':
-        trainer.model.encode.load_state_dict(torch.load(finetune,
-                                                        map_location=torch.device(device))['encode'])
+        VAE_state_dictionary = torch.load(finetune, map_location=torch.device(device))
+        DCCNN = OrderedDict()
+        for param_name in VAE_state_dictionary:
+            if param_name[:6] == 'encode':
+                DCCNN[param_name[7:]] = VAE_state_dictionary[param_name]
+        trainer.model.encode.load_state_dict(DCCNN)
 
     if not model_eval:
         while training_epochs > trainer.epoch:

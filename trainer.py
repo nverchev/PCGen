@@ -103,7 +103,7 @@ class Trainer(metaclass=ABCMeta):
 
     def train(self, num_epoch, val_after_train=False):
         if not self.quiet_mode:
-            print('Version ', self.exp_name)
+            print('Experiment name ', self.exp_name)
         for _ in range(num_epoch):
             self.update_learning_rate(self.optimizer_settings['params'])
             self.epoch += 1
@@ -247,9 +247,9 @@ class Trainer(metaclass=ABCMeta):
     def loss(self, output, inputs, targets):
         pass
 
-    def save(self, new_version=None):
+    def save(self, new_exp_name=None):
         self.model.eval()
-        paths = self.paths(new_version)
+        paths = self.paths(new_exp_name)
         torch.save(self.model.state_dict(), paths['model'])
         torch.save(self.optimizer.state_dict(), paths['optim'])
         json.dump(self.train_losses, open(paths['train_hist'], 'w'))
@@ -295,9 +295,9 @@ class Trainer(metaclass=ABCMeta):
         print("Loaded: ", paths['model'])
         return
 
-    def paths(self, new_version=None):
-        if new_version:  # save a parallel version to work with
-            directory = os.path.join(self.dir_path, new_version)
+    def paths(self, new_exp_name=None):
+        if new_exp_name:  # save a parallel version to work with
+            directory = os.path.join(self.dir_path, new_exp_name)
             ep = self.epoch
         else:
             directory = os.path.join(self.dir_path, self.exp_name)

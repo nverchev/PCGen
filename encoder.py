@@ -29,7 +29,6 @@ class DGCNN_sim(nn.Module):
         x = get_graph_features(x, k=self.k)
         x = self.conv(x)
         x = x.max(dim=3, keepdim=False)[0]
-        print(x.shape)
         return self.encode(x)
 
 
