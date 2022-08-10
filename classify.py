@@ -102,8 +102,8 @@ if __name__ == '__main__':
         trainer.load(load)
 
     if not model_eval:
-        while training_epochs >= trainer.epoch:
-            trainer.train(10)
+        while training_epochs > trainer.epoch:
+            trainer.train(1)
             trainer.test()
             trainer.save()
 
