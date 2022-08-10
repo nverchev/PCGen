@@ -94,13 +94,13 @@ class FoldingLayer(nn.Module):
     def __init__(self, in_channel: int, out_channels: list):
         super(FoldingLayer, self).__init__()
 
-        module = []
+        modules = []
         for oc in out_channels[:-1]:
-            module.append(PointsConvBlock(in_channel, oc, act = nn.ReLU()))
+            modules.append(PointsConvBlock(in_channel, oc, act = nn.ReLU()))
             in_channel = oc
         out_layer = nn.Conv1d(in_channel, out_channels[-1], 1)
-        module.append(out_layer)
-        self.layers = nn.Sequential(module)
+        modules.append(out_layer)
+        self.layers = nn.Sequential(*modules)
 
     def forward(self, grids, x):
         # concatenate
