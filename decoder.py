@@ -29,7 +29,7 @@ class PointGenerator(nn.Module):
     def __init__(self):
         super().__init__()
         self.in_chan = IN_CHAN
-        h_dim = [Z_DIM, 512, 256, 256, 128]
+        h_dim = [1024, 512, 256, 256, 128]
         self.m = 2048
         self.m_training = 128
         self.sample_dim = 8
@@ -37,6 +37,7 @@ class PointGenerator(nn.Module):
         self.map_latent_mul1 = LinearBlock(Z_DIM, h_dim[0], act=nn.Sigmoid())
         self.map_latent_mul2 = LinearBlock(Z_DIM, h_dim[0], act=nn.Sigmoid())
         self.dbr = PointsConvBlock(self.sample_dim, h_dim[0], act=None)
+
         modules = []
         for i in range(len(h_dim) - 1):
             modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
@@ -54,7 +55,6 @@ class PointGenerator(nn.Module):
         x = x * mul1 + add * mul2
         x = self.mlp(x)
         return x.transpose(2, 1)
-
 
 
 class FoldingNet(nn.Module):
