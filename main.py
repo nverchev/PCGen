@@ -29,7 +29,7 @@ def parse_args():
                              '0 for most recent, otherwise epoch after which the model was saved')
     parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_momentum", "Adam", "AdamW"],
                         help='SGD_momentum, has momentum = 0.9')
-    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
     parser.add_argument('--cuda', action='store_false', default=True, help='enables CUDA training')
     parser.add_argument('--eval', action='store_true', default=False,
