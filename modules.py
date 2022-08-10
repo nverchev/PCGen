@@ -86,9 +86,33 @@ class EdgeConvBlock(LinearBlock):
 
     def __init__(self, in_dim, out_dim, act=act):
         super().__init__(in_dim, out_dim, act)
-        self.bn = PointBatch2D(out_dim)
+        self.dense = nn.Conv2d(in_dim, out_dim, kernel_size=1, bias=False)
+        self.bn = nn.BatchNorm2d(out_dim)
+        self.act = act
+        self.in_dim = in_dim
+        self.out_dim = out_dim
 
+    def forward(self, x):
+        x = x.transpose(3, 1)
+        x = self.bn(self.dense(x))
+        x if self.act is None else self.act(x)
+        return x.transpose(3, 1).contiguous()
 
+class PointsConvBlock(LinearBlock):
+
+    def __init__(self, in_dim, out_dim, act=act):
+        super().__init__(in_dim, out_dim, act)
+        self.dense = nn.Conv1d(in_dim, out_dim, kernel_size=1, bias=False)
+        self.bn = nn.BatchNorm1d(out_dim)
+        self.act = act
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+
+    def forward(self, x):
+        x = x.transpose(2, 1)
+        x = self.bn(self.dense(x))
+        x if self.act is None else self.act(x)
+        return x.transpose(2, 1).contiguous()
 class STN(nn.Module):
 
     def __init__(self, channels=3):

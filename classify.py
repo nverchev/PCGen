@@ -5,6 +5,7 @@ from dataset import get_dataset
 from optim import get_opt, CosineSchedule
 from trainer import get_class_trainer
 from model import Classifier
+
 pykeops.set_verbose(False)
 
 
@@ -19,10 +20,13 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--epochs', type=int, default=250)
-    parser.add_argument('--load', type=int, default=0,
+    parser.add_argument('--load', type=int, default=-1,
                         help='load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
-    parser.add_argument('--optimizer', type=str, default='SGD_momentum', choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
+    parser.add_argument('--finetune', type=str, default="",
+                        help='path of the VAE model whose encoder is used for pretraining')
+    parser.add_argument('--optimizer', type=str, default='SGD_momentum',
+                        choices=["SGD", "SGD_nesterov", "Adam", "AdamW"],
                         help='SGD has no momentum, otherwise momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.1, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.0001, help='weight decay')
@@ -54,6 +58,7 @@ if __name__ == '__main__':
     opt_name = args.optimizer
     batch_size = args.batch_size
     load = args.load
+    finetune = args.finetune
     initial_learning_rate = args.lr
     weight_decay = args.wd
     model_eval = args.eval
@@ -100,6 +105,9 @@ if __name__ == '__main__':
         trainer.load()
     elif load > 0:
         trainer.load(load)
+    elif finetune != '':
+        trainer.model.encode.load_state_dict(torch.load(finetune,
+                                                        map_location=torch.device(device))['encode'])
 
     if not model_eval:
         while training_epochs > trainer.epoch:
