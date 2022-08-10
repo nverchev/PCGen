@@ -25,10 +25,11 @@ class DGCNN_sim(nn.Module):
         self.encode = nn.Sequential(*modules)
 
     def forward(self, x):
+        x = x.transpose(2, 1)
         x = get_graph_features(x, k=self.k)
         x = self.conv(x)
-        x = x.max(dim=2, keepdim=False)[0]
-        x = x.transpose(2, 1).contiguous()
+        x = x.max(dim=3, keepdim=False)[0]
+        print(x.shape)
         return self.encode(x)
 
 
@@ -41,24 +42,25 @@ class DGCNN(nn.Module):
         for i in range(len(h_dim) - 1):
             edge_conv_list.append(EdgeConvBlock(2 * h_dim[i], h_dim[i + 1]))
         self.edge_convs = nn.Sequential(*edge_conv_list)
-        self.final_conv = nn.Linear(sum(h_dim), 2 * Z_DIM)
+        self.final_conv = nn.Conv1d(sum(h_dim), 2 * Z_DIM, kernel_size=1)
         self.task = task
 
     def forward(self, x):
         xs = []
+        x = x.transpose(2, 1)
         for conv in self.edge_convs:
-            x = get_graph_features(x, k=self.k) #[batch, num_points, k, features]
+            x = get_graph_features(x, k=self.k) #[batch, features, num_points, k]
             x = conv(x)
-            x = x.max(dim=2, keepdim=False)[0] #[batch, num_points, features]
+            x = x.max(dim=3, keepdim=False)[0] #[batch, features, num_points]
             xs.append(x)
-        x = torch.cat(xs, dim=2).contiguous()
+        x = torch.cat(xs, dim=1).contiguous()
         x = self.final_conv(x)
-        x_max = x.max(dim=1, keepdim=False)[0]
+        x_max = x.max(dim=2, keepdim=False)[0]
         if self.task == 'reconstruct':
             x = x_max
         if self.task == 'classify':
-            x_avg = x.mean(dim=1)
-            x = torch.cat([x_max, x_avg], dim=1)
+            x_avg = x.mean(dim=2)
+            x = torch.cat([x_max, x_avg], dim=1).contiguous()
         return x
 
 

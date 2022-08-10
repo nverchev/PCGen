@@ -17,29 +17,7 @@ class View(nn.Module):
 class MaxChannel(nn.Module):
 
     def forward(self, x):
-        return torch.max(x, 1)[0]
-
-
-class PointBatch1D(nn.Module):
-    def __init__(self, out_dim):
-        super().__init__()
-        self.batchnorm = nn.BatchNorm1d(out_dim)
-
-    def forward(self, x):
-        x = x.transpose(-1, -2)
-        x = self.batchnorm(x)
-        return x.transpose(-1, -2)
-
-
-class PointBatch2D(nn.Module):
-    def __init__(self, out_dim):
-        super().__init__()
-        self.batchnorm = nn.BatchNorm2d(out_dim)
-
-    def forward(self, x):
-        x = x.transpose(-1, -3)
-        x = self.batchnorm(x)
-        return x.transpose(-1, -3)
+        return torch.max(x, 2)[0]
 
 
 # Input (Batch, Features)
@@ -64,55 +42,18 @@ class PointsConvBlock(LinearBlock):
     # Dense + Batch + Relu
     def __init__(self, in_dim, out_dim, act=act):
         super().__init__(in_dim, out_dim, act)
-        self.bn = PointBatch1D(out_dim)
+        self.dense = nn.Conv1d(in_dim, out_dim, kernel_size=1, bias=False)
+        self.bn = nn.BatchNorm1d(out_dim)
 
 
-# Input (Batch, Samples, Points, Features)
-class PointsConvBlock4(PointsConvBlock):
-
-    def forward(self, x, n_samples=1, m=None):
-        if m is not None:
-            x = x.view(-1, m, self.in_dim)
-        else:
-            x = x.squeeze()
-        x = super().forward(x)
-        if m is not None:
-            x = x.view(-1, n_samples, m, self.out_dim)
-        return x
-
-
-# Input (Batch, Channels, Edge_start, Edge_end)
 class EdgeConvBlock(LinearBlock):
 
     def __init__(self, in_dim, out_dim, act=act):
         super().__init__(in_dim, out_dim, act)
         self.dense = nn.Conv2d(in_dim, out_dim, kernel_size=1, bias=False)
         self.bn = nn.BatchNorm2d(out_dim)
-        self.act = act
-        self.in_dim = in_dim
-        self.out_dim = out_dim
 
-    def forward(self, x):
-        x = x.transpose(3, 1)
-        x = self.bn(self.dense(x))
-        x if self.act is None else self.act(x)
-        return x.transpose(3, 1).contiguous()
 
-class PointsConvBlock(LinearBlock):
-
-    def __init__(self, in_dim, out_dim, act=act):
-        super().__init__(in_dim, out_dim, act)
-        self.dense = nn.Conv1d(in_dim, out_dim, kernel_size=1, bias=False)
-        self.bn = nn.BatchNorm1d(out_dim)
-        self.act = act
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-
-    def forward(self, x):
-        x = x.transpose(2, 1)
-        x = self.bn(self.dense(x))
-        x if self.act is None else self.act(x)
-        return x.transpose(2, 1).contiguous()
 class STN(nn.Module):
 
     def __init__(self, channels=3):
