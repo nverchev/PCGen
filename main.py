@@ -110,13 +110,13 @@ if __name__ == '__main__':
         trainer.load(load)
 
     if not model_eval:
-        while training_epochs >= trainer.epoch:
+        while training_epochs > trainer.epoch:
             if m_training == 0:
                 m = max(128, (4096 * trainer.epoch) // training_epochs)
             else:
                 m = m_training
             trainer.update_m_training(m)
-            trainer.train(1)
+            trainer.train(10)
             trainer.clas_metric(final)
             trainer.save()
 
