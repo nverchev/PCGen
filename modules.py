@@ -26,7 +26,7 @@ class PointBatch1D(nn.Module):
         self.batchnorm = nn.BatchNorm1d(out_dim)
 
     def forward(self, x):
-        x.transpose(-1, -2)
+        x = x.transpose(-1, -2)
         x = self.batchnorm(x)
         return x.transpose(-1, -2)
 

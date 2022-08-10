@@ -25,10 +25,9 @@ class DGCNN_sim(nn.Module):
         self.encode = nn.Sequential(*modules)
 
     def forward(self, x):
-        x = x.transpose(2, 1).contiguous()
         x = get_graph_features(x, k=self.k)
         x = self.conv(x)
-        x = x.max(dim=-1, keepdim=False)[0]
+        x = x.max(dim=2, keepdim=False)[0]
         x = x.transpose(2, 1).contiguous()
         return self.encode(x)
 
