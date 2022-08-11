@@ -113,7 +113,7 @@ class Trainer(metaclass=ABCMeta):
                 print('====> Epoch:{:3d}'.format(self.epoch))
             self._run_session(partition='train')
             if self.val_loader and val_after_train:  # check losses on val
-                self._run_session(partition='val', inference=True)  # best to test instead
+                self._run_session(partition='val', inference=True)  # best to test instead if interested in metrics
         return
 
     def test(self, partition='val'):  # runs and stores evaluated test samples
@@ -314,6 +314,7 @@ class Trainer(metaclass=ABCMeta):
 class VAETrainer(Trainer):
     clf = svm.LinearSVC(dual=False)
     bin = 'pcdvae'  # minio bin
+    saved_accuracies = {}
 
     def __init__(self, model, recon_loss, exp_name, block_args):
         self.acc = None
@@ -355,6 +356,9 @@ class VAETrainer(Trainer):
         y_hat = self.clf.predict(x_val)
         self.acc = (y_hat == y_val).sum() / y_hat.shape[0]
         print("Accuracy: ", self.acc)
+        accuracy_path = os.path.join(self.dir_path, self.exp_name, "svm_accuracies.json")
+        self.saved_accuracies[self.epoch] = self.acc
+        json.dump(self.saved_accuracies, open(accuracy_path, 'w'))
         return self.acc
 
     def latent_visualisation(self, highlight_label):
@@ -369,6 +373,7 @@ class VAETrainer(Trainer):
 
 
 class ClassificationTrainer(Trainer):
+    saved_metrics = {}
     _metrics = {}
     average = "macro"
     bin = 'pcdvae'  # minio bin
@@ -396,6 +401,9 @@ class ClassificationTrainer(Trainer):
         right_pred = (self.test_pred == self.targets)
         self.wrong_indices = torch.nonzero(~right_pred).squeeze()
         self.calculate_metrics()
+        metrics_path = os.path.join(self.dir_path, self.exp_name, "metrics.json")
+        self.saved_metrics[self.epoch] = self._metrics.copy()
+        json.dump(self.saved_metrics, open(metrics_path, 'w'))
         return
 
     @property
@@ -411,7 +419,7 @@ class ClassificationTrainer(Trainer):
         one_hot_targets = torch.zeros(len(self.targets), max(self.targets) + 1).scatter(1, self.targets.view(-1, 1), 1)
         one_hot_pred = torch.zeros_like(one_hot_targets).scatter(1, self.test_pred.view(-1, 1), 1)
         correct = (one_hot_pred * one_hot_targets)
-        self._metrics['Mean Accuracy'] = (correct.sum(0) / one_hot_targets.sum(0)).mean()
+        self._metrics['Mean Accuracy'] = (correct.sum(0) / one_hot_targets.sum(0)).mean().item()
         self._metrics[avg_type + 'F1 Score'] = metrics.f1_score(self.targets, self.test_pred, average=self.average)
         self._metrics[avg_type + 'Jaccard Score'] = metrics.jaccard_score(self.targets,
                                                                           self.test_pred, average=self.average)

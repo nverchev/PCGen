@@ -115,7 +115,7 @@ if __name__ == '__main__':
         trainer.model.encode.load_state_dict(DCCNN)
 
     if not model_eval:
-        while training_epochs > trainer.epoch:
+        while training_epochs + 20> trainer.epoch :
             trainer.train(1)
             trainer.test()
             trainer.save()
