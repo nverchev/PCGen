@@ -408,6 +408,10 @@ class ClassificationTrainer(Trainer):
         # calculates common and also gives back the indices of the wrong guesses
 
         self._metrics['Accuracy'] = metrics.accuracy_score(self.targets, self.test_pred)
+        one_hot_targets = torch.zeros(len(self.targets), max(self.targets) + 1).scatter(1, self.targets, 1)
+        one_hot_pred = torch.zeros_like(one_hot_targets).scatter(1, self.test_pred, 1)
+        correct = (one_hot_pred * one_hot_targets)
+        self._metrics['Mean Accuracy'] = (correct.sum(0) / one_hot_targets.sum(0)).mean()
         self._metrics[avg_type + 'F1 Score'] = metrics.f1_score(self.targets, self.test_pred, average=self.average)
         self._metrics[avg_type + 'Jaccard Score'] = metrics.jaccard_score(self.targets,
                                                                           self.test_pred, average=self.average)
