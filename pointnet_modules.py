@@ -184,7 +184,7 @@ class OA(nn.Module):
 
 
 class PCT(nn.Module):
-    def __init__(self, samples=[256, 128], enc=128):
+    def __init__(self, k=0, samples=[512, 256]):
         super().__init__()
 
         self.neighbor_embedding = NeighborEmbedding(samples)
@@ -193,9 +193,10 @@ class PCT(nn.Module):
         self.oa2 = OA(256)
         self.oa3 = OA(256)
         self.oa4 = OA(256)
+
         self.linear = nn.Sequential(
-            nn.Conv1d(1280, 2 * enc, kernel_size=1, bias=False),
-            nn.BatchNorm1d(2 * enc),
+            nn.Conv1d(1280, 1024, kernel_size=1, bias=False),
+            nn.BatchNorm1d(1024),
             nn.LeakyReLU(negative_slope=0.2)
         )
 

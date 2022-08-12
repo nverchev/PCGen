@@ -29,6 +29,8 @@ class CosineSchedule:
 
     def __call__(self, base_lr, epoch):
         min_lr = self.min_decay * base_lr
+        if epoch > self.decay_steps:
+            return min_lr
         return min_lr + (base_lr - min_lr) * (1 + np.cos(np.pi * epoch / self.decay_steps) / 2)
 
     def __repr__(self):

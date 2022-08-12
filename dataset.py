@@ -154,7 +154,7 @@ def get_dataset(dataset, final, batch_size, val_every=6, dir_path="./", n_points
                                                   shuffle=False, pin_memory=pin_memory)
 
     else:
-        train_dataset = PCDataset(data_dir=data_dir, split="train", n_points=n_points)
+        train_dataset = PCDataset(data_dir=data_dir, split="train", n_points=n_points, rotation=True, noise=noise)
 
         if dataset == "modelnet40":
             num_train = len(train_dataset)
