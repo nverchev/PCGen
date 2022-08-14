@@ -3,7 +3,7 @@ import torch.nn as nn
 from modules import PointsConvBlock, LinearBlock, STN, MaxChannel, EdgeConvBlock
 from utils import get_graph_features
 
-from pointnet_modules import PCT, SPCT
+#from pointnet_modules import PCT, SPCT
 # input feature dimension
 IN_CHAN = 3
 N_POINTS = 2048
@@ -67,6 +67,6 @@ def get_encoder(encoder_name):
     dict_encoder = {
         "DGCNN_sim": DGCNN_sim,
         "DGCNN": DGCNN,
-        "PCT": PCT
+        #"PCT": PCT
     }
     return dict_encoder[encoder_name]
