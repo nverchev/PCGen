@@ -81,7 +81,7 @@ class CalLoss:
 class AbstractVAELoss(metaclass=ABCMeta):
     losses = ['Criterion', 'KLD']
     c_rec = 1
-    c_KLD = 0.01
+    c_KLD = 0.001
 
     def __call__(self, outputs, inputs, targets):
         recons = outputs['recon']

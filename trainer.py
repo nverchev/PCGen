@@ -312,7 +312,7 @@ class Trainer(metaclass=ABCMeta):
 
 
 class VAETrainer(Trainer):
-    clf = svm.LinearSVC(dual=False)
+    clf = svm.SVC(kernel='linear')
     bin = 'pcdvae'  # minio bin
     saved_accuracies = {}
 
