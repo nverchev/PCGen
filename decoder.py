@@ -25,12 +25,13 @@ class MLPDecoder(nn.Module):
         return x
 
 
+
 class PointGenerator(nn.Module):
 
     def __init__(self):
         super().__init__()
         self.in_chan = IN_CHAN
-        h_dim = [1024, 512, 256, 256, 128]
+        h_dim = [1024, 256, 256, 256, 256, 256]
         self.m = 2048
         self.m_training = 128
         self.sample_dim = 8
@@ -48,6 +49,7 @@ class PointGenerator(nn.Module):
         device = z.device
         mul1 = self.map_latent_mul1(z).unsqueeze(2)
         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
+        x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
         mul2 = self.map_latent_mul2(x)
         x = mul1 * mul2
         x = self.mlp(x)
