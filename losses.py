@@ -91,7 +91,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
         recon_loss_dict = self.get_recon_loss(inputs, recons)
         recon_loss = recon_loss_dict[self.losses[2]]
-        criterion = self.c_rec * recon_loss + self.c_KLD * KLD_free
+        criterion = self.c_rec * recon_loss
         if torch.isnan(criterion):
             print(outputs)
             raise
