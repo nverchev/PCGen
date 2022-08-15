@@ -356,8 +356,11 @@ class VAETrainer(Trainer):
         y_hat = self.clf.predict(x_val)
         self.acc = (y_hat == y_val).sum() / y_hat.shape[0]
         print("Accuracy: ", self.acc)
-        accuracy_path = os.path.join(self.dir_path, self.exp_name, "svm_accuracies.json")
+        directory = os.path.join(self.dir_path, self.exp_name)
+        accuracy_path = os.path.join(directory, "svm_accuracies.json")
         self.saved_accuracies[self.epoch] = self.acc
+        if not os.path.exists(directory):
+            os.mkdir(directory)
         json.dump(self.saved_accuracies, open(accuracy_path, 'w'))
         return self.acc
 
@@ -401,8 +404,11 @@ class ClassificationTrainer(Trainer):
         right_pred = (self.test_pred == self.targets)
         self.wrong_indices = torch.nonzero(~right_pred).squeeze()
         self.calculate_metrics()
-        metrics_path = os.path.join(self.dir_path, self.exp_name, "metrics.json")
+        directory = os.path.join(self.dir_path, self.exp_name)
+        metrics_path = os.path.join(directory, "metrics.json")
         self.saved_metrics[self.epoch] = self._metrics.copy()
+        if not os.path.exists(directory):
+            os.mkdir(directory)
         json.dump(self.saved_metrics, open(metrics_path, 'w'))
         return
 
