@@ -117,7 +117,7 @@ if __name__ == '__main__':
     if not model_eval:
         while training_epochs + 20> trainer.epoch :
             trainer.train(1)
-            trainer.test()
             trainer.save()
+            trainer.test()
 
     trainer.test(partition="test")
