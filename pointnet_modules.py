@@ -194,11 +194,7 @@ class PCT(nn.Module):
         self.oa3 = OA(256)
         self.oa4 = OA(256)
 
-        self.linear = nn.Sequential(
-            nn.Conv1d(1280, 1024, kernel_size=1, bias=False),
-            nn.BatchNorm1d(1024),
-            nn.LeakyReLU(negative_slope=0.2)
-        )
+        self.linear = nn.BatchNorm1d(1024)
 
     def forward(self, x):
         x = x.permute(0, 2, 1)
