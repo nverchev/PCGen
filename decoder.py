@@ -31,7 +31,7 @@ class PointGenerator(nn.Module):
     def __init__(self):
         super().__init__()
         self.in_chan = IN_CHAN
-        h_dim = [1024, 256, 256, 256, 256, 256]
+        h_dim = [1024, 512, 256, 256, 128]
         self.m = 2048
         self.m_training = 128
         self.sample_dim = 8
