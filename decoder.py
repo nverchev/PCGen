@@ -24,6 +24,7 @@ class MLPDecoder(nn.Module):
         x = self.mlp(z)
         return x
 
+
 class PointGenerator(nn.Module):
 
     def __init__(self):
@@ -33,10 +34,8 @@ class PointGenerator(nn.Module):
         self.m = 2048
         self.m_training = 128
         self.sample_dim = 8
-        self.map_latent_add = LinearBlock(Z_DIM, h_dim[0], act=nn.ReLU())
-        self.map_latent_mul1 = LinearBlock(Z_DIM, h_dim[0], act=nn.Sigmoid())
-        self.map_latent_mul2 = LinearBlock(Z_DIM, h_dim[0], act=nn.Sigmoid())
-        self.dbr = PointsConvBlock(self.sample_dim, h_dim[0], act=None)
+        self.map_latent_mul1 = LinearBlock(Z_DIM, h_dim[0], act=nn.ReLU())
+        self.map_latent_mul2 = PointsConvBlock(self.sample_dim, h_dim[0], act=nn.Tanh())
 
         modules = []
         for i in range(len(h_dim) - 1):
@@ -48,11 +47,9 @@ class PointGenerator(nn.Module):
         batch = z.size()[0]
         device = z.device
         mul1 = self.map_latent_mul1(z).unsqueeze(2)
-        mul2 = self.map_latent_mul2(z).unsqueeze(2)
-        add = self.map_latent_add(z).unsqueeze(2)
         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
-        x = self.dbr(x)
-        x = x * mul1 + add * mul2
+        mul2 = self.map_latent_mul2(x)
+        x = mul1 * mul2
         x = self.mlp(x)
         return x.transpose(2, 1)
 
@@ -96,7 +93,7 @@ class FoldingLayer(nn.Module):
 
         modules = []
         for oc in out_channels[:-1]:
-            modules.append(PointsConvBlock(in_channel, oc, act = nn.ReLU()))
+            modules.append(PointsConvBlock(in_channel, oc, act=nn.ReLU()))
             in_channel = oc
         out_layer = nn.Conv1d(in_channel, out_channels[-1], 1)
         modules.append(out_layer)
@@ -117,5 +114,3 @@ def get_decoder(decoder_name):
         "FoldingNet": FoldingNet,
     }
     return decoder_dict[decoder_name]
-
-
