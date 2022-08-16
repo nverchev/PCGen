@@ -51,13 +51,13 @@ def jitter(cloud, sigma=0.01, clip=0.02):
 
 class BaseDataset(Dataset):
 
-    def __init__(self, split, data_dir, n_points, rotation, noise):
+    def __init__(self, split, data_dir, n_points, rotation, translation):
         self.data_name = None
         self.split = split
         self.data_dir = data_dir
         self.n_points = n_points
         self.rotation = rotation
-        self.noise = noise
+        self.translation = translation
 
     def load(self, split):
         pcs = []
@@ -81,16 +81,15 @@ class BaseDataset(Dataset):
         cloud, label = self.pcd[index], self.labels[index]
         if self.rotation:
             random_rotation(cloud)
-        if self.noise:
+        if self.translation:
             cloud = random_scale_translate(cloud)
-            cloud = jitter(cloud)
         return cloud, label
 
 
 class Modelnet40Dataset(BaseDataset):
 
-    def __init__(self, split, data_dir, n_points=2048, rotation=False, noise=False):
-        super().__init__(split, data_dir, n_points, rotation, noise)
+    def __init__(self, split, data_dir, n_points=2048, rotation=False, translation=False):
+        super().__init__(split, data_dir, n_points, rotation, translation)
         self.data_name = 'modelnet40_hdf5_2048'
         self.pcd, self.labels = self.load(split)
         self.pcd = torch.from_numpy(self.pcd)
@@ -106,8 +105,8 @@ class Modelnet40Dataset(BaseDataset):
 
 class ShapeNetDataset(BaseDataset):
 
-    def __init__(self, split, data_dir, n_points=2048, rotation=False, noise=False):
-        super().__init__(split, data_dir, n_points, rotation, noise)
+    def __init__(self, split, data_dir, n_points=2048, rotation=False, translation=False):
+        super().__init__(split, data_dir, n_points, rotation, translation)
         self.data_name = 'shapenetcorev2_hdf5_2048'
         self.pcd, self.labels = self.load(split)
         self.pcd = torch.from_numpy(self.pcd)
@@ -123,7 +122,7 @@ class ShapeNetDataset(BaseDataset):
             return super().load(split=split)
 
 
-def get_dataset(dataset, final, batch_size, val_every=6, dir_path="./", n_points=2048, noise=False):
+def get_dataset(dataset, final, batch_size, val_every=6, dir_path="./", n_points=2048, translation=False, rotation=True):
     data_dir = os.path.join(dir_path, 'dataset')
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
@@ -144,7 +143,8 @@ def get_dataset(dataset, final, batch_size, val_every=6, dir_path="./", n_points
             zip_ref.extractall(data_dir)
     pin_memory = torch.cuda.is_available()
     if final:
-        train_dataset = PCDataset(data_dir=data_dir, split="trainval", n_points=n_points, rotation=True, noise=noise)
+        train_dataset = PCDataset(data_dir=data_dir, split="trainval", n_points=n_points, rotation=rotation,
+                                  translation=translation)
         test_dataset = PCDataset(data_dir=data_dir, split="test", n_points=n_points)
         train_loader = torch.utils.data.DataLoader(train_dataset, drop_last=True,
                                                    batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
@@ -154,7 +154,7 @@ def get_dataset(dataset, final, batch_size, val_every=6, dir_path="./", n_points
                                                   shuffle=False, pin_memory=pin_memory)
 
     else:
-        train_dataset = PCDataset(data_dir=data_dir, split="train", n_points=n_points, rotation=True, noise=noise)
+        train_dataset = PCDataset(data_dir=data_dir, split="train", n_points=n_points, rotation=rotation, noise=noise)
 
         if dataset == "modelnet40":
             num_train = len(train_dataset)
