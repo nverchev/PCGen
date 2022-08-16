@@ -321,6 +321,7 @@ class VAETrainer(Trainer):
         self._loss = get_vae_loss(recon_loss)
         self.losses = self._loss.losses  # losses must be defined before super().__init__()
         super().__init__(model, exp_name, **block_args)
+        self.model.setting = {'c_KLD': self._loss.c_KLD}
         return
 
     def loss(self, output, inputs, targets):
