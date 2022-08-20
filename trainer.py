@@ -434,7 +434,7 @@ class ClassificationTrainer(Trainer):
             metrics.roc_auc_score(self.targets, self.test_probs,
                                   average=self.average, multi_class='ovr')
         for metric, value in self._metrics.items():
-            print(metric + f' : {value:.4f}', end='\t')
+            print(metric + f': {value:.4f}', end='\t')
         print('')
         return
 
