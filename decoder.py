@@ -25,7 +25,6 @@ class MLPDecoder(nn.Module):
         return x
 
 
-
 class PointGenerator(nn.Module):
 
     def __init__(self):
@@ -48,12 +47,23 @@ class PointGenerator(nn.Module):
         batch = z.size()[0]
         device = z.device
         mul1 = self.map_latent_mul1(z).unsqueeze(2)
-        x = s if s is not None else torch.randn(self.m_training, self.sample_dim, self.m).to(device)
+        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
         x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
         mul2 = self.map_latent_mul2(x)
         x = mul1 * mul2
         x = self.mlp(x)
         return x.transpose(2, 1)
+
+    @property
+    def m(self):
+        if self.training:
+            return self.m_training
+        else:
+            return self._m
+
+    @m.setter
+    def m(self, m):
+        self._m = m
 
 
 class FoldingNet(nn.Module):
