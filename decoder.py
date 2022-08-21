@@ -30,12 +30,11 @@ class PointGenerator(nn.Module):
     def __init__(self):
         super().__init__()
         self.in_chan = IN_CHAN
-        h_dim = [1024, 512, 256, 256, 128]
+        h_dim = [Z_DIM, 512, 256, 128, 64]
         self.m = 2048
         self.m_training = 128
         self.sample_dim = 8
-        self.map_latent_mul1 = LinearBlock(Z_DIM, h_dim[0], act=nn.ReLU())
-        self.map_latent_mul2 = PointsConvBlock(self.sample_dim, h_dim[0], act=nn.Tanh())
+        self.map_latent_mul = PointsConvBlock(self.sample_dim, h_dim[0], act=nn.Tanh())
 
         modules = []
         for i in range(len(h_dim) - 1):
@@ -46,11 +45,10 @@ class PointGenerator(nn.Module):
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
-        mul1 = self.map_latent_mul1(z).unsqueeze(2)
         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
-        x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        mul2 = self.map_latent_mul2(x)
-        x = mul1 * mul2
+        # x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
+        mul = self.map_latent_mul(x)
+        x = z.unsqueeze(2) * mul
         x = self.mlp(x)
         return x.transpose(2, 1)
 
