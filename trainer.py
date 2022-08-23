@@ -346,10 +346,7 @@ class VAETrainer(Trainer):
         x_train = x_train[shuffle]
         y_train = y_train[shuffle]
         print("Fitting the classifier ...")
-        with warnings.catch_warnings():
-            # warnings.filterwarnings("ignore", category=ConvergenceWarning, module="sklearn")
-            # Does not fully converge
-            self.clf.fit(x_train, y_train)
+        self.clf.fit(x_train, y_train)
         partition = "test" if final else "val"
         self.test(partition=partition)
         x_val = np.array([z.numpy() for z in self.test_outputs['z']])
