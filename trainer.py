@@ -285,7 +285,8 @@ class Trainer(metaclass=ABCMeta):
         paths = self.paths()
         if self.minio is not None:
             for file in paths.values():
-                self.minio.fget_object(self.bin, self.minio_path(file), file)
+                if file[-13:] != 'settings.json':
+                    self.minio.fget_object(self.bin, self.minio_path(file), file)
         self.model.load_state_dict(torch.load(paths['model'],
                                               map_location=torch.device(self.device)))
         self.optimizer.load_state_dict(torch.load(paths['optim'],
