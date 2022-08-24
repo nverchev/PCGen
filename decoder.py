@@ -71,13 +71,13 @@ class FoldingNet(nn.Module):
         self.in_chan = IN_CHAN
         # Sample the grids in 2D space
         num_grid = 45
-        self.hdim = [512] * 4
+        self.h_dim = [512] * 4
         self.m_grid = num_grid ** 2
         xx = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
         self.grid = torch.stack(torch.meshgrid(xx, yy, indexing="ij")).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
-        self.fold1 = FoldingLayer(Z_DIM + 2, [self.hdim[0], self.hdim[1], 3])
-        self.fold2 = FoldingLayer(Z_DIM + 3, [self.hdim[2], self.hdim[3], 3])
+        self.fold1 = FoldingLayer(Z_DIM + 2, [self.h_dim[0], self.h_dim[1], 3])
+        self.fold2 = FoldingLayer(Z_DIM + 3, [self.h_dim[2], self.h_dim[3], 3])
 
     def forward(self, z):
         batch_size = z.shape[0]
