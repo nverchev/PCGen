@@ -17,11 +17,11 @@ def chamfer(t1, t2, dist):
     idx1 = dist.argmin(axis=1).expand(-1, -1, 3)
     m1 = t1.gather(1, idx1)
     squared1 = ((t2 - m1) ** 2).mean(0).sum()
-    norm1 = (torch.sqrt((t2 - m1) ** 2).sum(-1)).mean()
+    norm1 = torch.sqrt(((t2 - m1) ** 2).sum(-1)).mean()
     idx2 = dist.argmin(axis=2).expand(-1, -1, 3)
     m2 = t2.gather(1, idx2)
     squared2 = ((t1 - m2) ** 2).mean(0).sum()
-    norm2 = (torch.sqrt((t1 - m2) ** 2).sum(-1)).mean()
+    norm2 = torch.sqrt(((t1 - m2) ** 2).sum(-1)).mean()
     # forward + reverse
     squared = squared1 + squared2
     norm = norm1 + norm2
@@ -112,12 +112,12 @@ class AbstractVAELoss(metaclass=ABCMeta):
 
 class VAELossChamfer(AbstractVAELoss):
     losses = AbstractVAELoss.losses + ['Chamfer', 'Chamfer_norm']
-    c_rec = 1
+    c_rec = 1000
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
         squared, norm = chamfer(inputs, recons, pairwise_dist)
-        return {'recon': squared,
+        return {'recon': norm,
                 'Chamfer': squared,
                 'Chamfer_norm': norm}
 

@@ -319,6 +319,7 @@ class VAETrainer(Trainer):
 
     def __init__(self, model, recon_loss, exp_name, block_args):
         self.acc = None
+        self.cf = None
         self._loss = get_vae_loss(recon_loss)
         self.losses = self._loss.losses  # losses must be defined before super().__init__()
         model.settings.update({'c_KLD': self._loss.c_KLD})
@@ -351,11 +352,13 @@ class VAETrainer(Trainer):
         self.clf.fit(x_train, y_train)
         partition = "test" if final else "val"
         self.test(partition=partition)
-        x_val = np.array([z.numpy() for z in self.test_outputs['z']])
-        y_val = np.array([z.numpy() for z in self.test_targets])
-        y_hat = self.clf.predict(x_val)
-        self.acc = (y_hat == y_val).sum() / y_hat.shape[0]
+        x_test = np.array([z.numpy() for z in self.test_outputs['z']])
+        y_test = np.array([z.numpy() for z in self.test_targets])
+        y_hat = self.clf.predict(x_test)
+        self.acc = (y_hat == y_test).sum() / y_hat.shape[0]
         print("Accuracy: ", self.acc)
+        self.cf = metrics.confusion_matrix(y_hat, y_test, normalize='true')
+        print('Mean Accuracy;', np.diag(self.cf).astype(float).mean())
         directory = os.path.join(self.dir_path, self.exp_name)
         accuracy_path = os.path.join(directory, "svm_accuracies.json")
         self.saved_accuracies[self.epoch] = self.acc
