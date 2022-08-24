@@ -41,7 +41,7 @@ class Trainer(metaclass=ABCMeta):
     max_output = np.inf  # maximum amount of stored evaluated test samples
 
     def __init__(self, model, exp_name, device, optim, train_loader, val_loader=None,
-                 test_loader=None, minioClient=None, dir_path='./', mp=False, **block_args):
+                 test_loader=None, minioClient=None, dir_path='./', **block_args):
 
         torch.manual_seed = 112358
         self.epoch = 0
@@ -52,7 +52,6 @@ class Trainer(metaclass=ABCMeta):
         self.settings = {**model.settings, **block_args}
         self.optimizer_settings = block_args['optim_args'].copy()
         self.optimizer = optim(**self.optimizer_settings)
-        self.mp = mp and device.type == 'cuda'  # mixed precision casting
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
