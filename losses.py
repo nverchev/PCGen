@@ -111,7 +111,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
 
 
 class VAELossChamfer(AbstractVAELoss):
-    losses = AbstractVAELoss.losses + ['Chamfer']
+    losses = AbstractVAELoss.losses + ['Chamfer', 'Chamfer_norm']
     c_rec = 1
 
     def get_recon_loss(self, inputs, recons):
@@ -124,19 +124,20 @@ class VAELossChamfer(AbstractVAELoss):
 
 # Negative Log Likelihood Distance
 class VAELossNLL(AbstractVAELoss):
-    losses = AbstractVAELoss.losses + ['NLL', 'Chamfer']
+    losses = AbstractVAELoss.losses + ['NLL', 'Chamfer', 'Chamfer_norm']
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        chamfer_loss = chamfer(inputs, recons, pairwise_dist)
+        squared, norm = chamfer(inputs, recons, pairwise_dist)
         recon = nll(inputs, recons, pairwise_dist)
         return {'recon':recon,
                 'NLL': recon,
-                'Chamfer': chamfer_loss}
+                'Chamfer': squared,
+                'Chamfer_norm': norm}
 
 
 class VAELossSinkhorn(AbstractVAELoss):
-    losses = AbstractVAELoss.losses + ['Sinkhorn', 'Chamfer']
+    losses = AbstractVAELoss.losses + ['Sinkhorn', 'Chamfer', 'Chamfer_norm']
     c_rec = 70000
     sinkhorn = geomloss.SamplesLoss(loss="sinkhorn", p=2,
                                     blur=.03, diameter=2,
@@ -144,7 +145,7 @@ class VAELossSinkhorn(AbstractVAELoss):
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        chamfer_loss = chamfer(inputs, recons, pairwise_dist)
+        squared, norm = chamfer(inputs, recons, pairwise_dist)
         # need to divide into batches
         inputs_list = inputs.chunk(4, 0)
         recon_list = recons.chunk(4, 0)
@@ -153,8 +154,8 @@ class VAELossSinkhorn(AbstractVAELoss):
             sk_loss += self.sinkhorn(inp, rec).mean()
         return {'recon': sk_loss,
                 'Sinkhorn': sk_loss,
-                'Chamfer': chamfer_loss}
-
+                'Chamfer': squared,
+                'Chamfer_norm': norm}
 
 def get_classification_loss(loss):
     classification_loss_dict = {

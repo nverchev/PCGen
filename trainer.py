@@ -152,9 +152,8 @@ class Trainer(metaclass=ABCMeta):
                 return
             inputs, targets = self.to_recursive([inputs, targets], self.device)
             inputs_aux = self.helper_inputs(inputs, targets)
-            with amp.autocast(self.mp):
-                outputs = self.model(**inputs_aux)
-                batch_loss = self.loss(outputs, inputs, targets)
+            outputs = self.model(**inputs_aux)
+            batch_loss = self.loss(outputs, inputs, targets)
             criterion = batch_loss['Criterion']
             for loss in self.losses:
                 epoch_loss[loss] += batch_loss[loss].item()
