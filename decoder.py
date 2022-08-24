@@ -10,13 +10,13 @@ class MLPDecoder(nn.Module):
 
     def __init__(self):
         super().__init__()
-        h_dim = [256, 256]
-        modules = [nn.Linear(Z_DIM, h_dim[0])]
-        for i in range(len(h_dim) - 1):
+        self.hdim = [256, 256]
+        modules = [nn.Linear(Z_DIM, self.h_dim[0])]
+        for i in range(len(self.h_dim) - 1):
             modules.append(nn.ELU())
-            modules.append(nn.Linear(h_dim[i], h_dim[i + 1]))
+            modules.append(nn.Linear(self.h_dim[i], self.h_dim[i + 1]))
         modules.append(nn.ELU())
-        modules.append(nn.Linear(h_dim[-1], IN_CHAN * N_POINTS))
+        modules.append(nn.Linear(self.h_dim[-1], IN_CHAN * N_POINTS))
         modules.append(View(-1, N_POINTS, IN_CHAN))
         self.mlp = nn.Sequential(*modules)
 
@@ -30,16 +30,16 @@ class PointGenerator(nn.Module):
     def __init__(self):
         super().__init__()
         self.in_chan = IN_CHAN
-        h_dim = [256, Z_DIM, 512, 256, 128, 64]
+        self.h_dim = [256, Z_DIM, 512, 256, 128, 64]
         self.m = 2048
         self.m_training = 128
         self.sample_dim = 16
-        self.map_latent_mul1 = PointsConvBlock(self.sample_dim, h_dim[0])
-        self.map_latent_mul2 = PointsConvBlock(h_dim[0], h_dim[1], act=nn.Hardtanh())
+        self.map_latent_mul1 = PointsConvBlock(self.sample_dim, self.h_dim[0])
+        self.map_latent_mul2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], act=nn.Hardtanh())
         modules = []
-        for i in range(1, len(h_dim) - 1):
-            modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
-        modules.append(nn.Conv1d(h_dim[-1], IN_CHAN, kernel_size=1))
+        for i in range(1, len(self.h_dim) - 1):
+            modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
+        modules.append(nn.Conv1d(self.h_dim[-1], IN_CHAN, kernel_size=1))
         self.mlp = nn.Sequential(*modules)
 
     def forward(self, z, s=None):
@@ -71,12 +71,13 @@ class FoldingNet(nn.Module):
         self.in_chan = IN_CHAN
         # Sample the grids in 2D space
         num_grid = 45
+        self.hdim = [512] * 4
         self.m_grid = num_grid ** 2
         xx = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
         self.grid = torch.stack(torch.meshgrid(xx, yy, indexing="ij")).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
-        self.fold1 = FoldingLayer(Z_DIM + 2, [512, 512, 3])
-        self.fold2 = FoldingLayer(Z_DIM + 3, [512, 512, 3])
+        self.fold1 = FoldingLayer(Z_DIM + 2, [self.hdim[0], self.hdim[1], 3])
+        self.fold2 = FoldingLayer(Z_DIM + 3, [self.hdim[2], self.hdim[3], 3])
 
     def forward(self, z):
         batch_size = z.shape[0]

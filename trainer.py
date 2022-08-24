@@ -49,7 +49,7 @@ class Trainer(metaclass=ABCMeta):
         self.model = model.to(device)  # model is not copied
         self.exp_name = exp_name  # name used for saving and loading
         self.schedule = block_args['schedule']
-        self.settings = {**model.settings, **block_args, 'Optimizer': str(optim)}
+        self.settings = {**model.settings, **block_args}
         self.optimizer_settings = block_args['optim_args'].copy()
         self.optimizer = optim(**self.optimizer_settings)
         self.mp = mp and device.type == 'cuda'  # mixed precision casting
@@ -65,6 +65,8 @@ class Trainer(metaclass=ABCMeta):
         self.dir_path = dir_path
         self.minio_path = staticmethod(lambda path: path[len(dir_path):]).__func__  # removes dir path
         self.test_targets, self.test_outputs = [], {}  # stored in RAM
+        settings_path = self.paths()['settings']
+        json.dump(self.settings, open(settings_path, 'w'), default=vars)
 
     @property
     def optimizer_settings(self):  # settings shown depend on epoch
@@ -304,7 +306,8 @@ class Trainer(metaclass=ABCMeta):
             ep = self.epoch
         if not os.path.exists(directory):
             os.mkdir(directory)
-        paths = {'model': os.path.join(directory, f'model_epoch{ep}.pt'),
+        paths = {'settings': os.path.join(directory, 'settings.json'),
+                 'model': os.path.join(directory, f'model_epoch{ep}.pt'),
                  'optim': os.path.join(directory, f'optimizer_epoch{ep}.pt'),
                  'train_hist': os.path.join(directory, 'train_losses.json'),
                  'val_hist': os.path.join(directory, 'val_losses.json')}
@@ -320,8 +323,9 @@ class VAETrainer(Trainer):
         self.acc = None
         self._loss = get_vae_loss(recon_loss)
         self.losses = self._loss.losses  # losses must be defined before super().__init__()
+        model.settings.update({'c_KLD': self._loss.c_KLD})
         super().__init__(model, exp_name, **block_args)
-        self.model.setting = {'c_KLD': self._loss.c_KLD}
+
         return
 
     def loss(self, output, inputs, targets):
@@ -357,8 +361,6 @@ class VAETrainer(Trainer):
         directory = os.path.join(self.dir_path, self.exp_name)
         accuracy_path = os.path.join(directory, "svm_accuracies.json")
         self.saved_accuracies[self.epoch] = self.acc
-        if not os.path.exists(directory):
-            os.mkdir(directory)
         json.dump(self.saved_accuracies, open(accuracy_path, 'w'))
         return self.acc
 
@@ -405,8 +407,6 @@ class ClassificationTrainer(Trainer):
         directory = os.path.join(self.dir_path, self.exp_name)
         metrics_path = os.path.join(directory, "metrics.json")
         self.saved_metrics[self.epoch] = self._metrics.copy()
-        if not os.path.exists(directory):
-            os.mkdir(directory)
         json.dump(self.saved_metrics, open(metrics_path, 'w'))
         return
 

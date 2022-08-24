@@ -14,14 +14,14 @@ class DGCNN_sim(nn.Module):
     def __init__(self, k=20):
         super().__init__()
         self.k = k
-        h_dim = [64, 64, 64, 128, 128, 512]
-        self.conv = EdgeConvBlock(2 * IN_CHAN, h_dim[0])
+        self.h_dim = [64, 64, 64, 128, 128, 512]
+        self.conv = EdgeConvBlock(2 * IN_CHAN, self.h_dim[0])
         modules = []
-        for i in range(1, len(h_dim) - 2):
-            modules.append(PointsConvBlock(h_dim[i], h_dim[i + 1]))
+        for i in range(1, len(self.h_dim) - 2):
+            modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
         modules.append(MaxChannel())
-        modules.append(LinearBlock(h_dim[-2], h_dim[-1]))
-        modules.append(nn.Linear(h_dim[-1], 2 * Z_DIM))
+        modules.append(LinearBlock(self.h_dim[-2], self.h_dim[-1]))
+        modules.append(nn.Linear(self.h_dim[-1], 2 * Z_DIM))
         self.encode = nn.Sequential(*modules)
 
     def forward(self, x):
@@ -36,12 +36,12 @@ class DGCNN(nn.Module):
     def __init__(self, k=40, task='reconstruct'):
         super().__init__()
         self.k = k
-        h_dim = [64, 64, 128, 256]
-        edge_conv_list = [EdgeConvBlock(2 * IN_CHAN, h_dim[0])]
-        for i in range(len(h_dim) - 1):
-            edge_conv_list.append(EdgeConvBlock(2 * h_dim[i], h_dim[i + 1]))
+        self.h_dim = [64, 64, 128, 256]
+        edge_conv_list = [EdgeConvBlock(2 * IN_CHAN, self.h_dim[0])]
+        for i in range(len(self.h_dim) - 1):
+            edge_conv_list.append(EdgeConvBlock(2 * self.h_dim[i], self.h_dim[i + 1]))
         self.edge_convs = nn.Sequential(*edge_conv_list)
-        self.final_conv = nn.Conv1d(sum(h_dim), 2 * Z_DIM, kernel_size=1)
+        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * Z_DIM, kernel_size=1)
         self.task = task
 
     def forward(self, x):

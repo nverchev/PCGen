@@ -18,7 +18,7 @@ class ExponentialSchedule:
     def __call__(self, base_lr, epoch):
         return base_lr * self.exp_decay ** epoch
 
-    def __repr__(self):
+    def __str__(self):
         return "ExponentialSchedule"
 
 
@@ -33,7 +33,7 @@ class CosineSchedule:
             return min_lr
         return min_lr + (base_lr - min_lr) * (1 + np.cos(np.pi * epoch / self.decay_steps) / 2)
 
-    def __repr__(self):
+    def __str__(self):
         return "CosineSchedule"
 
 

@@ -15,6 +15,7 @@ class VAE(nn.Module):
         self.decoder_name = decoder_name
         self.encode = get_encoder(encoder_name)(k)
         self.decode = get_decoder(decoder_name)()
+        self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, "k": k}
 
     def forward(self, x):
         data = self.encoder(x)
@@ -63,6 +64,7 @@ class Classifier(nn.Module):
             LinearBlock(512, 256),
             nn.Dropout(0.5),
             nn.Linear(256, num_classes))
+        self.settings = {'encode_h_dim': self.encode.h_dim, 'dense_h_dim': [512, 256], "k": k}
 
     def forward(self, x):
         features = self.encode(x)
