@@ -14,7 +14,7 @@ def parse_args():
 
     parser.add_argument('--encoder', type=str, default='DGCNN', choices=["DGCNN_sim", "DGCNN"])
     parser.add_argument('--decoder', type=str, default='Gen', choices=["MLP", "Gen", "FoldingNet"])
-    parser.add_argument('--recon_loss', type=str, default='Chamfer', choices=["Chamfer", "Sinkhorn", "NLL", "MMD"],
+    parser.add_argument('--recon_loss', type=str, default='Chamfer', choices=["Chamfer", "Sinkhorn", "NLL"],
                         help='reconstruction loss')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')

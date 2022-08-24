@@ -16,12 +16,16 @@ def chamfer(t1, t2, dist):
     # We use the retrieved index on torch
     idx1 = dist.argmin(axis=1).expand(-1, -1, 3)
     m1 = t1.gather(1, idx1)
-    s1 = ((t2 - m1) ** 2).mean(0).sum()
+    squared1 = ((t2 - m1) ** 2).mean(0).sum()
+    norm1 = (torch.sqrt((t2 - m1) ** 2).sum(-1)).mean()
     idx2 = dist.argmin(axis=2).expand(-1, -1, 3)
     m2 = t2.gather(1, idx2)
-    s2 = ((t1 - m2) ** 2).mean(0).sum()
+    squared2 = ((t1 - m2) ** 2).mean(0).sum()
+    norm2 = (torch.sqrt((t1 - m2) ** 2).sum(-1)).mean()
     # forward + reverse
-    return s1 + s2
+    squared = squared1 + squared2
+    norm = norm1 + norm2
+    return squared, norm
 
 
 # # Works with distance in torch
@@ -90,7 +94,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
             inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
         recon_loss_dict = self.get_recon_loss(inputs, recons)
-        recon_loss = recon_loss_dict[self.losses[2]]
+        recon_loss = recon_loss_dict['recon']
         criterion = self.c_rec * recon_loss + self.c_KLD * KLD_free
         if torch.isnan(criterion):
             print(outputs)
@@ -112,7 +116,10 @@ class VAELossChamfer(AbstractVAELoss):
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        return {'Chamfer': chamfer(inputs, recons, pairwise_dist)}
+        squared, norm = chamfer(inputs, recons, pairwise_dist)
+        return {'recon': squared,
+                'Chamfer': squared,
+                'Chamfer_norm': norm}
 
 
 # Negative Log Likelihood Distance
@@ -122,22 +129,9 @@ class VAELossNLL(AbstractVAELoss):
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
         chamfer_loss = chamfer(inputs, recons, pairwise_dist)
-        return {'NLL': nll(inputs, recons, pairwise_dist),
-                'Chamfer': chamfer_loss}
-
-
-class VAELossMMD(AbstractVAELoss):
-    losses = AbstractVAELoss.losses + ['MMD', 'Chamfer']
-    c_rec = 1
-    mmd_gaussian = geomloss.SamplesLoss(loss="gaussian",
-                                        blur=.05, diameter=2,
-                                        backend="tensorized")
-
-    def get_recon_loss(self, inputs, recons):
-        pairwise_dist = square_distance(inputs, recons)
-        chamfer_loss = chamfer(inputs, recons, pairwise_dist)
-        mmd = self.mmd_gaussian(inputs, recons)
-        return {'MMD': mmd.mean(),
+        recon = nll(inputs, recons, pairwise_dist)
+        return {'recon':recon,
+                'NLL': recon,
                 'Chamfer': chamfer_loss}
 
 
@@ -157,7 +151,8 @@ class VAELossSinkhorn(AbstractVAELoss):
         sk_loss = 0
         for inp, rec in zip(inputs_list, recon_list):
             sk_loss += self.sinkhorn(inp, rec).mean()
-        return {'Sinkhorn': sk_loss,
+        return {'recon': sk_loss,
+                'Sinkhorn': sk_loss,
                 'Chamfer': chamfer_loss}
 
 
@@ -172,7 +167,6 @@ def get_vae_loss(recon_loss):
     recon_loss_dict = {
         "Chamfer": VAELossChamfer,
         "NLL": VAELossNLL,
-        "MMD": VAELossMMD,
         'Sinkhorn': VAELossSinkhorn,
     }
     return recon_loss_dict[recon_loss]()
