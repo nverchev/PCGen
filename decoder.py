@@ -65,6 +65,30 @@ class PointGenerator(nn.Module):
         self._m = m
 
 
+class FoldingLayer(nn.Module):
+    """
+    The folding operation of FoldingNet
+    """
+
+    def __init__(self, in_channel: int, out_channels: list):
+        super(FoldingLayer, self).__init__()
+
+        modules = []
+        for oc in out_channels[:-1]:
+            modules.append(PointsConvBlock(in_channel, oc, act=nn.ReLU()))
+            in_channel = oc
+        out_layer = nn.Conv1d(in_channel, out_channels[-1], 1)
+        modules.append(out_layer)
+        self.layers = nn.Sequential(*modules)
+
+    def forward(self, grids, x):
+        # concatenate
+        x = torch.cat([grids, x], dim=1)
+        # shared mlp
+        x = self.layers(x)
+        return x
+
+
 class FoldingNet(nn.Module):
     def __init__(self):
         super().__init__()
@@ -93,30 +117,6 @@ class FoldingNet(nn.Module):
         recon1 = self.fold1(grid, x)
         recon2 = self.fold2(recon1, x)
         return recon2.transpose(2, 1)
-
-
-class FoldingLayer(nn.Module):
-    """
-    The folding operation of FoldingNet
-    """
-
-    def __init__(self, in_channel: int, out_channels: list):
-        super(FoldingLayer, self).__init__()
-
-        modules = []
-        for oc in out_channels[:-1]:
-            modules.append(PointsConvBlock(in_channel, oc, act=nn.ReLU()))
-            in_channel = oc
-        out_layer = nn.Conv1d(in_channel, out_channels[-1], 1)
-        modules.append(out_layer)
-        self.layers = nn.Sequential(*modules)
-
-    def forward(self, grids, x):
-        # concatenate
-        x = torch.cat([grids, x], dim=1)
-        # shared mlp
-        x = self.layers(x)
-        return x
 
 
 def get_decoder(decoder_name):

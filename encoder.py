@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.init as init
+import torch.nn.functional as F
 from modules import PointsConvBlock, LinearBlock, MaxChannel, EdgeConvBlock
 from utils import get_graph_features
 
@@ -93,45 +94,101 @@ class Point_Transform_Net(nn.Module):
         return x  # (batch_size, 3, 3)
 
 
-class DGCNN_Seg(nn.Module):
+
+
+class FoldingNet(nn.Module):
     def __init__(self,  k=40, task='reconstruct'):
         super().__init__()
-        self.k = k
-        self.transform_net = Point_Transform_Net()
-        h_dim = [64] * 5 + [2 * Z_DIM]
-        self.conv1 = EdgeConvBlock(2 * IN_CHAN, h_dim[0])
-        self.conv2 = EdgeConvBlock(h_dim[0], h_dim[1])
-        self.conv3 = EdgeConvBlock(2 * h_dim[1], h_dim[2])
-        self.conv4 = EdgeConvBlock(h_dim[2], h_dim[3])
-        self.conv5 = EdgeConvBlock(2 * h_dim[3], h_dim[4])
-        self.conv6 = EdgeConvBlock(2 * h_dim[4], h_dim[5])
+        self.k = 16
+        self.h_dim = [12, 64, 64, 64]
+
+        self.n = 2048   # input point cloud size
+        modules = PointsConvBlock(IN_CHAN, 12, act=nn.ReLU())
+        for i in range(len(self.h_dim) - 1):
+            modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1], act=nn.ReLU()))
+
+
+
+        self.mlp1 = nn.Sequential(
+            nn.Conv1d(12, 64, 1),
+            nn.ReLU(),
+            nn.Conv1d(64, 64, 1),
+            nn.ReLU(),
+            nn.Conv1d(64, 64, 1),
+            nn.ReLU(),
+        )
+        self.linear1 = nn.Linear(64, 64)
+        self.conv1 = nn.Conv1d(64, 128, 1)
+        self.linear2 = nn.Linear(128, 128)
+        self.conv2 = nn.Conv1d(128, 1024, 1)
+        self.mlp2 = nn.Sequential(
+            nn.Conv1d(1024, 1024, 1),
+            nn.ReLU(),
+            nn.Conv1d(1024, 1024, 1),
+        )
+
+    def local_maxpool(self, x, idx):
+        batch_size = x.size(0)
+        num_points = x.size(2)
+        x = x.view(batch_size, -1, num_points)
+
+        _, num_dims, _ = x.size()
+
+        x = x.transpose(2, 1).contiguous()  # (batch_size, num_points, num_dims)
+        x = x.view(batch_size * num_points, -1)[idx, :]  # (batch_size*n, num_dims) -> (batch_size*n*k, num_dims)
+        x = x.view(batch_size, num_points, -1, num_dims)  # (batch_size, num_points, k, num_dims)
+        x, _ = torch.max(x, dim=2)  # (batch_size, num_points, num_dims)
+        return x
+
+    def local_cov(pts, idx):
+        batch_size = pts.size(0)
+        num_points = pts.size(2)
+        pts = pts.view(batch_size, -1, num_points)  # (batch_size, 3, num_points)
+
+        _, num_dims, _ = pts.size()
+
+        x = pts.transpose(2, 1).contiguous()  # (batch_size, num_points, 3)
+        x = x.view(batch_size * num_points, -1)[idx, :]  # (batch_size*num_points*2, 3)
+        x = x.view(batch_size, num_points, -1, num_dims)  # (batch_size, num_points, k, 3)
+
+        x = torch.matmul(x[:, :, 0].unsqueeze(3), x[:, :, 1].unsqueeze(
+            2))  # (batch_size, num_points, 3, 1) * (batch_size, num_points, 1, 3) -> (batch_size, num_points, 3, 3)
+        # x = torch.matmul(x[:,:,1:].transpose(3, 2), x[:,:,1:])
+        x = x.view(batch_size, num_points, 9).transpose(2, 1)  # (batch_size, 9, num_points)
+
+        x = torch.cat((pts, x), dim=1)  # (batch_size, 12, num_points)
+
+        return x
+
+    def graph_layer(self, x, idx):
+        x = self.local_maxpool(x, idx)
+        x = self.linear1(x)
+        x = x.transpose(2, 1)
+        x = F.relu(self.conv1(x))
+        x = self.local_maxpool(x, idx)
+        x = self.linear2(x)
+        x = x.transpose(2, 1)
+        x = self.conv2(x)
+        return x
 
     def forward(self, x):
-        x = x.transpose(2, 1)
-        x0 = get_graph_features(x, k=self.k)  # (batch_size, 3, num_points) -> (batch_size, 3*2, num_points, k)
-        t = self.transform_net(x0)  # (batch_size, 3, 3)
-        x = x.transpose(2, 1)  # (batch_size, 3, num_points) -> (batch_size, num_points, 3)
-        x = torch.bmm(x, t)  # (batch_size, num_points, 3) * (batch_size, 3, 3) -> (batch_size, num_points, 3)
-        x = x.transpose(2, 1)  # (batch_size, num_points, 3) -> (batch_size, 3, num_points)
-        x = get_graph_features(x, k=self.k)  # (batch_size, 3, num_points) -> (batch_size, 3*2, num_points, k)
-        x = self.conv1(x)  # (batch_size, 3*2, num_points, k) -> (batch_size, 64, num_points, k)
-        x1 = x.max(dim=-1, keepdim=False)[0]  # (batch_size, 64, num_points, k) -> (batch_size, 64, num_points)
-        x = get_graph_features(x1, k=self.k)  # (batch_size, 64, num_points) -> (batch_size, 64*2, num_points, k)
-        x = self.conv3(x)  # (batch_size, 64*2, num_points, k) -> (batch_size, 64, num_points, k)
-        x2 = x.max(dim=-1, keepdim=False)[0]  # (batch_size, 64, num_points, k) -> (batch_size, 64, num_points)
-        x = get_graph_features(x2, k=self.k)  # (batch_size, 64, num_points) -> (batch_size, 64*2, num_points, k)
-        x = self.conv5(x)  # (batch_size, 64*2, num_points, k) -> (batch_size, 64, num_points, k)
-        x3 = x.max(dim=-1, keepdim=False)[0]  # (batch_size, 64, num_points, k) -> (batch_size, 64, num_points)
-        x = torch.cat((x1, x2, x3), dim=1)  # (batch_size, 64*3, num_points)
-        x = self.conv6(x)  # (batch_size, 64*3, num_points) -> (batch_size, emb_dims, num_points)
-        x = x.max(dim=-1, keepdim=False)[0]  # (batch_size, emb_dims, num_points) -> (batch_size, emb_dims)
-        return x  # (batch_size,  emb_dims)
+        x = x.transpose(2, 1)               # (batch_size, 3, num_points)
+        idx = knn(x, k=self.k)
+        x = self.local_cov(x, idx)            # (batch_size, 3, num_points) -> (batch_size, 12, num_points])
+        x = self.mlp1(x)                        # (batch_size, 12, num_points) -> (batch_size, 64, num_points])
+        x = self.graph_layer(x, idx)            # (batch_size, 64, num_points) -> (batch_size, 1024, num_points)
+        x = torch.max(x, 2, keepdim=True)[0]    # (batch_size, 1024, num_points) -> (batch_size, 1024, 1)
+        x = self.mlp2(x)                        # (batch_size, 1024, 1) -> (batch_size, feat_dims, 1)
+        feat = x.transpose(2,1)                 # (batch_size, feat_dims, 1) -> (batch_size, 1, feat_dims)
+        return feat                             # (batch_size, 1, feat_dims)
+
+
 
 
 def get_encoder(encoder_name):
     dict_encoder = {
         "DGCNN_sim": DGCNN_sim,
         "DGCNN": DGCNN,
-        "DGCNN_Seg": DGCNN_Seg,
+        "FoldingNet": FoldingNet,
     }
     return dict_encoder[encoder_name]

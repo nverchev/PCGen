@@ -51,13 +51,14 @@ def jitter(cloud, sigma=0.01, clip=0.02):
 
 class BaseDataset(Dataset):
 
-    def __init__(self, split, data_dir, n_points, rotation, translation):
+    def __init__(self, split, data_dir, n_points, rotation, translation, cov_matrix):
         self.data_name = None
         self.split = split
         self.data_dir = data_dir
         self.n_points = n_points
         self.rotation = rotation
         self.translation = translation
+        self.cov_matrix = cov_matrix
 
     def load(self, split):
         pcs = []
@@ -67,6 +68,7 @@ class BaseDataset(Dataset):
                 # Dataset is already normalized
                 pc = f['data'][:].astype('float32')
                 pc = pc[:, :self.n_points, :]
+                pc = self.calculate_cov_matrix(pc)
                 label = f['label'][:].astype('int64')
             pcs.append(pc)
             labels.append(label)
@@ -85,11 +87,15 @@ class BaseDataset(Dataset):
             cloud = random_scale_translate(cloud)
         return cloud, label
 
+    @staticmethod
+    def calculate_cov_matrix(x):
+        return x
+
 
 class Modelnet40Dataset(BaseDataset):
 
-    def __init__(self, split, data_dir, n_points=2048, rotation=False, translation=False):
-        super().__init__(split, data_dir, n_points, rotation, translation)
+    def __init__(self, split, data_dir, n_points=2048, rotation=False, translation=False, cov_matrix=False):
+        super().__init__(split, data_dir, n_points, rotation, translation, cov_matrix=cov_matrix)
         self.data_name = 'modelnet40_hdf5_2048'
         self.pcd, self.labels = self.load(split)
         self.pcd = torch.from_numpy(self.pcd)
@@ -105,8 +111,8 @@ class Modelnet40Dataset(BaseDataset):
 
 class ShapeNetDataset(BaseDataset):
 
-    def __init__(self, split, data_dir, n_points=2048, rotation=False, translation=False):
-        super().__init__(split, data_dir, n_points, rotation, translation)
+    def __init__(self, split, data_dir, n_points=2048, rotation=False, translation=False, cov_matrix=False):
+        super().__init__(split, data_dir, n_points, rotation, translation, cov_matrix=cov_matrix)
         self.data_name = 'shapenetcorev2_hdf5_2048'
         self.pcd, self.labels = self.load(split)
         self.pcd = torch.from_numpy(self.pcd)
@@ -122,7 +128,8 @@ class ShapeNetDataset(BaseDataset):
             return super().load(split=split)
 
 
-def get_dataset(dataset, final, batch_size, val_every=6, dir_path="./", n_points=2048, translation=False, rotation=True):
+def get_dataset(dataset, final, batch_size, val_every=6, dir_path="./",
+                n_points=2048, translation=False, rotation=True, cov_matrix=False):
     data_dir = os.path.join(dir_path, 'dataset')
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)

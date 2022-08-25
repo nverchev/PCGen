@@ -12,10 +12,11 @@ pykeops.set_verbose(False)
 def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
-    parser.add_argument('--encoder', type=str, default='DGCNN', choices=["DGCNN_sim", "DGCNN"])
+    parser.add_argument('--encoder', type=str, default='DGCNN', choices=["DGCNN_sim", "DGCNN", "FoldingNet"])
     parser.add_argument('--decoder', type=str, default='Gen', choices=["MLP", "Gen", "FoldingNet"])
     parser.add_argument('--recon_loss', type=str, default='Chamfer', choices=["Chamfer", "Sinkhorn", "NLL"],
                         help='reconstruction loss')
+    parser.add_argument('--c_kld', type=float, default=0.001, help='coefficient for KLD')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
@@ -51,10 +52,12 @@ if __name__ == '__main__':
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
+    cov_matrix = (decoder_name == "FoldingNet")
     model_name = encoder_name + "_" + decoder_name
     device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
     dataset = args.dataset
     recon_loss = args.recon_loss
+    c_kld = args.c_kld
     experiment = args.experiment
     dir_path = args.dir_path
     training_epochs = args.epochs
@@ -81,7 +84,7 @@ if __name__ == '__main__':
     exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path == "" else args.model_path
 
     train_loader, val_loader, test_loader = get_dataset(dataset, final, batch_size, dir_path=dir_path,
-                                                        n_points=num_points)
+                                                        n_points=num_points, cov_matrix=cov_matrix)
     model = VAE(encoder_name, decoder_name, k=k)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     block_args = {
