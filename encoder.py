@@ -11,18 +11,20 @@ N_POINTS = 2048
 Z_DIM = 512
 
 
-class DGCNN_sim(nn.Module):
+
+class DGCNN_Vanilla(nn.Module):
     def __init__(self, k=20):
         super().__init__()
         self.k = k
-        self.h_dim = [64, 64, 64, 128, 128, 512]
+        self.h_dim = [64, 128, 128, 1024, 512, 512]
         self.conv = EdgeConvBlock(2 * IN_CHAN, self.h_dim[0])
         modules = []
-        for i in range(1, len(self.h_dim) - 2):
+        for i in range(3):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
         modules.append(MaxChannel())
-        modules.append(LinearBlock(self.h_dim[-2], self.h_dim[-1]))
-        modules.append(nn.Linear(self.h_dim[-1], 2 * Z_DIM))
+        for i in range(3, len(self.h_dim) - 1):
+            modules.append(LinearBlock(self.h_dim[i], self.h_dim[i + 1]))
+        modules.append(nn.Linear(self.h_dim[-1], Z_DIM))
         self.encode = nn.Sequential(*modules)
 
     def forward(self, x):
@@ -187,7 +189,7 @@ class FoldingNet(nn.Module):
 
 def get_encoder(encoder_name):
     dict_encoder = {
-        "DGCNN_sim": DGCNN_sim,
+        "DGCNN_Vanilla": DGCNN_Vanilla,
         "DGCNN": DGCNN,
         "FoldingNet": FoldingNet,
     }
