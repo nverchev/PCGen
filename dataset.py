@@ -70,7 +70,7 @@ class BaseDataset(Dataset):
                 max_points = pc.shape[1]
                 rand_sampling = np.random.choice(max_points, size=self.n_points, replace=False)
                 sample = np.random.shuffle(np.arange(max_points))
-                pc = pc[:, sample[:self.n_points], :]
+                pc = pc[:, rand_sampling, :]
                 pc = self.calculate_cov_matrix(pc)
                 label = f['label'][:].astype('int64')
             pcs.append(pc)
