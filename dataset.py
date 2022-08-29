@@ -67,7 +67,10 @@ class BaseDataset(Dataset):
             with h5py.File(h5_name, 'r+') as f:
                 # Dataset is already normalized
                 pc = f['data'][:].astype('float32')
-                pc = pc[:, :self.n_points, :]
+                max_points = pc.shape[1]
+                rand_sampling = np.random.choice(max_points, size=self.n_points, replace=False)
+                sample = np.random.shuffle(np.arange(max_points))
+                pc = pc[:, sample[:self.n_points], :]
                 pc = self.calculate_cov_matrix(pc)
                 label = f['label'][:].astype('int64')
             pcs.append(pc)

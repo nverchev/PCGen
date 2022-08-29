@@ -34,8 +34,8 @@ class PointGenerator(nn.Module):
         self.m = 2048
         self.m_training = 128
         self.sample_dim = 16
-        self.map_latent_mul1 = PointsConvBlock(self.sample_dim, self.h_dim[0])
-        self.map_latent_mul2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], act=nn.Hardtanh())
+        self.sample_mapping1 = PointsConvBlock(self.sample_dim, self.h_dim[0])
+        self.sample_mapping2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], act=nn.Hardtanh())
         modules = []
         for i in range(1, len(self.h_dim) - 1):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
@@ -47,12 +47,11 @@ class PointGenerator(nn.Module):
         device = z.device
         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
         # x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        x = self.map_latent_mul1(x)
-        x = self.map_latent_mul2(x)
+        x = self.sample_mapping1(x)
+        x = self.sample_mapping2(x)
         x = z.unsqueeze(2) * x
         x = self.mlp(x)
         return x.transpose(2, 1)
-
     @property
     def m(self):
         if self.training:
@@ -63,6 +62,37 @@ class PointGenerator(nn.Module):
     @m.setter
     def m(self, m):
         self._m = m
+
+
+class PointGenerator_ADAIN(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.in_chan = IN_CHAN
+        self.h_dim = [Z_DIM, Z_DIM, Z_DIM, Z_DIM, Z_DIM]
+        self.m = 2048
+        self.m_training = 128
+        self.sample_dim = Z_DIM
+        map_samples = []
+        map_latents = []
+        for i in range(len(self.h_dim) - 1):
+            map_samples.append(PointsConvBlock(self.h_dim[i], self.h_dim[i+1]))
+            map_latents.append(PointsConvBlock(self.h_dim[i], 2 * self.h_dim[i+1]))
+        self.map_samples = nn.ModuleList(map_samples)
+        self.map_latents = nn.ModuleList(map_latents)
+        self.final = nn.Conv1d(self.h_dim[-1], IN_CHAN, kernel_size=1)
+
+    def forward(self, z, s=None):
+        batch = z.size()[0]
+        device = z.device
+        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
+        z = z.unsqueeze(2)
+        for map_sample, map_latent in zip(self.map_samples, self.map_latents):
+            x = map_sample(x)
+            y_mean, y_bias = map_latent(z).chunk(2, 1)
+            x = y_mean * (x - x.mean(2, keepdim=True) / x.var(2, keepdim=True)) + y_bias
+        x = self.final(x)
+        return x.transpose(2, 1)
 
 
 class FoldingLayer(nn.Module):
@@ -123,6 +153,7 @@ def get_decoder(decoder_name):
     decoder_dict = {
         "MLP": MLPDecoder,
         "Gen": PointGenerator,
+        "ADAIN": PointGenerator_ADAIN,
         "FoldingNet": FoldingNet,
     }
     return decoder_dict[decoder_name]

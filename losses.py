@@ -24,7 +24,7 @@ def chamfer(t1, t2, dist):
     norm2 = torch.sqrt(((t1 - m2) ** 2).sum(-1)).mean()
     # forward + reverse
     squared = squared1 + squared2
-    norm = norm1 + norm2
+    norm = max(norm1, norm2)
     return squared, norm
 
 
