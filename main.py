@@ -12,16 +12,16 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
     parser.add_argument('--encoder', type=str, default='DGCNN', choices=['DGCNN_Vanilla', 'DGCNN', 'FoldingNet'])
-    parser.add_argument('--decoder', type=str, default='Gen', choices=['MLP', 'Gen', 'ADAIN' 'FoldingNet'])
+    parser.add_argument('--decoder', type=str, default='PCGen', choices=['MLP', 'PCGen', 'AdaIN' 'FoldingNet'])
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
-                        choices=['Chamfer', 'Chamfer_Augmented', 'Sinkhorn', 'NLL'], help='reconstruction loss')
+                        choices=['Chamfer', 'Chamfer_Augmented', 'Chamfer_Smooth', 'Sinkhorn'], help='reconstruction loss')
     parser.add_argument('--c_kld', type=float, default=0.001, help='coefficient for KLD')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
+    parser.add_argument('--z_dim', type=int, default=512, help='dimension of the latent space')
     parser.add_argument('--m_training', type=int, default=2048,
-                        help='Points  generated when training, 0 for  increasing sequence  \
-                            128 -> 4096 ')
+                        help='Points  generated when training, 0 for  increasing sequence 128 -> 4096 ')
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--epochs', type=int, default=250)
     parser.add_argument('--load', type=int, default=-1,
@@ -60,15 +60,17 @@ if __name__ == '__main__':
     num_points = args.num_points
     batch_size = args.batch_size
     cov_matrix = (args.decoder == 'FoldingNet')
+    in_chan = 12 if cov_matrix else 3
     minio_credential = args.minio_credential
     initial_learning_rate = args.lr
     weight_decay = args.wd
     opt_name = args.optim
     k = args.k
+    z_dim = args.z_dim
+    m_training = args.m_training
     c_kld = args.c_kld
     model_eval = args.eval
     load = args.load
-    m_training = args.m_training
     training_epochs = args.epochs
 
     if minio_credential:
@@ -93,7 +95,7 @@ if __name__ == '__main__':
     )
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, args.lr, args.wd)
-    model = VAE(encoder_name, decoder_name, k=k)
+    model = VAE(encoder_name, decoder_name, z_dim, in_chan, k=k, m=m_training)
 
     trainer_settings = dict(
         opt_name=opt_name,
@@ -112,13 +114,7 @@ if __name__ == '__main__':
     )
 
     block_args = {**trainer_settings, **data_loader_settings}
-
-
     trainer = get_vae_trainer(model, exp_name, block_args)
-    for k, v in block_args.items():
-        if not isinstance(v, (type, torch.utils.data.dataloader.DataLoader)):
-            print(k, ': ', v)
-
     # loads last model
     if load == 0:
         trainer.load()
@@ -129,11 +125,9 @@ if __name__ == '__main__':
         while training_epochs > trainer.epoch:
             if m_training == 0:
                 m = max(128, (4096 * trainer.epoch) // training_epochs)
-            else:
-                m = m_training
-            trainer.update_m_training(m)
+                trainer.update_m_training(m)
             trainer.train(10)
             trainer.save()
-            trainer.clas_metric(final)
+            trainer.test(on='test' if final else 'val')
 
-    trainer.clas_metric(final=final)
+    trainer.test(final='test' if final else 'val')

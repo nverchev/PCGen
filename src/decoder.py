@@ -2,22 +2,21 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from src.encoder import Z_DIM, IN_CHAN, N_POINTS
 from src.modules import PointsConvBlock, LinearBlock, View
-
+CHAN_OUT = 3
 
 class MLPDecoder(nn.Module):
 
-    def __init__(self):
+    def __init__(self, z_dim, m):
         super().__init__()
         self.hdim = [256, 256]
-        modules = [nn.Linear(Z_DIM, self.h_dim[0])]
+        modules = [nn.Linear(z_dim, self.h_dim[0])]
         for i in range(len(self.h_dim) - 1):
             modules.append(nn.ELU())
             modules.append(nn.Linear(self.h_dim[i], self.h_dim[i + 1]))
         modules.append(nn.ELU())
-        modules.append(nn.Linear(self.h_dim[-1], IN_CHAN * N_POINTS))
-        modules.append(View(-1, N_POINTS, IN_CHAN))
+        modules.append(nn.Linear(self.h_dim[-1], CHAN_OUT * m))
+        modules.append(View(-1, m, CHAN_OUT))
         self.mlp = nn.Sequential(*modules)
 
     def forward(self, z):
@@ -25,21 +24,20 @@ class MLPDecoder(nn.Module):
         return x
 
 
-class PointGenerator(nn.Module):
+class PCGen(nn.Module):
 
-    def __init__(self):
+    def __init__(self, z_dim, m):
         super().__init__()
-        self.in_chan = IN_CHAN
-        self.h_dim = [256, Z_DIM, 512, 256, 128, 64]
+        self.h_dim = [256, z_dim, 512, 256, 128, 64]
         self.m = 2048
-        self.m_training = 128
+        self.m_training = m
         self.sample_dim = 16
         self.map_latent_mul1 = PointsConvBlock(self.sample_dim, self.h_dim[0])
         self.map_latent_mul2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], act=nn.Hardtanh())
         modules = []
         for i in range(1, len(self.h_dim) - 1):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
-        modules.append(nn.Conv1d(self.h_dim[-1], IN_CHAN, kernel_size=1))
+        modules.append(nn.Conv1d(self.h_dim[-1], CHAN_OUT, kernel_size=1))
         self.mlp = nn.Sequential(*modules)
 
     def forward(self, z, s=None):
@@ -64,15 +62,14 @@ class PointGenerator(nn.Module):
         self._m = m
 
 
-class PointGenerator_ADAIN(nn.Module):
+class Gen_ADAIN(nn.Module):
 
-    def __init__(self):
+    def __init__(self, z_dim, m):
         super().__init__()
-        self.in_chan = IN_CHAN
-        self.h_dim = [Z_DIM, Z_DIM, Z_DIM, Z_DIM, Z_DIM]
+        self.h_dim = [z_dim] * 5
         self.m = 2048
-        self.m_training = 128
-        self.sample_dim = Z_DIM
+        self.m_training = m
+        self.sample_dim = z_dim
         map_samples = []
         map_latents = []
         for i in range(len(self.h_dim) - 1):
@@ -80,7 +77,7 @@ class PointGenerator_ADAIN(nn.Module):
             map_latents.append(PointsConvBlock(self.h_dim[i], 2 * self.h_dim[i+1]))
         self.map_samples = nn.ModuleList(map_samples)
         self.map_latents = nn.ModuleList(map_latents)
-        self.final = nn.Conv1d(self.h_dim[-1], IN_CHAN, kernel_size=1)
+        self.final = nn.Conv1d(self.h_dim[-1], CHAN_OUT, kernel_size=1)
 
     def forward(self, z, s=None):
         batch = z.size()[0]
@@ -120,18 +117,17 @@ class FoldingLayer(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self):
+    def __init__(self, z_dim, m):
         super().__init__()
-        self.in_chan = IN_CHAN
         # Sample the grids in 2D space
-        num_grid = 45
+        num_grid = round(np.sqrt(m))
         self.h_dim = [512] * 4
         self.m_grid = num_grid ** 2
         xx = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
         self.grid = torch.stack(torch.meshgrid(xx, yy, indexing='ij')).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
-        self.fold1 = FoldingLayer(Z_DIM + 2, [self.h_dim[0], self.h_dim[1], 3])
-        self.fold2 = FoldingLayer(Z_DIM + 3, [self.h_dim[2], self.h_dim[3], 3])
+        self.fold1 = FoldingLayer(z_dim + 2, [self.h_dim[0], self.h_dim[1], CHAN_OUT])
+        self.fold2 = FoldingLayer(z_dim + 3, [self.h_dim[2], self.h_dim[3], CHAN_OUT])
 
     def forward(self, z):
         batch_size = z.shape[0]
@@ -152,8 +148,8 @@ class FoldingNet(nn.Module):
 def get_decoder(decoder_name):
     decoder_dict = {
         'MLP': MLPDecoder,
-        'Gen': PointGenerator,
-        'ADAIN': PointGenerator_ADAIN,
+        'PCGen': PCGen,
+        'AdaIN': Gen_ADAIN,
         'FoldingNet': FoldingNet,
     }
     return decoder_dict[decoder_name]

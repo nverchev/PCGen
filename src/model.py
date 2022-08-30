@@ -9,12 +9,12 @@ from src.modules import LinearBlock
 class VAE(nn.Module):
     settings = {}
 
-    def __init__(self, encoder_name, decoder_name, k=20):
+    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k=20, m=2048):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
-        self.encode = get_encoder(encoder_name)(k)
-        self.decode = get_decoder(decoder_name)()
+        self.encode = get_encoder(encoder_name)(in_chan, z_dim, k)
+        self.decode = get_decoder(decoder_name)(z_dim, m)
         self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, 'k': k}
 
     def forward(self, x):

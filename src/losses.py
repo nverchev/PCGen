@@ -17,15 +17,15 @@ def chamfer(t1, t2, dist):
     idx1 = dist.argmin(axis=1).expand(-1, -1, 3)
     m1 = t1.gather(1, idx1)
     squared1 = ((t2 - m1) ** 2).mean(0).sum()
-    norm1 = torch.sqrt(((t2 - m1) ** 2).sum(-1)).mean()
+    augmented1 = torch.sqrt(((t2 - m1) ** 2).sum(-1)).mean()
     idx2 = dist.argmin(axis=2).expand(-1, -1, 3)
     m2 = t2.gather(1, idx2)
     squared2 = ((t1 - m2) ** 2).mean(0).sum()
-    norm2 = torch.sqrt(((t1 - m2) ** 2).sum(-1)).mean()
+    augmented2 = torch.sqrt(((t1 - m2) ** 2).sum(-1)).mean()
     # forward + reverse
     squared = squared1 + squared2
-    norm = max(norm1, norm2)
-    return squared, norm
+    augmented = max(augmented1, augmented2)
+    return squared, augmented
 
 
 # # Works with distance in torch
@@ -35,7 +35,7 @@ def chamfer(t1, t2, dist):
 
 
 # Nll reconstruction
-def nll(inputs, recons, pairwise_dist):
+def chamfer_smooth(inputs, recons, pairwise_dist):
     n = inputs.size()[1]
     m = recons.size()[1]
     # variance of the components (model assumption)
@@ -49,16 +49,6 @@ def nll(inputs, recons, pairwise_dist):
     loss2 = -lse2.sum(2).mean() + n * normalize2
     return loss1 + loss2
 
-# def nll(inputs, recons, pairwise_dist):
-#     n = inputs.size()[1]
-#     m = recons.size()[1]
-#     # 0.1192794 precomputed var of trainval dataset
-#     sigma2 = 0.1192794
-#     sigma6 = sigma2 ** 3
-#     pairwise_dist /= - 2 * sigma2
-#     lse = torch.logsumexp(pairwise_dist, axis=2)
-#     normalize = 0.5 * np.log(sigma6 * (2 * np.pi) ** 3) + np.log(m)
-#     return -lse.sum(1).mean() + n * normalize
 
 def kld_loss(q_mu, q_logvar, freebits=2):
     KLD_matrix = -1 - q_logvar + q_mu ** 2 + q_logvar.exp()
@@ -68,28 +58,12 @@ def kld_loss(q_mu, q_logvar, freebits=2):
     return KLD, KLD_free
 
 
-class CalLoss:
-    eps = 0.2
-    losses = ['Criterion', 'Calib Loss']
-
-    def __init__(self, num_classes):
-        self.num_classes = num_classes
-
-    def __call__(self, outputs, inputs, targets):
-        logits = outputs['y']
-        one_hot = torch.zeros_like(logits).scatter(1, targets.view(-1, 1), 1)
-        one_hot = one_hot * (1 - self.eps) + (1 - one_hot) * self.eps / (self.num_classes - 1)
-        log_prb = F.log_softmax(logits, dim=1)
-        loss = -(one_hot * log_prb).sum(dim=1).mean()
-        return {'Criterion': loss,
-                'Calib Loss': loss}
-
-
 class AbstractVAELoss(metaclass=ABCMeta):
     losses = ['Criterion', 'KLD']
     c_rec = 1
-    def __init__(self, c_KLD):
-        self.c_KLD = c_KLD
+
+    def __init__(self, c_kld):
+        self.c_kld = c_kld
 
     def __call__(self, outputs, inputs, targets):
         recons = outputs['recon']
@@ -99,7 +73,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
         recon_loss_dict = self.get_recon_loss(inputs, recons)
         recon_loss = recon_loss_dict['recon']
-        criterion = self.c_rec * recon_loss + self.c_KLD * KLD_free
+        criterion = self.c_rec * recon_loss + self.c_kld * KLD_free
         if torch.isnan(criterion):
             print(outputs)
             raise
@@ -115,63 +89,63 @@ class AbstractVAELoss(metaclass=ABCMeta):
 
 
 class VAELossChamfer(AbstractVAELoss):
-    losses = AbstractVAELoss.losses + ['Chamfer', 'Chamfer_norm']
-    c_rec = 1000
+    losses = AbstractVAELoss.losses + ['Chamfer', 'Chamfer_Augmented']
+    c_rec = 1
+
+    def __init__(self, c_kld):
+        super().__init__(c_kld)
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        squared, norm = chamfer(inputs, recons, pairwise_dist)
-        return {'recon': norm,
+        squared, augmented = chamfer(inputs, recons, pairwise_dist)
+        return {'recon': augmented,
                 'Chamfer': squared,
-                'Chamfer_norm': norm}
+                'Chamfer_Augmented': augmented}
 
 
-# Negative Log Likelihood Distance
-class VAELossNLL(AbstractVAELoss):
-    losses = AbstractVAELoss.losses + ['NLL', 'Chamfer', 'Chamfer_norm']
+class VAELossChamferAugmented(AbstractVAELoss):
+    c_rec = 200
+
+    def __init__(self, c_kld):
+        super().__init__(c_kld)
+
+    def get_recon_loss(self, inputs, recons):
+        loss_list = super().get_recon_loss(inputs, recons)
+        return loss_list.update({'recon': loss_list['Chamfer_Augmented']})
+
+
+class VAELossChamferSmooth(VAELossChamferAugmented):
+    losses = VAELossChamferAugmented.losses + ['Chamfer_Smooth']
+
+    def __init__(self, c_kld):
+        super().__init__(c_kld)
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
-        squared, norm = chamfer(inputs, recons, pairwise_dist)
-        recon = nll(inputs, recons, pairwise_dist)
-        return {'recon':recon,
-                'NLL': recon,
+        squared, augmented = chamfer(inputs, recons, pairwise_dist)
+        smooth = chamfer_smooth(inputs, recons, pairwise_dist)
+        return {'recon': augmented,
                 'Chamfer': squared,
-                'Chamfer_norm': norm}
+                'Chamfer_norm': augmented,
+                'Chamfer_Smooth': smooth}
 
 
-class VAELossSinkhorn(AbstractVAELoss):
-    losses = AbstractVAELoss.losses + ['Sinkhorn', 'Chamfer', 'Chamfer_norm']
+class VAELossSinkhorn(VAELossChamferAugmented):
+    losses = AbstractVAELoss.losses + ['Chamfer', 'Chamfer_Augmented', 'Sinkhorn']
     c_rec = 70000
-    sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2,
-                                    blur=.03, diameter=2,
-                                    scaling=.3, backend='tensorized')
+    def __init__(self, c_kld):
+        super().__init__(c_kld)
+        self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.03, diameter=2, scaling=.3, backend='tensorized')
 
     def get_recon_loss(self, inputs, recons):
-        pairwise_dist = square_distance(inputs, recons)
-        squared, norm = chamfer(inputs, recons, pairwise_dist)
-        # need to divide into batches
-        inputs_list = inputs.chunk(4, 0)
-        recon_list = recons.chunk(4, 0)
-        sk_loss = 0
-        for inp, rec in zip(inputs_list, recon_list):
-            sk_loss += self.sinkhorn(inp, rec).mean()
-        return {'recon': sk_loss,
-                'Sinkhorn': sk_loss,
-                'Chamfer': squared,
-                'Chamfer_norm': norm}
-
-def get_classification_loss(loss):
-    classification_loss_dict = {
-        'cal': CalLoss,
-    }
-    return classification_loss_dict[loss]
-
+        sk_loss = self.sinkhorn(inputs, recons).mean()
+        return super().get_recon_loss(inputs, recons).update({'recon': sk_loss, 'Sinkhorn':sk_loss})
 
 def get_vae_loss(recon_loss):
     recon_loss_dict = {
         'Chamfer': VAELossChamfer,
-        'NLL': VAELossNLL,
+        'Chamfer_Augmented': VAELossChamferAugmented,
+        'Chamfer_Smooth': VAELossChamferSmooth,
         'Sinkhorn': VAELossSinkhorn,
     }
     return recon_loss_dict[recon_loss]

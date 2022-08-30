@@ -16,8 +16,8 @@ class View(nn.Module):
 
 class MaxChannel(nn.Module):
 
-    def forward(self, x):
-        return torch.max(x, 2)[0]
+    def forward(self, x, axis=-1):
+        return torch.max(x, axis)[0]
 
 
 # Input (Batch, Features)

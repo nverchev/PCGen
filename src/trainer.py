@@ -8,7 +8,7 @@ from sklearn import svm, metrics
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
-from src.losses import get_vae_loss, get_classification_loss
+from src.losses import get_vae_loss
 from src.plot_PC import pc_show
 
 '''
@@ -372,104 +372,5 @@ class VAETrainer(Trainer):
         highlight_z = z_red[(highlight_label == labels)]
         pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
 
-
-class ClassificationTrainer(Trainer):
-    saved_metrics = {}
-    _metrics = {}
-    average = 'macro'
-    bin = 'pcdvae'  # minio bin
-
-    def __init__(self, model, loss, exp_name, block_args):
-        self._loss = get_classification_loss(loss)(model.num_classes)
-        self.losses = self._loss.losses  # losses must be defined before super().__init__()
-        super().__init__(model, exp_name, **block_args)
-        self.wrong_indices = None
-        self.targets = None
-        self.test_pred = None
-        self.test_probs = None
-        return
-
-    def loss(self, output, inputs, targets):
-        return self._loss(output, inputs, targets)
-
-    # overwrites Trainer method
-    def test(self, partition='test'):
-        super().test(partition=partition)  # stored in RAM
-        y = torch.stack(self.test_outputs['y'])
-        self.test_probs = F.softmax(y, dim=-1)
-        self.test_pred = torch.argmax(self.test_probs, dim=1)
-        self.targets = torch.stack(self.test_targets)
-        right_pred = (self.test_pred == self.targets)
-        self.wrong_indices = torch.nonzero(~right_pred).squeeze()
-        self.calculate_metrics()
-        directory = os.path.join(self.models_path, self.exp_name)
-        metrics_path = os.path.join(directory, 'metrics.json')
-        self.saved_metrics[self.epoch] = self._metrics.copy()
-        json.dump(self.saved_metrics, open(metrics_path, 'w'))
-        return
-
-    @property
-    def metrics(self):
-        self.test(partition='val')
-        return self._metrics
-
-    def calculate_metrics(self):
-        avg_type = self.average.capitalize() + ' ' if self.test_probs.size(1) > 1 else ''
-        # calculates common and also gives back the indices of the wrong guesses
-
-        self._metrics['Accuracy'] = metrics.accuracy_score(self.targets, self.test_pred)
-        one_hot_targets = torch.zeros(len(self.targets), max(self.targets) + 1).scatter(1, self.targets.view(-1, 1), 1)
-        one_hot_pred = torch.zeros_like(one_hot_targets).scatter(1, self.test_pred.view(-1, 1), 1)
-        correct = (one_hot_pred * one_hot_targets)
-        self._metrics['Mean Accuracy'] = (correct.sum(0) / one_hot_targets.sum(0)).mean().item()
-        self._metrics[avg_type + 'F1 Score'] = metrics.f1_score(self.targets, self.test_pred, average=self.average)
-        self._metrics[avg_type + 'Jaccard Score'] = metrics.jaccard_score(self.targets,
-                                                                          self.test_pred, average=self.average)
-        self._metrics[avg_type + 'AUC ROC'] = \
-            metrics.roc_auc_score(self.targets, self.test_probs,
-                                  average=self.average, multi_class='ovr')
-        for metric, value in self._metrics.items():
-            print(metric + f': {value:.4f}', end='\t')
-        print('')
-        return
-
-
-def get_class_trainer(model, loss, exp_name, block_args):
-    return ClassificationTrainer(model, loss, exp_name, block_args)
-
-
 def get_vae_trainer(model, exp_name, block_args):
     return VAETrainer(model, exp_name, block_args)
-
-# class VAEMetric():
-#     # overwrites Trainer method
-#     def test(self, on='val', batch_test=64):
-#         super().test(on=on)
-#         if on == 'val':
-#             inputs = self.val_loader.dataset.dataset.pcd
-#         elif on == 'test':
-#             inputs = self.test_loader.dataset.dataset.pcd
-#
-#         l_test = len(inputs)
-#         recons = self.test_outputs['recon']
-#         n = inputs[0].size()[1]
-#         m = recons[0].size()[1]
-#         sigma6 = torch.tensor(0.01)
-#         mu = torch.vstack(self.test_outputs['mu'])
-#         logvar = torch.vstack(self.test_outputs['log_var'])
-#         if len(recons[0].size()) == 4:
-#             n_samples = recons.size()[1]
-#             inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
-#         KLD, _ = kld_loss(mu, logvar)
-#         nll_recon = 0
-#         chamfer_recon = 0
-#         for i in range(0, l_test, batch_test):
-#             batch_inputs = torch.vstack(inputs[i:i + batch_test])
-#             batch_recons = torch.vstack(recons[i:i + batch_test])
-#             pairwise_dist = square_distance(batch_inputs, batch_recons)
-#             chamfer_recon += chamfer(pairwise_dist)
-#             nll_recon += nll(pairwise_dist, sigma6, n, m)
-#
-#         print(f'KLD: {KLD:.4f}', end='\t')
-#         print(f'Chamfer: {chamfer_recon / l_test:.4f}', end='\t')
-#         print(f'NLL: {nll_recon / l_test:.4f}', end='\t')

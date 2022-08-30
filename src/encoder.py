@@ -5,24 +5,19 @@ import torch.nn.functional as F
 from src.modules import PointsConvBlock, LinearBlock, MaxChannel, EdgeConvBlock
 from src.utils import get_graph_features
 
-# input feature dimension
-IN_CHAN = 3
-N_POINTS = 2048
-Z_DIM = 512
-
 class DGCNN_Vanilla(nn.Module):
-    def __init__(self, k=20):
+    def __init__(self, chan_in=3, z_dim=512, k=20):
         super().__init__()
         self.k = k
         self.h_dim = [64, 128, 128, 1024, 512, 512]
-        self.conv = EdgeConvBlock(2 * IN_CHAN, self.h_dim[0])
+        self.conv = EdgeConvBlock(2 * chan_in, self.h_dim[0])
         modules = []
         for i in range(3):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
         modules.append(MaxChannel())
         for i in range(3, len(self.h_dim) - 1):
             modules.append(LinearBlock(self.h_dim[i], self.h_dim[i + 1]))
-        modules.append(nn.Linear(self.h_dim[-1], 2 * Z_DIM))
+        modules.append(nn.Linear(self.h_dim[-1], 2 * z_dim))
         self.encode = nn.Sequential(*modules)
 
     def forward(self, x):
@@ -34,16 +29,15 @@ class DGCNN_Vanilla(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, k=40, task='reconstruct'):
+    def __init__(self, chan_in=3, z_dim=512, k=20):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
-        edge_conv_list = [EdgeConvBlock(2 * IN_CHAN, self.h_dim[0])]
+        edge_conv_list = [EdgeConvBlock(2 * chan_in, self.h_dim[0])]
         for i in range(len(self.h_dim) - 1):
             edge_conv_list.append(EdgeConvBlock(2 * self.h_dim[i], self.h_dim[i + 1]))
         self.edge_convs = nn.Sequential(*edge_conv_list)
-        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * Z_DIM, kernel_size=1)
-        self.task = task
+        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * z_dim, kernel_size=1)
 
     def forward(self, x):
         xs = []
@@ -56,11 +50,7 @@ class DGCNN(nn.Module):
         x = torch.cat(xs, dim=1).contiguous()
         x = self.final_conv(x)
         x_max = x.max(dim=2, keepdim=False)[0]
-        if self.task == 'reconstruct':
-            x = x_max
-        if self.task == 'classify':
-            x_avg = x.mean(dim=2)
-            x = torch.cat([x_max, x_avg], dim=1).contiguous()
+        x = x_max
         return x
 
 
@@ -71,12 +61,12 @@ class Point_Transform_Net(nn.Module):
         self.bn1 = nn.BatchNorm2d(64)
         self.bn2 = nn.BatchNorm2d(128)
         self.bn3 = nn.BatchNorm1d(1024)
-        self.conv1 = EdgeConvBlock(2 * IN_CHAN, h_dim[0])
+        self.conv1 = EdgeConvBlock(2 * chan_in, h_dim[0])
         self.conv2 = EdgeConvBlock(h_dim[0], h_dim[1])
         self.conv3 = EdgeConvBlock(h_dim[1], h_dim[2])
         self.linear1 = LinearBlock(h_dim[2], h_dim[3])
         self.linear2 = LinearBlock(h_dim[3], h_dim[4])
-        self.transform = nn.Linear(h_dim[4], IN_CHAN ** 2)
+        self.transform = nn.Linear(h_dim[4], chan_in ** 2)
         init.constant_(self.transform.weight, 0)
         init.eye_(self.transform.bias.view(3, 3))
 
@@ -89,7 +79,7 @@ class Point_Transform_Net(nn.Module):
         x = self.linear1(x)  # (batch_size, 1024) -> (batch_size, 512)
         x = self.linear2(x)  # (batch_size, 512) -> (batch_size, 256)
         x = self.transform(x)  # (batch_size, 256) -> (batch_size, 3*3)
-        x = x.view(-1, IN_CHAN, IN_CHAN)  # (batch_size, 3*3) -> (batch_size, 3, 3)
+        x = x.view(-1, chan_in, chan_in)  # (batch_size, 3*3) -> (batch_size, 3, 3)
 
         return x  # (batch_size, 3, 3)
 
@@ -97,19 +87,16 @@ class Point_Transform_Net(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self,  k=40, task='reconstruct'):
+    def __init__(self, chan_in=3, z_dim=512, k=16):
         super().__init__()
         self.k = 16
         self.h_dim = [12, 64, 64, 64]
 
         self.n = 2048   # input point cloud size
-        modules = PointsConvBlock(IN_CHAN, 12, act=nn.ReLU())
+        modules = PointsConvBlock(chan_in, 12, act=nn.ReLU())
         for i in range(len(self.h_dim) - 1):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1], act=nn.ReLU()))
-
-
-
-        self.mlp1 = nn.Sequential(
+            self.mlp1 = nn.Sequential(
             nn.Conv1d(12, 64, 1),
             nn.ReLU(),
             nn.Conv1d(64, 64, 1),

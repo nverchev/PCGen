@@ -7,7 +7,7 @@ class NoSchedule:
     def __call__(self, base_lr, epoch):
         return base_lr
 
-    def __repr__(self):
+    def __str__(self):
         return 'NoSchedule'
 
 
@@ -48,5 +48,5 @@ def get_opt(opt, initial_learning_rate, weight_decay=0):
                    'AdamW': {'weight_decay': weight_decay, 'lr': initial_learning_rate},
                    'SGD': {'weight_decay': weight_decay, 'lr': initial_learning_rate},
                    'SGD_momentum': {'weight_decay': weight_decay, 'lr': initial_learning_rate,
-                                    'momentum': 0.9, 'nesterov': False}}
+                                    'momentum': 0.9, 'nesterov': True}}
     return optimizer[opt], optimi_args[opt]
