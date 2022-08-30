@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 import geomloss
 from abc import ABCMeta, abstractmethod
-from utils import square_distance
+from src.utils import square_distance
 
 
 # Chamfer Distance
@@ -41,10 +41,13 @@ def nll(inputs, recons, pairwise_dist):
     # variance of the components (model assumption)
     sigma2 = 0.0001
     pairwise_dist /= - 2 * sigma2
-    lse = pairwise_dist.logsumexp(axis=2)
-    normalize = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(m)
-    return -lse.sum(1).mean() + n * normalize
-
+    lse1 = pairwise_dist.logsumexp(axis=2)
+    normalize1 = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(m)
+    loss1 = -lse1.sum(1).mean() + n * normalize1
+    lse2 = pairwise_dist.logsumexp(axis=1)
+    normalize2 = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(n)
+    loss2 = -lse2.sum(2).mean() + n * normalize2
+    return loss1 + loss2
 
 # def nll(inputs, recons, pairwise_dist):
 #     n = inputs.size()[1]
@@ -67,7 +70,7 @@ def kld_loss(q_mu, q_logvar, freebits=2):
 
 class CalLoss:
     eps = 0.2
-    losses = ['Criterion', "Calib Loss"]
+    losses = ['Criterion', 'Calib Loss']
 
     def __init__(self, num_classes):
         self.num_classes = num_classes
@@ -85,7 +88,8 @@ class CalLoss:
 class AbstractVAELoss(metaclass=ABCMeta):
     losses = ['Criterion', 'KLD']
     c_rec = 1
-    c_KLD = 0.001
+    def __init__(self, c_KLD):
+        self.c_KLD = c_KLD
 
     def __call__(self, outputs, inputs, targets):
         recons = outputs['recon']
@@ -139,9 +143,9 @@ class VAELossNLL(AbstractVAELoss):
 class VAELossSinkhorn(AbstractVAELoss):
     losses = AbstractVAELoss.losses + ['Sinkhorn', 'Chamfer', 'Chamfer_norm']
     c_rec = 70000
-    sinkhorn = geomloss.SamplesLoss(loss="sinkhorn", p=2,
+    sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2,
                                     blur=.03, diameter=2,
-                                    scaling=.3, backend="tensorized")
+                                    scaling=.3, backend='tensorized')
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
@@ -159,15 +163,15 @@ class VAELossSinkhorn(AbstractVAELoss):
 
 def get_classification_loss(loss):
     classification_loss_dict = {
-        "cal": CalLoss,
+        'cal': CalLoss,
     }
     return classification_loss_dict[loss]
 
 
 def get_vae_loss(recon_loss):
     recon_loss_dict = {
-        "Chamfer": VAELossChamfer,
-        "NLL": VAELossNLL,
+        'Chamfer': VAELossChamfer,
+        'NLL': VAELossNLL,
         'Sinkhorn': VAELossSinkhorn,
     }
-    return recon_loss_dict[recon_loss]()
+    return recon_loss_dict[recon_loss]

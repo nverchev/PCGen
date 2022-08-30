@@ -1,34 +1,33 @@
+import os
 import torch
 import argparse
 import pykeops
-from dataset import get_dataset
-from optim import get_opt, CosineSchedule
-from trainer import get_vae_trainer
-from model import VAE
-
+from src.dataset import get_dataset
+from src.optim import get_opt, CosineSchedule
+from src.trainer import get_vae_trainer
+from src.model import VAE
 pykeops.set_verbose(False)
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
-    parser.add_argument('--encoder', type=str, default='DGCNN', choices=["DGCNN_Vanilla", "DGCNN", "FoldingNet"])
-    parser.add_argument('--decoder', type=str, default='Gen', choices=["MLP", "Gen", "ADAIN" "FoldingNet"])
-    parser.add_argument('--recon_loss', type=str, default='Chamfer', choices=["Chamfer", "Sinkhorn", "NLL"],
-                        help='reconstruction loss')
+    parser.add_argument('--encoder', type=str, default='DGCNN', choices=['DGCNN_Vanilla', 'DGCNN', 'FoldingNet'])
+    parser.add_argument('--decoder', type=str, default='Gen', choices=['MLP', 'Gen', 'ADAIN' 'FoldingNet'])
+    parser.add_argument('--recon_loss', type=str, default='Chamfer',
+                        choices=['Chamfer', 'Chamfer_Augmented', 'Sinkhorn', 'NLL'], help='reconstruction loss')
     parser.add_argument('--c_kld', type=float, default=0.001, help='coefficient for KLD')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--m_training', type=int, default=2048,
-                        help="Points  generated when training, 0 for  increasing sequence  \
-                            128 -> 4096 ")
+                        help='Points  generated when training, 0 for  increasing sequence  \
+                            128 -> 4096 ')
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--epochs', type=int, default=250)
     parser.add_argument('--load', type=int, default=-1,
                         help='load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
-    parser.add_argument('--optimizer', type=str, default='Adam', choices=["SGD", "SGD_momentum", "Adam", "AdamW"],
+    parser.add_argument('--optim', type=str, default='Adam', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum, has momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
@@ -52,26 +51,26 @@ if __name__ == '__main__':
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
-    cov_matrix = (decoder_name == "FoldingNet")
-    model_name = encoder_name + "_" + decoder_name
-    device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
-    dataset = args.dataset
-    recon_loss = args.recon_loss
-    c_kld = args.c_kld
     experiment = args.experiment
+    recon_loss = args.recon_loss
+    exp_name = args.model_path or '_'.join([encoder_name, decoder_name, recon_loss, experiment])
+    final = experiment[:5] == 'final'
     dir_path = args.dir_path
-    training_epochs = args.epochs
-    opt_name = args.optimizer
+    dataset_name = args.dataset
+    num_points = args.num_points
     batch_size = args.batch_size
-    load = args.load
+    cov_matrix = (args.decoder == 'FoldingNet')
+    minio_credential = args.minio_credential
     initial_learning_rate = args.lr
     weight_decay = args.wd
-    model_eval = args.eval
+    opt_name = args.optim
     k = args.k
-    num_points = args.num_points
-    minio_credential = args.minio_credential
+    c_kld = args.c_kld
+    model_eval = args.eval
+    load = args.load
     m_training = args.m_training
-    final = experiment[:5] == 'final'
+    training_epochs = args.epochs
+
     if minio_credential:
         from minio import Minio
 
@@ -81,27 +80,41 @@ if __name__ == '__main__':
             minioClient = Minio(server, access_key=access_key, secret_key=secret_key, secure=True)
     else:
         minioClient = None
-    exp_name = '_'.join([model_name, recon_loss, experiment]) if args.model_path == "" else args.model_path
 
-    train_loader, val_loader, test_loader = get_dataset(dataset, final, batch_size, dir_path=dir_path,
-                                                        n_points=num_points, cov_matrix=cov_matrix)
+    data_loader_settings = dict(
+        dataset_name=dataset_name,
+        dir_path=dir_path,
+        num_points=num_points,
+        cov_matrix=cov_matrix,
+        translation=False,
+        rotation=True,
+        batch_size=args.batch_size,
+        final=final,
+    )
+    train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
+    optimizer, optim_args = get_opt(opt_name, args.lr, args.wd)
     model = VAE(encoder_name, decoder_name, k=k)
-    optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
-    block_args = {
-        'optim_name': opt_name,
-        'optim': optimizer,
-        'optim_args': optim_args,
-        'train_loader': train_loader,
-        'device': device,
-        'val_loader': val_loader,
-        'test_loader': test_loader,
-        'batch_size': batch_size,
-        'schedule': CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
-        'minioClient': minioClient,
-        'dir_path': dir_path,
-    }
 
-    trainer = get_vae_trainer(model, recon_loss, exp_name, block_args)
+    trainer_settings = dict(
+        opt_name=opt_name,
+        optimizer=optimizer,
+        optim_args=optim_args,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        test_loader=test_loader,
+        device=torch.device('cuda:0' if torch.cuda.is_available() and args.cuda else 'cpu'),
+        batch_size=batch_size,
+        schedule=CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
+        minioClient=minioClient,
+        model_path=os.path.join(args.dir_path, 'model'),
+        recon_loss=recon_loss,
+        c_kld=c_kld,
+    )
+
+    block_args = {**trainer_settings, **data_loader_settings}
+
+
+    trainer = get_vae_trainer(model, exp_name, block_args)
     for k, v in block_args.items():
         if not isinstance(v, (type, torch.utils.data.dataloader.DataLoader)):
             print(k, ': ', v)
@@ -122,6 +135,5 @@ if __name__ == '__main__':
             trainer.train(10)
             trainer.save()
             trainer.clas_metric(final)
-
 
     trainer.clas_metric(final=final)

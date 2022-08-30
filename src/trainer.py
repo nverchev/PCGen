@@ -4,21 +4,18 @@ import torch.nn.functional as F
 import os
 import json
 import re
-import warnings
-from sklearn.exceptions import ConvergenceWarning
 from sklearn import svm, metrics
-import torch.cuda.amp as amp
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
-from losses import get_vae_loss, get_classification_loss
-from plot_PC import pc_show
+from src.losses import get_vae_loss, get_classification_loss
+from src.plot_PC import pc_show
 
 '''
 This abstract class manages training and general utilities.
 It works together with a class defining the loss.
 This loss returns a dictionary dict with 
-dict["Criterion"] = loss to backprop
+dict['Criterion'] = loss to backprop
 
 To save and load on a separate sever, it expects a Minio object from the minio library.
 This object downloads and uploads the model to a separate storage.
@@ -40,8 +37,8 @@ class Trainer(metaclass=ABCMeta):
     quiet_mode = False  # less output
     max_output = np.inf  # maximum amount of stored evaluated test samples
 
-    def __init__(self, model, exp_name, device, optim, train_loader, val_loader=None,
-                 test_loader=None, minioClient=None, dir_path='./', **block_args):
+    def __init__(self, model, exp_name, device, optimizer, train_loader, val_loader=None,
+                 test_loader=None, minioClient=None, models_path='./models', **block_args):
 
         torch.manual_seed = 112358
         self.epoch = 0
@@ -51,7 +48,7 @@ class Trainer(metaclass=ABCMeta):
         self.schedule = block_args['schedule']
         self.settings = {**model.settings, **block_args}
         self.optimizer_settings = block_args['optim_args'].copy()
-        self.optimizer = optim(**self.optimizer_settings)
+        self.optimizer = optimizer(**self.optimizer_settings)
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
@@ -61,11 +58,11 @@ class Trainer(metaclass=ABCMeta):
         self.test_targets, self.test_outputs = [], {}
         self.converge = 1  # if 0 kills session
         self.minio = minioClient
-        self.dir_path = dir_path
-        self.minio_path = staticmethod(lambda path: path[len(dir_path):]).__func__  # removes dir path
+        self.models_path = models_path
+        self.minio_path = staticmethod(lambda path: path[len(models_path):]).__func__  # removes dir path
         self.test_targets, self.test_outputs = [], {}  # stored in RAM
         settings_path = self.paths()['settings']
-        json.dump(self.settings, open(settings_path, 'w'), default=vars)
+        json.dump(self.settings, open(settings_path, 'w'), default=vars, indent=4)
 
     @property
     def optimizer_settings(self):  # settings shown depend on epoch
@@ -109,7 +106,7 @@ class Trainer(metaclass=ABCMeta):
             self.update_learning_rate(self.optimizer_settings['params'])
             self.epoch += 1
             if self.quiet_mode:
-                print('\r====> Epoch:{:3d}'.format(self.epoch), end="")
+                print('\r====> Epoch:{:3d}'.format(self.epoch), end='')
             else:
                 print('====> Epoch:{:3d}'.format(self.epoch))
             self._run_session(partition='train')
@@ -190,14 +187,14 @@ class Trainer(metaclass=ABCMeta):
         return {'x': inputs}
 
     def plot_losses(self, loss):
-        tidy_loss = " ".join([s.capitalize() for s in loss.split('_')])
+        tidy_loss = ' '.join([s.capitalize() for s in loss.split('_')])
         epochs = np.arange(self.epoch)
         plt.plot(epochs, self.train_losses[loss], label='train')
         if self.val_loader:
             plt.plot(epochs, self.val_losses[loss], label='val')
         plt.xlabel('Epochs')
         plt.ylabel(tidy_loss)
-        plt.title(f"{self.exp_name}")
+        plt.title(f'{self.exp_name}')
         plt.show()
         return
 
@@ -257,7 +254,7 @@ class Trainer(metaclass=ABCMeta):
         if self.minio is not None:
             for file in paths.values():
                 self.minio.fput_object(self.bin, self.minio_path(file), file)
-        print("Model saved at: ", paths['model'])
+        print('Model saved at: ', paths['model'])
         return
 
     def load(self, epoch=None):
@@ -269,16 +266,16 @@ class Trainer(metaclass=ABCMeta):
             past_epochs = []  # here it looks for the most recent model
             if self.minio is not None:
                 for file in self.minio.list_objects(self.bin, recursive=True):
-                    file_dir, *file_name = file.object_name.split("/")
+                    file_dir, *file_name = file.object_name.split('/')
                     if file_dir == directory and file_name[0][:5] == 'model':
-                        past_epochs.append(int(re.sub("\D", "", file_name[0])))
-            local_path = os.path.join(self.dir_path, self.exp_name)
+                        past_epochs.append(int(re.sub('\D', '', file_name[0])))
+            local_path = os.path.join(self.models_path, self.exp_name)
             if os.path.exists(local_path):
                 for file in os.listdir(local_path):
                     if file[:5] == 'model':
-                        past_epochs.append(int(re.sub("\D", "", file)))
+                        past_epochs.append(int(re.sub('\D', '', file)))
             if len(past_epochs) == 0:
-                print("No saved models found")
+                print('No saved models found')
                 return
             else:
                 self.epoch = max(past_epochs)
@@ -293,15 +290,15 @@ class Trainer(metaclass=ABCMeta):
                                                   map_location=torch.device(self.device)))
         self.train_losses = json.load(open(paths['train_hist']))
         self.val_losses = json.load(open(paths['val_hist']))
-        print("Loaded: ", paths['model'])
+        print('Loaded: ', paths['model'])
         return
 
     def paths(self, new_exp_name=None):
         if new_exp_name:  # save a parallel version to work with
-            directory = os.path.join(self.dir_path, new_exp_name)
+            directory = os.path.join(self.models_path, new_exp_name)
             ep = self.epoch
         else:
-            directory = os.path.join(self.dir_path, self.exp_name)
+            directory = os.path.join(self.models_path, self.exp_name)
             ep = self.epoch
         if not os.path.exists(directory):
             os.mkdir(directory)
@@ -318,12 +315,11 @@ class VAETrainer(Trainer):
     bin = 'pcdvae'  # minio bin
     saved_accuracies = {}
 
-    def __init__(self, model, recon_loss, exp_name, block_args):
+    def __init__(self, model, exp_name, block_args):
         self.acc = None
         self.cf = None
-        self._loss = get_vae_loss(recon_loss)
+        self._loss = get_vae_loss(block_args['recon_loss'])(block_args['c_kld'])
         self.losses = self._loss.losses  # losses must be defined before super().__init__()
-        model.settings.update({'c_KLD': self._loss.c_KLD})
         super().__init__(model, exp_name, **block_args)
 
         return
@@ -342,26 +338,26 @@ class VAETrainer(Trainer):
     def clas_metric(self, final=False):
         # No rotation here
         self.train_loader.dataset.rotation = False
-        self.test(partition="train")
+        self.test(partition='train')
         self.train_loader.dataset.rotation = True
         x_train = np.array([z.numpy() for z in self.test_outputs['z']])
         y_train = np.array([z.numpy() for z in self.test_targets])
         shuffle = np.random.permutation(y_train.shape[0])
         x_train = x_train[shuffle]
         y_train = y_train[shuffle]
-        print("Fitting the classifier ...")
+        print('Fitting the classifier ...')
         self.clf.fit(x_train, y_train)
-        partition = "test" if final else "val"
+        partition = 'test' if final else 'val'
         self.test(partition=partition)
         x_test = np.array([z.numpy() for z in self.test_outputs['z']])
         y_test = np.array([z.numpy() for z in self.test_targets])
         y_hat = self.clf.predict(x_test)
         self.acc = (y_hat == y_test).sum() / y_hat.shape[0]
-        print("Accuracy: ", self.acc)
+        print('Accuracy: ', self.acc)
         self.cf = metrics.confusion_matrix(y_hat, y_test, normalize='true')
         print('Mean Accuracy;', np.diag(self.cf).astype(float).mean())
-        directory = os.path.join(self.dir_path, self.exp_name)
-        accuracy_path = os.path.join(directory, "svm_accuracies.json")
+        directory = os.path.join(self.models_path, self.exp_name)
+        accuracy_path = os.path.join(directory, 'svm_accuracies.json')
         self.saved_accuracies[self.epoch] = self.acc
         json.dump(self.saved_accuracies, open(accuracy_path, 'w'))
         return self.acc
@@ -380,7 +376,7 @@ class VAETrainer(Trainer):
 class ClassificationTrainer(Trainer):
     saved_metrics = {}
     _metrics = {}
-    average = "macro"
+    average = 'macro'
     bin = 'pcdvae'  # minio bin
 
     def __init__(self, model, loss, exp_name, block_args):
@@ -406,8 +402,8 @@ class ClassificationTrainer(Trainer):
         right_pred = (self.test_pred == self.targets)
         self.wrong_indices = torch.nonzero(~right_pred).squeeze()
         self.calculate_metrics()
-        directory = os.path.join(self.dir_path, self.exp_name)
-        metrics_path = os.path.join(directory, "metrics.json")
+        directory = os.path.join(self.models_path, self.exp_name)
+        metrics_path = os.path.join(directory, 'metrics.json')
         self.saved_metrics[self.epoch] = self._metrics.copy()
         json.dump(self.saved_metrics, open(metrics_path, 'w'))
         return
@@ -418,7 +414,7 @@ class ClassificationTrainer(Trainer):
         return self._metrics
 
     def calculate_metrics(self):
-        avg_type = self.average.capitalize() + ' ' if self.test_probs.size(1) > 1 else ""
+        avg_type = self.average.capitalize() + ' ' if self.test_probs.size(1) > 1 else ''
         # calculates common and also gives back the indices of the wrong guesses
 
         self._metrics['Accuracy'] = metrics.accuracy_score(self.targets, self.test_pred)
@@ -442,8 +438,8 @@ def get_class_trainer(model, loss, exp_name, block_args):
     return ClassificationTrainer(model, loss, exp_name, block_args)
 
 
-def get_vae_trainer(model, recon_loss, exp_name, block_args):
-    return VAETrainer(model, recon_loss, exp_name, block_args)
+def get_vae_trainer(model, exp_name, block_args):
+    return VAETrainer(model, exp_name, block_args)
 
 # class VAEMetric():
 #     # overwrites Trainer method

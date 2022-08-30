@@ -3,7 +3,7 @@ import argparse
 import pykeops
 from dataset import get_dataset
 from optim import get_opt, CosineSchedule
-from trainer import get_class_trainer
+from src.trainer import get_class_trainer
 from model import Classifier
 from collections import OrderedDict
 

@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from encoder import Z_DIM, IN_CHAN, N_POINTS
-from modules import PointsConvBlock, LinearBlock, View
+from src.encoder import Z_DIM, IN_CHAN, N_POINTS
+from src.modules import PointsConvBlock, LinearBlock, View
 
 
 class MLPDecoder(nn.Module):
@@ -34,8 +34,8 @@ class PointGenerator(nn.Module):
         self.m = 2048
         self.m_training = 128
         self.sample_dim = 16
-        self.sample_mapping1 = PointsConvBlock(self.sample_dim, self.h_dim[0])
-        self.sample_mapping2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], act=nn.Hardtanh())
+        self.map_latent_mul1 = PointsConvBlock(self.sample_dim, self.h_dim[0])
+        self.map_latent_mul2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], act=nn.Hardtanh())
         modules = []
         for i in range(1, len(self.h_dim) - 1):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
@@ -47,8 +47,8 @@ class PointGenerator(nn.Module):
         device = z.device
         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
         # x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        x = self.sample_mapping1(x)
-        x = self.sample_mapping2(x)
+        x = self.map_latent_mul1(x)
+        x = self.map_latent_mul2(x)
         x = z.unsqueeze(2) * x
         x = self.mlp(x)
         return x.transpose(2, 1)
@@ -96,9 +96,9 @@ class PointGenerator_ADAIN(nn.Module):
 
 
 class FoldingLayer(nn.Module):
-    """
+    '''
     The folding operation of FoldingNet
-    """
+    '''
 
     def __init__(self, in_channel: int, out_channels: list):
         super(FoldingLayer, self).__init__()
@@ -129,7 +129,7 @@ class FoldingNet(nn.Module):
         self.m_grid = num_grid ** 2
         xx = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, num_grid, dtype=torch.float)
-        self.grid = torch.stack(torch.meshgrid(xx, yy, indexing="ij")).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
+        self.grid = torch.stack(torch.meshgrid(xx, yy, indexing='ij')).view(2, -1)  # (2, 45, 45) -> (2, 45 * 45)
         self.fold1 = FoldingLayer(Z_DIM + 2, [self.h_dim[0], self.h_dim[1], 3])
         self.fold2 = FoldingLayer(Z_DIM + 3, [self.h_dim[2], self.h_dim[3], 3])
 
@@ -151,9 +151,9 @@ class FoldingNet(nn.Module):
 
 def get_decoder(decoder_name):
     decoder_dict = {
-        "MLP": MLPDecoder,
-        "Gen": PointGenerator,
-        "ADAIN": PointGenerator_ADAIN,
-        "FoldingNet": FoldingNet,
+        'MLP': MLPDecoder,
+        'Gen': PointGenerator,
+        'ADAIN': PointGenerator_ADAIN,
+        'FoldingNet': FoldingNet,
     }
     return decoder_dict[decoder_name]

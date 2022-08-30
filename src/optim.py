@@ -8,7 +8,7 @@ class NoSchedule:
         return base_lr
 
     def __repr__(self):
-        return "NoSchedule"
+        return 'NoSchedule'
 
 
 class ExponentialSchedule:
@@ -19,7 +19,7 @@ class ExponentialSchedule:
         return base_lr * self.exp_decay ** epoch
 
     def __str__(self):
-        return "ExponentialSchedule"
+        return 'ExponentialSchedule'
 
 
 class CosineSchedule:
@@ -34,7 +34,7 @@ class CosineSchedule:
         return min_lr + (base_lr - min_lr) * (1 + np.cos(np.pi * epoch / self.decay_steps) / 2)
 
     def __str__(self):
-        return "CosineSchedule"
+        return 'CosineSchedule'
 
 
 def get_opt(opt, initial_learning_rate, weight_decay=0):

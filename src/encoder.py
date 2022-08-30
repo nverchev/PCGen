@@ -2,15 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
-from modules import PointsConvBlock, LinearBlock, MaxChannel, EdgeConvBlock
-from utils import get_graph_features
+from src.modules import PointsConvBlock, LinearBlock, MaxChannel, EdgeConvBlock
+from src.utils import get_graph_features
 
 # input feature dimension
 IN_CHAN = 3
 N_POINTS = 2048
 Z_DIM = 512
-
-
 
 class DGCNN_Vanilla(nn.Module):
     def __init__(self, k=20):
@@ -24,7 +22,7 @@ class DGCNN_Vanilla(nn.Module):
         modules.append(MaxChannel())
         for i in range(3, len(self.h_dim) - 1):
             modules.append(LinearBlock(self.h_dim[i], self.h_dim[i + 1]))
-        modules.append(nn.Linear(self.h_dim[-1], Z_DIM))
+        modules.append(nn.Linear(self.h_dim[-1], 2 * Z_DIM))
         self.encode = nn.Sequential(*modules)
 
     def forward(self, x):
@@ -189,8 +187,8 @@ class FoldingNet(nn.Module):
 
 def get_encoder(encoder_name):
     dict_encoder = {
-        "DGCNN_Vanilla": DGCNN_Vanilla,
-        "DGCNN": DGCNN,
-        "FoldingNet": FoldingNet,
+        'DGCNN_Vanilla': DGCNN_Vanilla,
+        'DGCNN': DGCNN,
+        'FoldingNet': FoldingNet,
     }
     return dict_encoder[encoder_name]
