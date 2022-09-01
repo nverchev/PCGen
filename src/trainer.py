@@ -13,15 +13,17 @@ from src.plot_PC import pc_show
 
 '''
 This abstract class manages training and general utilities.
-It works together with a class defining the loss.
-This loss returns a dictionary dict with 
+The loss is an abstract method later defined and returns a dictionary dict with 
+the different components of the criterion, plus eventually other useful metrics. 
+The loss is supposed to be already averaged on the batch and the epoch loss is slightly off 
+ whenever the last batch is smaller. For large dataset and small batch size the error should be irrelevant.
+
 dict['Criterion'] = loss to backprop
 
-To save and load on a separate sever, it expects a Minio object from the minio library.
+To save and load on a separate sever, it can handle a Minio object from the minio library.
 This object downloads and uploads the model to a separate storage.
-In order to get full access to this class utilities,
-set up MinIO on your storage device (https://min.io)
-install the minio api and then add the following:
+In order to get full access to this class utilities, set up MinIO on your storage device (https://min.io)
+Install the minio api and pass the minioClient:
 
 from minio import Minio
 minioClient = Minio(*Your storage name*,
@@ -33,7 +35,6 @@ minioClient = Minio(*Your storage name*,
 
 
 class Trainer(metaclass=ABCMeta):
-    losses = []  # defined later with the loss function
     quiet_mode = False  # less output
     max_output = np.inf  # maximum amount of stored evaluated test samples
 
@@ -52,14 +53,12 @@ class Trainer(metaclass=ABCMeta):
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.train_losses = {loss: [] for loss in self.losses}
-        self.val_losses = {loss: [] for loss in self.losses}
-        self.test_losses = {loss: [] for loss in self.losses}
+        self.train_losses, self.val_losses, self.test_losses = {}, {}, {}
         self.test_targets, self.test_outputs = [], {}
         self.converge = 1  # if 0 kills session
         self.minio = minioClient
         self.models_path = models_path
-        self.minio_path = staticmethod(lambda path: path[len(models_path):]).__func__  # removes dir path
+        self.minio_path = staticmethod(lambda path: path[len(models_path):]).__func__  # removes model path
         self.test_targets, self.test_outputs = [], {}  # stored in RAM
         settings_path = self.paths()['settings']
         json.dump(self.settings, open(settings_path, 'w'), default=vars, indent=4)
@@ -141,7 +140,7 @@ class Trainer(metaclass=ABCMeta):
         if save_outputs:
             self.test_targets, self.test_outputs = [], {}
 
-        epoch_loss = {loss: 0 for loss in self.losses}
+        epoch_loss = {}
         num_batch = len(loader)
         iterable = tqdm(enumerate(loader), total=num_batch, disable=self.quiet_mode)
         for batch_idx, (inputs, targets) in iterable:
@@ -152,8 +151,8 @@ class Trainer(metaclass=ABCMeta):
             outputs = self.model(**inputs_aux)
             batch_loss = self.loss(outputs, inputs, targets)
             criterion = batch_loss['Criterion']
-            for loss in self.losses:
-                epoch_loss[loss] += batch_loss[loss].item()
+            for loss, value in batch_loss.items():
+                epoch_loss[loss] = epoch_loss.get(loss, 0) + value.item()
             if not inference:
                 if torch.isinf(criterion) or torch.isnan(criterion):
                     self.converge = 0
@@ -172,14 +171,14 @@ class Trainer(metaclass=ABCMeta):
                 if batch_idx == len(loader) - 1:  # clear after last
                     iterable.set_description('')
 
-        for loss in self.losses:
-            epoch_loss[loss] /= num_batch
-            if not save_outputs:  # do not save history when testing
-                dict_losses[loss].append(epoch_loss[loss])
+        epoch_loss = {loss: value / num_batch for loss, value in epoch_loss}
+        if not save_outputs:
+            for loss, value in epoch_loss.items():
+                dict_losses.get(loss, []).append(value)
         if not self.quiet_mode:
             print('Average {} losses :'.format(partition))
-            for loss in self.losses:
-                print('{}: {:.4f}'.format(loss, epoch_loss[loss]), end='\t')
+            for loss, value in epoch_loss.items():
+                print('{}: {:.4f}'.format(loss, value), end='\t')
             print()
         return
 
@@ -215,8 +214,7 @@ class Trainer(metaclass=ABCMeta):
     def extend_dict_list(old_dict, new_dict):
         if old_dict == {}:
             # struct is dict of lists / lists of lists of tensors
-            old_dict.update({key: ([[]] if isinstance(value, list) else []) \
-                             for key, value in new_dict.items()})
+            old_dict.update({key: ([[]] if isinstance(value, list) else []) for key, value in new_dict.items()})
 
         for key, value in new_dict.items():
             if isinstance(value, list):
@@ -232,9 +230,7 @@ class Trainer(metaclass=ABCMeta):
         list_dict = {}
         for k, v in dict_list.items():
             if len(v) == 0 or isinstance(v[0], list):
-                new_v = []
-                for elem in v:
-                    new_v.append(elem[ind].unsqueeze(0))
+                new_v = [elem[ind].unsqueeze(0) for elem in v]
             else:
                 new_v = v[ind].unsqueeze(0)
             list_dict[k] = new_v
@@ -318,8 +314,7 @@ class VAETrainer(Trainer):
     def __init__(self, model, exp_name, block_args):
         self.acc = None
         self.cf = None
-        self._loss = get_vae_loss(block_args['recon_loss'])(block_args['c_kld'])
-        self.losses = self._loss.losses  # losses must be defined before super().__init__()
+        self._loss = get_vae_loss(block_args['recon_loss'], vq=block_args['vector_quantised'])(block_args['c_reg'])
         super().__init__(model, exp_name, **block_args)
 
         return
@@ -371,6 +366,7 @@ class VAETrainer(Trainer):
         labels = torch.stack(self.test_targets).cpu().numpy()
         highlight_z = z_red[(highlight_label == labels)]
         pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
+
 
 def get_vae_trainer(model, exp_name, block_args):
     return VAETrainer(model, exp_name, block_args)

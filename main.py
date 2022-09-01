@@ -13,34 +13,35 @@ def parse_args():
 
     parser.add_argument('--encoder', type=str, default='DGCNN', choices=['DGCNN_Vanilla', 'DGCNN', 'FoldingNet'])
     parser.add_argument('--decoder', type=str, default='PCGen', choices=['MLP', 'PCGen', 'AdaIN' 'FoldingNet'])
-    parser.add_argument('--recon_loss', type=str, default='Chamfer',
-                        choices=['Chamfer', 'Chamfer_Augmented', 'Chamfer_Smooth', 'Sinkhorn'], help='reconstruction loss')
-    parser.add_argument('--c_kld', type=float, default=0.001, help='coefficient for KLD')
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
+    parser.add_argument('--model_path', type=str, default='', metavar='N',
+                        help='Default is given by model_recon_loss_exp_name')
+    parser.add_argument('--recon_loss', type=str, default='Chamfer',
+                        choices=['Chamfer', 'Chamfer_A', 'Chamfer_S', 'Sinkhorn'], help='reconstruction loss')
+    parser.add_argument('--vector_quantized', action='store_true', default=False, help='Replaces KLD')
+    parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
-    parser.add_argument('--z_dim', type=int, default=512, help='dimension of the latent space')
-    parser.add_argument('--m_training', type=int, default=2048,
-                        help='Points  generated when training, 0 for  increasing sequence 128 -> 4096 ')
+    parser.add_argument('--num_points', type=int, default=2048,
+                        help='num of points of the training dataset [currently fixed]')
     parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--epochs', type=int, default=250)
-    parser.add_argument('--load', type=int, default=-1,
-                        help='load a saved model with the same settings. -1 for starting from scratch,'
-                             '0 for most recent, otherwise epoch after which the model was saved')
     parser.add_argument('--optim', type=str, default='Adam', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum, has momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
-    parser.add_argument('--cuda', action='store_false', default=True, help='enables CUDA training')
-    parser.add_argument('--eval', action='store_true', default=False,
-                        help='evaluate the model (exp_name needs to start with "final")')
     parser.add_argument('--k', type=int, default=20,
                         help='number of neighbours of a point (counting the point itself) in DGCNN]')
-    parser.add_argument('--num_points', type=int, default=2048,
-                        help='num of points of the training dataset [currently fixed]')
-    parser.add_argument('--model_path', type=str, default='', metavar='N',
-                        help='Default is given by model_recon_loss_exp_name')
-    parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
+    parser.add_argument('--z_dim', type=int, default=512, help='dimension of the latent space')
+    parser.add_argument('--c_reg', type=float, default=0.001, help='coefficient for regularization')
+    parser.add_argument('--cuda', action='store_false', default=True, help='enables CUDA training')
+    parser.add_argument('--epochs', type=int, default=250)
+    parser.add_argument('--m_training', type=int, default=2048,
+                        help='Points  generated when training, 0 for  increasing sequence 128 -> 4096 ')
+    parser.add_argument('--load', type=int, default=-1,
+                        help='load a saved model with the same settings. -1 for starting from scratch,'
+                             '0 for most recent, otherwise epoch after which the model was saved')
+    parser.add_argument('--eval', action='store_true', default=False,
+                        help='evaluate the model (exp_name needs to start with "final")')
     parser.add_argument('--minio_credential', type=str, default='',
                         help='path of file with written server;access_key;secret_key')
     return parser.parse_args()
@@ -53,7 +54,9 @@ if __name__ == '__main__':
     decoder_name = args.decoder
     experiment = args.experiment
     recon_loss = args.recon_loss
-    exp_name = args.model_path or '_'.join([encoder_name, decoder_name, recon_loss, experiment])
+    vector_quantised = args.vector_quantised
+    vq = ['vq'] if vector_quantised else []
+    exp_name = args.model_path or '_'.join([encoder_name, decoder_name, recon_loss, *vq, experiment])
     final = experiment[:5] == 'final'
     dir_path = args.dir_path
     dataset_name = args.dataset
@@ -61,17 +64,18 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     cov_matrix = (args.decoder == 'FoldingNet')
     in_chan = 12 if cov_matrix else 3
-    minio_credential = args.minio_credential
+    opt_name = args.optim
     initial_learning_rate = args.lr
     weight_decay = args.wd
-    opt_name = args.optim
     k = args.k
     z_dim = args.z_dim
-    m_training = args.m_training
-    c_kld = args.c_kld
-    model_eval = args.eval
-    load = args.load
+    c_reg = args.c_reg
+    cuda = args.cuda
     training_epochs = args.epochs
+    m_training = args.m_training
+    load = args.load
+    model_eval = args.eval
+    minio_credential = args.minio_credential
 
     if minio_credential:
         from minio import Minio
@@ -90,12 +94,12 @@ if __name__ == '__main__':
         cov_matrix=cov_matrix,
         translation=False,
         rotation=True,
-        batch_size=args.batch_size,
+        batch_size=batch_size,
         final=final,
     )
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
-    optimizer, optim_args = get_opt(opt_name, args.lr, args.wd)
-    model = VAE(encoder_name, decoder_name, z_dim, in_chan, k=k, m=m_training)
+    optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
+    model = VAE(encoder_name, decoder_name, z_dim, in_chan, k=k, m=m_training, vector_quantised=vector_quantised)
 
     trainer_settings = dict(
         opt_name=opt_name,
@@ -104,13 +108,14 @@ if __name__ == '__main__':
         train_loader=train_loader,
         val_loader=val_loader,
         test_loader=test_loader,
-        device=torch.device('cuda:0' if torch.cuda.is_available() and args.cuda else 'cpu'),
+        device=torch.device('cuda:0' if torch.cuda.is_available() and cuda else 'cpu'),
         batch_size=batch_size,
         schedule=CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
         minioClient=minioClient,
-        model_path=os.path.join(args.dir_path, 'model'),
+        model_path=os.path.join(dir_path, 'model'),
         recon_loss=recon_loss,
-        c_kld=c_kld,
+        vector_quantised=vector_quantised,
+        c_reg=c_reg,
     )
 
     block_args = {**trainer_settings, **data_loader_settings}
@@ -128,6 +133,6 @@ if __name__ == '__main__':
                 trainer.update_m_training(m)
             trainer.train(10)
             trainer.save()
-            trainer.test(on='test' if final else 'val')
+            trainer.test(partition='test' if final else 'val')
 
-    trainer.test(final='test' if final else 'val')
+    trainer.test(partition='test' if final else 'val')

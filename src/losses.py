@@ -39,7 +39,7 @@ def chamfer_smooth(inputs, recons, pairwise_dist):
     n = inputs.size()[1]
     m = recons.size()[1]
     # variance of the components (model assumption)
-    sigma2 = 0.0001
+    sigma2 = 0.001
     pairwise_dist /= - 2 * sigma2
     lse1 = pairwise_dist.logsumexp(axis=2)
     normalize1 = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(m)
@@ -59,11 +59,47 @@ def kld_loss(q_mu, q_logvar, freebits=2):
 
 
 class AbstractVAELoss(metaclass=ABCMeta):
-    losses = ['Criterion', 'KLD']
+    def __init__(self, c_reg):
+        self.c_reg = c_reg
+
+    def __call__(self, outputs, inputs, targets):
+        recons = outputs['recon']
+        if len(recons.size()) == 4:
+            n_samples = recons.size()[1]
+            inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
+        reg_loss_dict = self.get_reg_loss(self, inputs, outputs)
+        reg_loss = reg_loss_dict.pop('reg')
+        recon_loss_dict = self.get_recon_loss(inputs, recons)
+        recon_loss = recon_loss_dict.pop('recon')
+        criterion = self.c_rec * recon_loss + self.c_reg * reg_loss
+        if torch.isnan(criterion):
+            print(outputs)
+            raise
+        return {
+            'Criterion': criterion,
+            **reg_loss_dict,
+            **recon_loss_dict
+        }
+    @abstractmethod
+    def get_reg_loss(self, inputs, recons):
+        pass
+    @abstractmethod
+    def get_recon_loss(self, inputs, recons):
+        pass
+
+
+class KLDVAELoss(metaclass=ABCMeta):
+    def get_reg_loss(self, inputs, outputs):
+        KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
+        return {'reg': KLD_free,
+                'KLD': KLD
+                }
+
+class AbstractVAELoss(metaclass=ABCMeta):
     c_rec = 1
 
-    def __init__(self, c_kld):
-        self.c_kld = c_kld
+    def __init__(self, c_reg):
+        self.c_reg = c_reg
 
     def __call__(self, outputs, inputs, targets):
         recons = outputs['recon']
@@ -72,8 +108,8 @@ class AbstractVAELoss(metaclass=ABCMeta):
             inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
         recon_loss_dict = self.get_recon_loss(inputs, recons)
-        recon_loss = recon_loss_dict['recon']
-        criterion = self.c_rec * recon_loss + self.c_kld * KLD_free
+        recon_loss = recon_loss_dict.pop('recon')
+        criterion = self.c_rec * recon_loss + self.c_reg * KLD_free
         if torch.isnan(criterion):
             print(outputs)
             raise
@@ -84,68 +120,65 @@ class AbstractVAELoss(metaclass=ABCMeta):
         }
 
     @abstractmethod
-    def get_recon_loss(self, inputs, recons):
+    def get_reg_loss(self, inputs, recons):
         pass
 
+    @abstractmethod
+    def get_recon_loss(self, inputs, recons):
+        pass
+VQVAELoss(AbstractVAELoss)
 
-class VAELossChamfer(AbstractVAELoss):
-    losses = AbstractVAELoss.losses + ['Chamfer', 'Chamfer_Augmented']
+class VAELossChamfer():
     c_rec = 1
-
-    def __init__(self, c_kld):
-        super().__init__(c_kld)
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
         squared, augmented = chamfer(inputs, recons, pairwise_dist)
-        return {'recon': augmented,
+        return {'recon': squared,
                 'Chamfer': squared,
                 'Chamfer_Augmented': augmented}
 
 
-class VAELossChamferAugmented(AbstractVAELoss):
-    c_rec = 200
-
-    def __init__(self, c_kld):
-        super().__init__(c_kld)
+class VAELossChamferAugmented(VAELossChamfer):
+    c_rec = 1000
 
     def get_recon_loss(self, inputs, recons):
-        loss_list = super().get_recon_loss(inputs, recons)
-        return loss_list.update({'recon': loss_list['Chamfer_Augmented']})
+        loss_dict = super().get_recon_loss(inputs, recons)
+        loss_dict.update({'recon': loss_dict['Chamfer_Augmented']})
+        return loss_dict
 
 
-class VAELossChamferSmooth(VAELossChamferAugmented):
-    losses = VAELossChamferAugmented.losses + ['Chamfer_Smooth']
-
-    def __init__(self, c_kld):
-        super().__init__(c_kld)
+class VAELossChamferSmooth(VAELossChamfer):
+    c_rec = 0.1
 
     def get_recon_loss(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
         squared, augmented = chamfer(inputs, recons, pairwise_dist)
         smooth = chamfer_smooth(inputs, recons, pairwise_dist)
-        return {'recon': augmented,
+        return {'recon': smooth,
                 'Chamfer': squared,
-                'Chamfer_norm': augmented,
+                'Chamfer_Augmented': augmented,
                 'Chamfer_Smooth': smooth}
 
 
 class VAELossSinkhorn(VAELossChamferAugmented):
-    losses = AbstractVAELoss.losses + ['Chamfer', 'Chamfer_Augmented', 'Sinkhorn']
-    c_rec = 70000
-    def __init__(self, c_kld):
-        super().__init__(c_kld)
-        self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.03, diameter=2, scaling=.3, backend='tensorized')
+    c_rec = 1000
+    sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.03, diameter=2, scaling=.3, backend='tensorized')
 
     def get_recon_loss(self, inputs, recons):
         sk_loss = self.sinkhorn(inputs, recons).mean()
-        return super().get_recon_loss(inputs, recons).update({'recon': sk_loss, 'Sinkhorn':sk_loss})
+        loss_dict = super().get_recon_loss(inputs, recons)
+        loss_dict.update({'recon': sk_loss, 'Sinkhorn': sk_loss})
+        return loss_dict
 
-def get_vae_loss(recon_loss):
+
+def get_vae_loss(recon_loss, vq=False):
     recon_loss_dict = {
         'Chamfer': VAELossChamfer,
-        'Chamfer_Augmented': VAELossChamferAugmented,
-        'Chamfer_Smooth': VAELossChamferSmooth,
+        'Chamfer_A': VAELossChamferAugmented,
+        'Chamfer_S': VAELossChamferSmooth,
         'Sinkhorn': VAELossSinkhorn,
     }
-    return recon_loss_dict[recon_loss]
+    class FinalLoss(recon_loss_dict[recon_loss], VQVAELoss if vq else KLDVAELoss):
+        pass 
+    return FinalLoss
