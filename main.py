@@ -19,7 +19,7 @@ def parse_args():
                         help='Default is given by model_recon_loss_exp_name')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'Chamfer_A', 'Chamfer_S', 'Sinkhorn'], help='reconstruction loss')
-    parser.add_argument('--vector_quantized', action='store_true', default=False, help='Replaces KLD')
+    parser.add_argument('--vector_quantised', action='store_true', default=False, help='Replaces KLD')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--num_points', type=int, default=2048,

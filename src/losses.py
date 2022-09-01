@@ -95,39 +95,6 @@ class KLDVAELoss(metaclass=ABCMeta):
                 'KLD': KLD
                 }
 
-class AbstractVAELoss(metaclass=ABCMeta):
-    c_rec = 1
-
-    def __init__(self, c_reg):
-        self.c_reg = c_reg
-
-    def __call__(self, outputs, inputs, targets):
-        recons = outputs['recon']
-        if len(recons.size()) == 4:
-            n_samples = recons.size()[1]
-            inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
-        KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
-        recon_loss_dict = self.get_recon_loss(inputs, recons)
-        recon_loss = recon_loss_dict.pop('recon')
-        criterion = self.c_rec * recon_loss + self.c_reg * KLD_free
-        if torch.isnan(criterion):
-            print(outputs)
-            raise
-        return {
-            'Criterion': criterion,
-            'KLD': KLD,
-            **recon_loss_dict
-        }
-
-    @abstractmethod
-    def get_reg_loss(self, inputs, recons):
-        pass
-
-    @abstractmethod
-    def get_recon_loss(self, inputs, recons):
-        pass
-VQVAELoss(AbstractVAELoss)
-
 class VAELossChamfer():
     c_rec = 1
 
@@ -179,6 +146,6 @@ def get_vae_loss(recon_loss, vq=False):
         'Chamfer_S': VAELossChamferSmooth,
         'Sinkhorn': VAELossSinkhorn,
     }
-    class FinalLoss(recon_loss_dict[recon_loss], VQVAELoss if vq else KLDVAELoss):
+    class FinalLoss(recon_loss_dict[recon_loss], KLDVAELoss):
         pass 
     return FinalLoss
