@@ -67,7 +67,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
         if len(recons.size()) == 4:
             n_samples = recons.size()[1]
             inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
-        reg_loss_dict = self.get_reg_loss(self, inputs, outputs)
+        reg_loss_dict = self.get_reg_loss(inputs, outputs)
         reg_loss = reg_loss_dict.pop('reg')
         recon_loss_dict = self.get_recon_loss(inputs, recons)
         recon_loss = recon_loss_dict.pop('recon')
@@ -88,14 +88,14 @@ class AbstractVAELoss(metaclass=ABCMeta):
         pass
 
 
-class KLDVAELoss(metaclass=ABCMeta):
+class KLDVAELoss(AbstractVAELoss):
     def get_reg_loss(self, inputs, outputs):
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
         return {'reg': KLD_free,
                 'KLD': KLD
                 }
 
-class VAELossChamfer():
+class VAELossChamfer(KLDVAELoss):
     c_rec = 1
 
     def get_recon_loss(self, inputs, recons):
@@ -146,6 +146,5 @@ def get_vae_loss(recon_loss, vq=False):
         'Chamfer_S': VAELossChamferSmooth,
         'Sinkhorn': VAELossSinkhorn,
     }
-    class FinalLoss(recon_loss_dict[recon_loss], KLDVAELoss):
-        pass 
-    return FinalLoss
+
+    return recon_loss_dict[recon_loss]

@@ -9,7 +9,7 @@ from src.modules import LinearBlock
 class VAE(nn.Module):
     settings = {}
 
-    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k=20, m=2048):
+    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k=20, m=2048, vector_quantised=False):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
