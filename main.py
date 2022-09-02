@@ -5,8 +5,10 @@ import pykeops
 from src.dataset import get_dataset
 from src.optim import get_opt, CosineSchedule
 from src.trainer import get_vae_trainer
-from src.model import VAE
+from src.model import get_model
+
 pykeops.set_verbose(False)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
@@ -20,6 +22,8 @@ def parse_args():
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'Chamfer_A', 'Chamfer_S', 'Sinkhorn'], help='reconstruction loss')
     parser.add_argument('--vector_quantised', action='store_true', default=False, help='Replaces KLD')
+    parser.add_argument('--dict_size', type=int, default=16, help='dictionary size for vector quantisation')
+    parser.add_argument('--embed_dim', type=int, default=4, help='dim of the vector for vector quantisation')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--num_points', type=int, default=2048,
@@ -55,6 +59,8 @@ if __name__ == '__main__':
     experiment = args.experiment
     recon_loss = args.recon_loss
     vector_quantised = args.vector_quantised
+    dict_size = args.dict_size
+    embed_dim = args.embed_dim
     vq = ['vq'] if vector_quantised else []
     exp_name = args.model_path or '_'.join([encoder_name, decoder_name, recon_loss, *vq, experiment])
     final = experiment[:5] == 'final'
@@ -97,9 +103,20 @@ if __name__ == '__main__':
         batch_size=batch_size,
         final=final,
     )
+    model_settigns = dict(encoder_name=encoder_name,
+                          decoder_name=decoder_name,
+                          z_dim=z_dim,
+                          in_chan=in_chan,
+                          k=k,
+                          m=m_training,
+                          vector_quantised=vector_quantised,
+                          dict_size=args.dict_size,
+                          embed_dim=args.embed_dim
+                          )
+
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
-    model = VAE(encoder_name, decoder_name, z_dim, in_chan, k=k, m=m_training, vector_quantised=vector_quantised)
+    model = get_model(**model_settigns)
 
     trainer_settings = dict(
         opt_name=opt_name,
@@ -118,7 +135,7 @@ if __name__ == '__main__':
         c_reg=c_reg,
     )
 
-    block_args = {**trainer_settings, **data_loader_settings}
+    block_args = {**data_loader_settings, **model_settigns, **trainer_settings}
     trainer = get_vae_trainer(model, exp_name, block_args)
     # loads last model
     if load == 0:

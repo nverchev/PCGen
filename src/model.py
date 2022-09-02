@@ -26,7 +26,7 @@ class VAE(nn.Module):
     settings = {}
     vq = False
 
-    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k, m):
+    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, dict_size, dim_embed, k, m):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
@@ -67,9 +67,15 @@ class VAE(nn.Module):
 class VQVAE(VAE):
     settings = {}
     vq = True
-    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k, m):
-        super().__init__(encoder_name, decoder_name, z_dim, in_chan, k, m)
-
+    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, dict_size, dim_embed, k, m):
+        # encoder gives vector quantised codes, therefore the z dim must be multiplied by the embed dim
+        self.dim_codes = z_dim
+        self.dict_size = dict_size
+        self.dim_embedding = dim_embed
+        super().__init__(encoder_name, decoder_name, dim_embed * z_dim, in_chan, dict_size, dim_embed, k, m)
+        self.dictionary = torch.nn.Parameter(torch.randn(self.dim_codes, self.dict_size, self.dim_embedding))
+        self.settings['dict_size'] = self.dict_size
+        self.settings['dim_embedding'] = self.dim_embedding
 
 
     def quantise(self, mu):
@@ -95,10 +101,6 @@ class VQVAE(VAE):
         return data
 
 
-def get_model(encoder_name, decoder_name, z_dim, in_chan, k=20, m=2048, vector_quantised=False):
-    Model = VQVAE if vector_quantised else VAE
-    return Model(encoder_name, decoder_name, z_dim, in_chan, k, m)
-
 
 class Classifier(nn.Module):
     settings = {}
@@ -119,3 +121,7 @@ class Classifier(nn.Module):
     def forward(self, x):
         features = self.encode(x)
         return {'y': self.dense(features)}
+
+def get_model(encoder_name, decoder_name, z_dim, in_chan, dict_size, dim_embed, k=20, m=2048, vector_quantised=False):
+    Model = VQVAE if vector_quantised else VAE
+    return Model(encoder_name, decoder_name, z_dim, in_chan, dict_size, dim_embed, k, m)
