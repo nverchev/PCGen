@@ -86,13 +86,24 @@ class VAELoss(nn.Module):
         }
 
 
-class KLDVAELoss():
+class KLDVAELoss:
     c_kld = 0.001
 
     def __call__(self, inputs, outputs):
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
         return {'reg': self.c_kld * KLD_free,
                 'KLD': KLD
+                }
+
+
+class VQVAELoss:
+    c_kld = 0.1
+
+    def __call__(self, inputs, outputs):
+        mu_loss = ((outputs['mu'] - outputs['z'].detach()) ** 2).sum(-1).mean()
+        embed_loss = ((outputs['mu'].detach() - outputs['z_embed']) ** 2).sum(-1).mean()
+        return {'reg': self.c_kld * (embed_loss + mu_loss / 4),
+                'Embed Loss': embed_loss
                 }
 
 
