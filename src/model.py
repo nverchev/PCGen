@@ -1,10 +1,25 @@
 # @title Libraries
+from abc import ABC
+
 import torch
 import torch.nn as nn
 from src.encoder import get_encoder
 from src.decoder import get_decoder
 from src.modules import LinearBlock
 from src.utils import square_distance
+from torch.autograd import Function
+
+
+class TransferGrad(Function, ABC):
+
+    @staticmethod
+    # transfer the grad from output to input during backprop
+    def forward(ctx, input, output):
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output, None
 
 
 class VAE(nn.Module):
@@ -48,12 +63,17 @@ class VAE(nn.Module):
         print('Total Parameters: {}'.format(num_params))
         return
 
+
 class VQVAE(VAE):
     settings = {}
     vq = True
+    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k, m):
+        super().__init__(encoder_name, decoder_name, z_dim, in_chan, k, m)
+
+
 
     def quantise(self, mu):
-        batch, embedz = mu.size()
+        batch, embed = mu.size()
         mu2 = mu.view(batch * self.dim_codes, 1, self.dim_embedding)
         dict = self.dictionary.repeat(batch, 1, 1)
         dist = square_distance(mu2, dict)
@@ -78,7 +98,6 @@ class VQVAE(VAE):
 def get_model(encoder_name, decoder_name, z_dim, in_chan, k=20, m=2048, vector_quantised=False):
     Model = VQVAE if vector_quantised else VAE
     return Model(encoder_name, decoder_name, z_dim, in_chan, k, m)
-
 
 
 class Classifier(nn.Module):
