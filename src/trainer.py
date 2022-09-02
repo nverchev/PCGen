@@ -171,7 +171,7 @@ class Trainer(metaclass=ABCMeta):
                 if batch_idx == len(loader) - 1:  # clear after last
                     iterable.set_description('')
 
-        epoch_loss = {loss: value / num_batch for loss, value in epoch_loss}
+        epoch_loss = {loss: value / num_batch for loss, value in epoch_loss.items()}
         if not save_outputs:
             for loss, value in epoch_loss.items():
                 dict_losses.get(loss, []).append(value)
@@ -314,13 +314,11 @@ class VAETrainer(Trainer):
     def __init__(self, model, exp_name, block_args):
         self.acc = None
         self.cf = None
-        self._loss = get_vae_loss(block_args['recon_loss'], vq=block_args['vector_quantised'])(block_args['c_reg'])
+        self.loss = get_vae_loss(block_args)
         super().__init__(model, exp_name, **block_args)
 
         return
 
-    def loss(self, output, inputs, targets):
-        return self._loss(output, inputs, targets)
 
     def test(self, partition='val', m=2048):
         self.model.decode.m = m

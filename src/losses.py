@@ -1,6 +1,7 @@
 # Distances and functions
 import numpy as np
 import torch
+from torch import nn
 import torch.nn.functional as F
 import geomloss
 from abc import ABCMeta, abstractmethod
@@ -58,11 +59,14 @@ def kld_loss(q_mu, q_logvar, freebits=2):
     return KLD, KLD_free
 
 
-class AbstractVAELoss(metaclass=ABCMeta):
-    def __init__(self, c_reg):
+class VAELoss(nn.Module):
+    def __init__(self, get_reg_loss, get_recon_loss, c_reg):
+        super().__init__()
+        self.get_reg_loss = get_reg_loss
+        self.get_recon_loss = get_recon_loss
         self.c_reg = c_reg
 
-    def __call__(self, outputs, inputs, targets):
+    def forward(self, outputs, inputs, targets):
         recons = outputs['recon']
         if len(recons.size()) == 4:
             n_samples = recons.size()[1]
@@ -71,7 +75,7 @@ class AbstractVAELoss(metaclass=ABCMeta):
         reg_loss = reg_loss_dict.pop('reg')
         recon_loss_dict = self.get_recon_loss(inputs, recons)
         recon_loss = recon_loss_dict.pop('recon')
-        criterion = self.c_rec * recon_loss + self.c_reg * reg_loss
+        criterion = recon_loss + self.c_reg * reg_loss
         if torch.isnan(criterion):
             print(outputs)
             raise
@@ -80,71 +84,49 @@ class AbstractVAELoss(metaclass=ABCMeta):
             **reg_loss_dict,
             **recon_loss_dict
         }
-    @abstractmethod
-    def get_reg_loss(self, inputs, recons):
-        pass
-    @abstractmethod
-    def get_recon_loss(self, inputs, recons):
-        pass
 
 
-class KLDVAELoss(AbstractVAELoss):
-    def get_reg_loss(self, inputs, outputs):
+class KLDVAELoss():
+    c_kld = 0.001
+
+    def __call__(self, inputs, outputs):
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
-        return {'reg': KLD_free,
+        return {'reg': self.c_kld * KLD_free,
                 'KLD': KLD
                 }
 
-class VAELossChamfer(KLDVAELoss):
+
+class ReconLoss:
     c_rec = 1
 
-    def get_recon_loss(self, inputs, recons):
+    def __init__(self, backprop="Chamfer"):
+        self.backprop = backprop
+        self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.03,
+                                             diameter=2, scaling=.3, backend='tensorized')
+
+    def __call__(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
         squared, augmented = chamfer(inputs, recons, pairwise_dist)
-        return {'recon': squared,
-                'Chamfer': squared,
-                'Chamfer_Augmented': augmented}
+        dict_recon = {'Chamfer': squared, 'Chamfer_Augmented': augmented}
+        if self.backprop == "Chamfer":
+            recon = squared
+        elif self.backprop == "Chamfer_A":
+            recon = 1000 * augmented
+        elif self.backprop == "Chamfer_S":
+            smooth = chamfer_smooth(inputs, recons, pairwise_dist)
+            recon = 0.1 * smooth
+            dict_recon['Chamfer_Smooth'] = smooth
+        else:
+            assert self.backprop == "Sinkhorn", f"Loss {self.backprop} not known"
+            sk_loss = self.sinkhorn(inputs, recons).mean()
+            recon = 1000 * sk_loss
+            dict_recon['Sinkhorn'] = sk_loss
+
+        dict_recon['recon'] = recon
+        return dict_recon
 
 
-class VAELossChamferAugmented(VAELossChamfer):
-    c_rec = 1000
-
-    def get_recon_loss(self, inputs, recons):
-        loss_dict = super().get_recon_loss(inputs, recons)
-        loss_dict.update({'recon': loss_dict['Chamfer_Augmented']})
-        return loss_dict
-
-
-class VAELossChamferSmooth(VAELossChamfer):
-    c_rec = 0.1
-
-    def get_recon_loss(self, inputs, recons):
-        pairwise_dist = square_distance(inputs, recons)
-        squared, augmented = chamfer(inputs, recons, pairwise_dist)
-        smooth = chamfer_smooth(inputs, recons, pairwise_dist)
-        return {'recon': smooth,
-                'Chamfer': squared,
-                'Chamfer_Augmented': augmented,
-                'Chamfer_Smooth': smooth}
-
-
-class VAELossSinkhorn(VAELossChamferAugmented):
-    c_rec = 1000
-    sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.03, diameter=2, scaling=.3, backend='tensorized')
-
-    def get_recon_loss(self, inputs, recons):
-        sk_loss = self.sinkhorn(inputs, recons).mean()
-        loss_dict = super().get_recon_loss(inputs, recons)
-        loss_dict.update({'recon': sk_loss, 'Sinkhorn': sk_loss})
-        return loss_dict
-
-
-def get_vae_loss(recon_loss, vq=False):
-    recon_loss_dict = {
-        'Chamfer': VAELossChamfer,
-        'Chamfer_A': VAELossChamferAugmented,
-        'Chamfer_S': VAELossChamferSmooth,
-        'Sinkhorn': VAELossSinkhorn,
-    }
-
-    return recon_loss_dict[recon_loss]
+def get_vae_loss(block_args):
+    get_recon_loss = ReconLoss(block_args['recon_loss'])
+    get_reg_loss = VQVAELoss() if block_args['vector_quantised'] else KLDVAELoss()
+    return VAELoss(get_reg_loss, get_recon_loss, block_args['c_reg'])
