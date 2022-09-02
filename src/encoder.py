@@ -6,7 +6,7 @@ from src.modules import PointsConvBlock, LinearBlock, MaxChannel, EdgeConvBlock
 from src.utils import get_graph_features
 
 class DGCNN_Vanilla(nn.Module):
-    def __init__(self, chan_in=3, z_dim=512, k=20):
+    def __init__(self, chan_in=3, z_dim=512, k=20, vq=False):
         super().__init__()
         self.k = k
         self.h_dim = [64, 128, 128, 1024, 512, 512]
@@ -17,7 +17,7 @@ class DGCNN_Vanilla(nn.Module):
         modules.append(MaxChannel())
         for i in range(3, len(self.h_dim) - 1):
             modules.append(LinearBlock(self.h_dim[i], self.h_dim[i + 1]))
-        modules.append(nn.Linear(self.h_dim[-1], 2 * z_dim))
+        modules.append(nn.Linear(self.h_dim[-1], z_dim if vq else 2 * z_dim))
         self.encode = nn.Sequential(*modules)
 
     def forward(self, x):
@@ -29,7 +29,7 @@ class DGCNN_Vanilla(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, chan_in=3, z_dim=512, k=20):
+    def __init__(self, chan_in=3, z_dim=512, k=20, vq=False):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
@@ -37,7 +37,7 @@ class DGCNN(nn.Module):
         for i in range(len(self.h_dim) - 1):
             edge_conv_list.append(EdgeConvBlock(2 * self.h_dim[i], self.h_dim[i + 1]))
         self.edge_convs = nn.Sequential(*edge_conv_list)
-        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * z_dim, kernel_size=1)
+        self.final_conv = nn.Conv1d(sum(self.h_dim), z_dim if vq else 2 * z_dim, kernel_size=1)
 
     def forward(self, x):
         xs = []
@@ -87,7 +87,7 @@ class Point_Transform_Net(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self, chan_in=3, z_dim=512, k=16):
+    def __init__(self, chan_in=3, z_dim=512, k=16, vq=False):
         super().__init__()
         self.k = 16
         self.h_dim = [12, 64, 64, 64]

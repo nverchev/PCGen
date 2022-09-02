@@ -4,16 +4,18 @@ import torch.nn as nn
 from src.encoder import get_encoder
 from src.decoder import get_decoder
 from src.modules import LinearBlock
+from src.utils import square_distance
 
 
 class VAE(nn.Module):
     settings = {}
+    vq = False
 
-    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k=20, m=2048, vector_quantised=False):
+    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k, m):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
-        self.encode = get_encoder(encoder_name)(in_chan, z_dim, k)
+        self.encode = get_encoder(encoder_name)(in_chan, z_dim, k, vq=self.vq)
         self.decode = get_decoder(decoder_name)(z_dim, m)
         self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, 'k': k}
 
@@ -29,9 +31,6 @@ class VAE(nn.Module):
     def encoder(self, x):
         data = {}
         x = self.encode(x)
-        if isinstance(x, list):
-            data['trans'] = x[1]
-            x = x[0]
         data['mu'], data['log_var'] = x.chunk(2, 1)
         data['z'] = self.sampling(data['mu'], data['log_var'])
         return data
@@ -48,6 +47,38 @@ class VAE(nn.Module):
             num_params += param.numel()
         print('Total Parameters: {}'.format(num_params))
         return
+
+class VQVAE(VAE):
+    settings = {}
+    vq = True
+
+    def quantise(self, mu):
+        batch, embedz = mu.size()
+        mu2 = mu.view(batch * self.dim_codes, 1, self.dim_embedding)
+        dict = self.dictionary.repeat(batch, 1, 1)
+        dist = square_distance(mu2, dict)
+        idx = dist.argmin(axis=2)
+        z_embed = dict.gather(1, idx.expand(-1, -1, self.dim_embedding)).view(batch,
+                                                                              self.dim_codes * self.dim_embedding)
+        z = TransferGrad().apply(mu, z_embed)
+        one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=mu.device).scatter_(2,
+                                                                                                    idx.view(batch,
+                                                                                                             self.dim_codes,
+                                                                                                             1), 1)
+        return z, z_embed, one_hot_idx
+
+    def encoder(self, x):
+        data = {}
+        x = self.encode(x)
+        data['mu'] = x
+        data['z'] = self.quantise(x)
+        return data
+
+
+def get_model(encoder_name, decoder_name, z_dim, in_chan, k=20, m=2048, vector_quantised=False):
+    Model = VQVAE if vector_quantised else VAE
+    return Model(encoder_name, decoder_name, z_dim, in_chan, k, m)
+
 
 
 class Classifier(nn.Module):
