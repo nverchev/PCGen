@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--k', type=int, default=20,
                         help='number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--z_dim', type=int, default=512, help='dimension of the latent space')
-    parser.add_argument('--c_reg', type=float, default=0.001, help='coefficient for regularization')
+    parser.add_argument('--c_reg', type=float, default=1, help='coefficient for regularization')
     parser.add_argument('--cuda', action='store_false', default=True, help='enables CUDA training')
     parser.add_argument('--epochs', type=int, default=250)
     parser.add_argument('--m_training', type=int, default=2048,

@@ -314,7 +314,7 @@ class VAETrainer(Trainer):
     def __init__(self, model, exp_name, block_args):
         self.acc = None
         self.cf = None
-        self.loss = get_vae_loss(block_args)
+        self._loss = get_vae_loss(block_args)
         super().__init__(model, exp_name, **block_args)
 
         return
@@ -365,6 +365,8 @@ class VAETrainer(Trainer):
         highlight_z = z_red[(highlight_label == labels)]
         pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
 
+    def loss(self, output, inputs, targets):
+        return self._loss(output, inputs, targets)
 
 def get_vae_trainer(model, exp_name, block_args):
     return VAETrainer(model, exp_name, block_args)

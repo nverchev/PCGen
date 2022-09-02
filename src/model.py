@@ -10,7 +10,7 @@ from src.utils import square_distance
 from torch.autograd import Function
 
 
-class TransferGrad(Function, ABC):
+class TransferGrad(Function):
 
     @staticmethod
     # transfer the grad from output to input during backprop
@@ -26,7 +26,7 @@ class VAE(nn.Module):
     settings = {}
     vq = False
 
-    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, dict_size, dim_embed, k, m):
+    def __init__(self, encoder_name, decoder_name, z_dim, in_chan,  k=20, m=2048, **settings):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
@@ -67,12 +67,12 @@ class VAE(nn.Module):
 class VQVAE(VAE):
     settings = {}
     vq = True
-    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, dict_size, dim_embed, k, m):
+    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, dict_size, embed_dim, k, m):
         # encoder gives vector quantised codes, therefore the z dim must be multiplied by the embed dim
         self.dim_codes = z_dim
         self.dict_size = dict_size
-        self.dim_embedding = dim_embed
-        super().__init__(encoder_name, decoder_name, dim_embed * z_dim, in_chan, dict_size, dim_embed, k, m)
+        self.dim_embedding = embed_dim
+        super().__init__(encoder_name, decoder_name, embed_dim * z_dim, in_chan,  k, m)
         self.dictionary = torch.nn.Parameter(torch.randn(self.dim_codes, self.dict_size, self.dim_embedding))
         self.settings['dict_size'] = self.dict_size
         self.settings['dim_embedding'] = self.dim_embedding
@@ -84,20 +84,18 @@ class VQVAE(VAE):
         dict = self.dictionary.repeat(batch, 1, 1)
         dist = square_distance(mu2, dict)
         idx = dist.argmin(axis=2)
-        z_embed = dict.gather(1, idx.expand(-1, -1, self.dim_embedding)).view(batch,
-                                                                              self.dim_codes * self.dim_embedding)
+        z_embed = dict.gather(1, idx.expand(-1, -1, self.dim_embedding))
+        z_embed = z_embed.view(batch, self.dim_codes * self.dim_embedding)
         z = TransferGrad().apply(mu, z_embed)
-        one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=mu.device).scatter_(2,
-                                                                                                    idx.view(batch,
-                                                                                                             self.dim_codes,
-                                                                                                             1), 1)
+        one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=mu.device)
+        one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)
         return z, z_embed, one_hot_idx
 
     def encoder(self, x):
         data = {}
         x = self.encode(x)
         data['mu'] = x
-        data['z'] = self.quantise(x)
+        data['z'], data['z_embed'], data['idx'] = self.quantise(x)
         return data
 
 
@@ -122,6 +120,6 @@ class Classifier(nn.Module):
         features = self.encode(x)
         return {'y': self.dense(features)}
 
-def get_model(encoder_name, decoder_name, z_dim, in_chan, dict_size, dim_embed, k=20, m=2048, vector_quantised=False):
+def get_model(vector_quantised, **model_settings):
     Model = VQVAE if vector_quantised else VAE
-    return Model(encoder_name, decoder_name, z_dim, in_chan, dict_size, dim_embed, k, m)
+    return Model(**model_settings)

@@ -97,12 +97,12 @@ class KLDVAELoss:
 
 
 class VQVAELoss:
-    c_kld = 0.1
+    c_vq = 0.1
 
     def __call__(self, inputs, outputs):
         mu_loss = ((outputs['mu'] - outputs['z'].detach()) ** 2).sum(-1).mean()
         embed_loss = ((outputs['mu'].detach() - outputs['z_embed']) ** 2).sum(-1).mean()
-        return {'reg': self.c_kld * (embed_loss + mu_loss / 4),
+        return {'reg': self.c_vq * (embed_loss + mu_loss / 4),
                 'Embed Loss': embed_loss
                 }
 
