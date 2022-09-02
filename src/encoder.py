@@ -96,14 +96,6 @@ class FoldingNet(nn.Module):
         modules = PointsConvBlock(chan_in, 12, act=nn.ReLU())
         for i in range(len(self.h_dim) - 1):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1], act=nn.ReLU()))
-            self.mlp1 = nn.Sequential(
-            nn.Conv1d(12, 64, 1),
-            nn.ReLU(),
-            nn.Conv1d(64, 64, 1),
-            nn.ReLU(),
-            nn.Conv1d(64, 64, 1),
-            nn.ReLU(),
-        )
         self.linear1 = nn.Linear(64, 64)
         self.conv1 = nn.Conv1d(64, 128, 1)
         self.linear2 = nn.Linear(128, 128)
@@ -170,7 +162,23 @@ class FoldingNet(nn.Module):
         return feat                             # (batch_size, 1, feat_dims)
 
 
+class FoldingNet(nn.Module):
+    def __init__(self, chan_in=3, z_dim=512, k=20, vq=False):
+        super().__init__()
+        self.k = k
+        self.h_dim = [64, 128, 128, 1024, 512, 512]
+        modules = [PointsConvBlock(chan_in, self.h_dim[0])]
+        for i in range(3):
+            modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
+        modules.append(MaxChannel())
+        for i in range(3, len(self.h_dim) - 1):
+            modules.append(LinearBlock(self.h_dim[i], self.h_dim[i + 1]))
+        modules.append(nn.Linear(self.h_dim[-1], z_dim if vq else 2 * z_dim))
+        self.encode = nn.Sequential(*modules)
 
+    def forward(self, x):
+        x = x.transpose(2, 1)
+        return self.encode(x)
 
 def get_encoder(encoder_name):
     dict_encoder = {

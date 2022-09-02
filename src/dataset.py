@@ -7,7 +7,7 @@ from torch.utils.data import Dataset, Subset
 import requests
 import h5py
 import glob2
-
+from sklearn.neighbors import KDTree
 try:
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
@@ -28,20 +28,41 @@ def download_zip(dir_path, zip_name, url):
             zip_ref.extractall(data_dir)
     return zip_path[:-4]
 
+def create_cov_feature(pcs):
+    cov_matrix_list = []
+    for pc in pcs:
+        kdtree = KDTree(pc)
+        indices = kdtree.query(pc, 9, return_distance=False)
+        neighbours = np.take(pc, indices, axis=0)
+        neighbours -= neighbours.mean(2, keepdims=True)
+        cov_matrix = np.matmul(neighbours.transpose((0, 2, 1)), neighbours)
+        cov_matrix_list.append(cov_matrix.reshape(-1, 9))
+    return np.stack(cov_matrix_list, axis=0)
 
-def load_h5(wild_path, num_points):
+def load_h5(wild_path, num_points, cov_matrix):
     pcd = []
     labels = []
     for h5_name in glob2.glob(wild_path):
         with h5py.File(h5_name, 'r+') as f:
             # Dataset is already normalized
-            pc = f['data'][:].astype('float32')
-            pc = pc[:, :num_points, :]
+            pcs = f['data'][:].astype('float32')
+            pcs = pcs[:, :num_points, :]
             label = f['label'][:].astype('int64')
-        pcd.append(pc)
+            if cov_matrix:
+                cov_file = h5_name[:-3] + "_cov.npy"
+                if os.path.exists(cov_file):
+                    cov_features = np.load(cov_file)
+                else:
+                    print(cov_file)
+                    cov_features = create_cov_feature(pcs)
+                    np.save(cov_file, cov_features)
+                pcs = np.dstack([pcs, cov_features])
+
+        pcd.append(pcs)
         labels.append(label)
     pcd = np.concatenate(pcd, axis=0)
     labels = np.concatenate(labels, axis=0)
+
     return pcd, labels.ravel()
 
 
@@ -107,8 +128,8 @@ class Modelnet40Dataset:
         data_path = self.download()
         files_path = lambda x: os.path.join(data_path, f'*{x}*.h5')
         self.pcd, self.labels = {}, {}
-        self.pcd['trainval'], self.labels['trainval'] = load_h5(files_path('train'), num_points)
-        self.pcd['test'], self.labels['test'] = load_h5(files_path('test'), num_points)
+        self.pcd['trainval'], self.labels['trainval'] = load_h5(files_path('train'), num_points, cov_matrix)
+        self.pcd['test'], self.labels['test'] = load_h5(files_path('test'), num_points, cov_matrix)
         train_idx = list(range(self.pcd['trainval'].shape[0]))
         val_idx = [train_idx.pop(i) for i in train_idx[::-val_every]]
         self.pcd['train'], self.labels['train'] = self.pcd['trainval'][train_idx], self.labels['trainval'][train_idx]
@@ -131,9 +152,9 @@ class ShapeNetDataset:
         data_path = self.download()
         files_path = lambda x: os.path.join(data_path, f'*{x}*.h5')
         self.pcd, self.labels = {}, {}
-        self.pcd['train'], self.labels['train'] = load_h5(files_path('train'), num_points)
-        self.pcd['val'], self.labels['val'] = load_h5(files_path('val'), num_points)
-        self.pcd['test'], self.labels['test'] = load_h5(files_path('test'), num_points)
+        self.pcd['train'], self.labels['train'] = load_h5(files_path('train'), num_points, cov_matrix)
+        self.pcd['val'], self.labels['val'] = load_h5(files_path('val'), num_points, cov_matrix)
+        self.pcd['test'], self.labels['test'] = load_h5(files_path('test'), num_points, cov_matrix)
         self.pcd['trainval'] = np.concatenate([self.pcd['train'], self.pcd['val']], axis=0)
         self.labels['trainval'] = np.concatenate([self.labels['train'], self.labels['val']], axis=0)
 
