@@ -37,30 +37,36 @@ def self_square_distance(t1):
 
 def knn(x, k):
     d_ij = self_square_distance(x)
-    idx = d_ij.topk(k=k, largest=False, dim=-1)[1]
-    return idx
+    indices = d_ij.topk(k=k, largest=False, dim=-1)[1].contiguous()
+    return indices
 
-
-def get_graph_features(x, k=20):
+def get_neighbours(x, k, indices):
     batch, n_feat, n_points = x.size()
-    idx = knn(x, k=k)  # (batch_size, num_points, k)
-    idx = idx.view(batch, 1, k * n_points).expand(-1,  n_feat, -1)
-    feature = torch.gather(x, 2, idx).view(batch, n_feat, n_points, k)
+    if indices:
+        indices = indices
+    else:
+        indices = knn(x, k=k)  # (batch_size, num_points, k)
+        indices = indices.view(batch, 1, k * n_points).expand(-1,  n_feat, -1)
+    neighbours = torch.gather(x, 2, indices).view(batch, n_feat, n_points, k)
+    return neighbours
+
+def get_local_covariance(x, k=16, indices=None):
+    neighbours = get_neighbours(x, k, indices)
+    neighbours -= neighbours.mean(3, keepdim=True)
+    covariances = torch.matmul(neighbours.transpose(1, 2), neighbours.permute(0, 2, 3, 1))
+    x = torch.cat([x, covariances.flatten(start_dim=2).transpose(1, 2)], dim=1).contiguous()
+    return x
+
+def graph_max_pooling(x, k=16, indices=None):
+    neighbours = get_neighbours(x, k, indices)
+    max_pooling = torch.max(neighbours, dim=-1)[0]
+    return max_pooling
+
+
+def get_graph_features(x, k=20, indices=None):
+    neighbours = get_neighbours(x, k, indices)
     x = x.unsqueeze(3).expand(-1, -1, -1, k)
-    feature = torch.cat([feature - x, x], dim=1).contiguous()
-    # (batch_size, 2*num_dims, num_points, k)
+    feature = torch.cat([neighbours - x, x], dim=1).contiguous()
+    # (batch_size, 2 * num_dims, num_points, k)
     return feature
 
-# def local_cov(x, k=16):
-#     batch, n_feat, n_points = x.size()
-#     idx = knn(x, k=k)  # (batch_size, num_points, k)
-#     idx = idx.view(batch, 1, k * n_points).expand(-1, n_feat, -1)
-#     feature = torch.gather(x, 2, idx).view(batch, n_feat, n_points, k)
-#     feature -= feature.mean(-1, keepdim=True)
-#     torch.matmul(feature.transpose(2, 3), feature).view(batch, n, -1).permute(0, 2, 1)
-#     # (batch_size, num_points, k, 3)
-#     x = torch.matmul(x[:, :, 0].unsqueeze(3), x[:, :, 1].unsqueeze(2))  # (batch_size, num_points, 3, 1) * (batch_size, num_points, 1, 3) -> (batch_size, num_points, 3, 3)
-#     # x = torch.matmul(x[:,:,1:].transpose(3, 2), x[:,:,1:])
-#     x = x.view(batch_size, num_points, 9).transpose(2, 1)  # (batch_size, 9, num_points)
-#
-#     x = torch.cat((feature, x), dim=1)  # (batch_size, 12, num_points)

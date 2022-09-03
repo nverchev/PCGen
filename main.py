@@ -68,8 +68,7 @@ if __name__ == '__main__':
     dataset_name = args.dataset
     num_points = args.num_points
     batch_size = args.batch_size
-    cov_matrix = (args.decoder == 'FoldingNet')
-    in_chan = 12 if cov_matrix else 3
+    in_chan = 3
     opt_name = args.optim
     initial_learning_rate = args.lr
     weight_decay = args.wd
@@ -97,7 +96,7 @@ if __name__ == '__main__':
         dataset_name=dataset_name,
         dir_path=dir_path,
         num_points=num_points,
-        cov_matrix=cov_matrix,
+        k=k,  # preprocess k index to speed up training (invariant to affine transformations)
         translation=False,
         rotation=True,
         batch_size=batch_size,
