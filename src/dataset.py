@@ -50,10 +50,10 @@ def load_h5(wild_path, num_points, k):
                 neighbours_file = h5_name[:-3] + f"_{k}_neighbours.npy"
                 if os.path.exists(neighbours_file):
                     print('load', neighbours_file)
-                    indices = np.load(neighbours_file).astype(np.float)
+                    indices = np.load(neighbours_file).astype(np.single)
                 else:
                     indices = indices_k_neighbours(pcs, k)
-                    np.save(neighbours_file, indices).astype(np.float)
+                    np.save(neighbours_file, indices).astype(np.single)
                     print("Indexes file created in: ", neighbours_file)
             pcs = np.dstack([pcs, indices])
 

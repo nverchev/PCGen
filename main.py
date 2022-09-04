@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--num_points', type=int, default=2048,
                         help='num of points of the training dataset')
-    parser.add_argument('--preprocess_neighbours',  action='store_true', default=False,
+    parser.add_argument('--preprocess_neighbours',  action='store_false', default=True,
                         help='speed up training for more memory')
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--optim', type=str, default='Adam', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
