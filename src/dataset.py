@@ -56,7 +56,7 @@ def load_h5(wild_path, num_points, k):
                     indices = indices_k_neighbours(pcs, k)
                     np.save(neighbours_file, indices.astype(np.single))
                     print("Indexes file created in: ", neighbours_file)
-            pcs = np.dstack([pcs, indices])
+            pcs = np.dstack([pcs, indices]).astype(np.single)
 
         pcd.append(pcs)
         labels.append(label)
