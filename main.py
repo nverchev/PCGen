@@ -64,7 +64,7 @@ if __name__ == '__main__':
     dict_size = args.dict_size
     embed_dim = args.embed_dim
     vae = args.vae
-    exp_name = args.model_path or '_'.join([encoder_name, decoder_name, recon_loss, VAE, experiment])
+    exp_name = args.model_path or '_'.join([encoder_name, decoder_name, recon_loss, vae, experiment])
     final = experiment[:5] == 'final'
     dir_path = args.dir_path
     dataset_name = args.dataset
