@@ -42,7 +42,7 @@ def knn(x, k):
 
 def get_neighbours(x, k, indices):
     batch, n_feat, n_points = x.size()
-    if indices:
+    if indices is not None:
         indices = indices
     else:
         indices = knn(x, k=k)  # (batch_size, num_points, k)
