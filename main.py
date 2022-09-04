@@ -71,8 +71,7 @@ if __name__ == '__main__':
     num_points = args.num_points
     batch_size = args.batch_size
     k = args.k
-    preprocess_neighbours =  args.preprocess_neighbours
-    in_chan = k + 3 if preprocess_neighbours else 3
+    preprocess_neighbours = args.preprocess_neighbours
     opt_name = args.optim
     initial_learning_rate = args.lr
     weight_decay = args.wd
@@ -109,7 +108,7 @@ if __name__ == '__main__':
     model_settigns = dict(encoder_name=encoder_name,
                           decoder_name=decoder_name,
                           z_dim=z_dim,
-                          in_chan=in_chan,
+                          in_chan=3,
                           k=k,
                           m=m_training,
                           vector_quantised=vector_quantised,
