@@ -27,7 +27,9 @@ def parse_args():
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--num_points', type=int, default=2048,
-                        help='num of points of the training dataset [currently fixed]')
+                        help='num of points of the training dataset')
+    parser.add_argument('--preprocess_neighbours',  action='store_true', default=False,
+                        help='speed up training for more memory')
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--optim', type=str, default='Adam', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum, has momentum = 0.9')
@@ -68,11 +70,12 @@ if __name__ == '__main__':
     dataset_name = args.dataset
     num_points = args.num_points
     batch_size = args.batch_size
-    in_chan = 3
+    k = args.k
+    preprocess_neighbours =  args.preprocess_neighbours
+    in_chan = k + 3 if preprocess_neighbours else 3
     opt_name = args.optim
     initial_learning_rate = args.lr
     weight_decay = args.wd
-    k = args.k
     z_dim = args.z_dim
     c_reg = args.c_reg
     cuda = args.cuda
@@ -96,7 +99,8 @@ if __name__ == '__main__':
         dataset_name=dataset_name,
         dir_path=dir_path,
         num_points=num_points,
-        k=k,  # preprocess k index to speed up training (invariant to affine transformations)
+        # preprocess k index to speed up training (invariant to affine transformations)
+        k=k if preprocess_neighbours else 0,
         translation=False,
         rotation=True,
         batch_size=batch_size,
@@ -109,8 +113,8 @@ if __name__ == '__main__':
                           k=k,
                           m=m_training,
                           vector_quantised=vector_quantised,
-                          dict_size=args.dict_size,
-                          embed_dim=args.embed_dim
+                          dict_size=dict_size,
+                          embed_dim=embed_dim
                           )
 
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)

@@ -290,6 +290,8 @@ class Trainer(metaclass=ABCMeta):
         return
 
     def paths(self, new_exp_name=None):
+        if not os.path.exists(self.models_path):
+            os.mkdir(self.models_path)
         if new_exp_name:  # save a parallel version to work with
             directory = os.path.join(self.models_path, new_exp_name)
             ep = self.epoch

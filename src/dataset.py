@@ -40,19 +40,20 @@ def load_h5(wild_path, num_points, k):
     pcd = []
     labels = []
     for h5_name in glob2.glob(wild_path):
-        print(h5_name)
         with h5py.File(h5_name, 'r+') as f:
             # Dataset is already normalized
             pcs = f['data'][:].astype('float32')
             pcs = pcs[:, :num_points, :]
             label = f['label'][:].astype('int64')
-            cov_file = h5_name[:-3] + f"_{k}_neighbours.npy"
-            if os.path.exists(cov_file):
-                indices = np.load(cov_file)
-            else:
-                print("Indexes file created in: ", cov_file)
-                indices = indices_k_neighbours(pcs, k)
-                np.save(cov_file, indices)
+            if k:
+                neighbours_file = h5_name[:-3] + f"_{k}_neighbours.npy"
+                if os.path.exists(neighbours_file):
+                    print('load', neighbours_file)
+                    indices = np.load(neighbours_file)
+                else:
+                    indices = indices_k_neighbours(pcs, k)
+                    np.save(neighbours_file, indices)
+                    print("Indexes file created in: ", neighbours_file)
             pcs = np.dstack([pcs, indices])
 
         pcd.append(pcs)
