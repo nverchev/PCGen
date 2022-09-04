@@ -122,9 +122,9 @@ class ReconLoss:
         dict_recon = {'Chamfer': squared, 'Chamfer_Augmented': augmented}
         if self.backprop == "Chamfer":
             recon = squared
-        elif self.backprop == "Chamfer_A":
+        elif self.backprop == "ChamferA":
             recon = 1000 * augmented
-        elif self.backprop == "Chamfer_S":
+        elif self.backprop == "ChamferS":
             smooth = chamfer_smooth(inputs, recons, pairwise_dist)
             recon = 0.1 * smooth
             dict_recon['Chamfer_Smooth'] = smooth

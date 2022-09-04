@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Default is given by model_recon_loss_exp_name')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
-                        choices=['Chamfer', 'Chamfer_A', 'Chamfer_S', 'Sinkhorn'], help='reconstruction loss')
+                        choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='reconstruction loss')
     parser.add_argument('--vector_quantised', action='store_true', default=False, help='Replaces KLD')
     parser.add_argument('--dict_size', type=int, default=16, help='dictionary size for vector quantisation')
     parser.add_argument('--embed_dim', type=int, default=4, help='dim of the vector for vector quantisation')
