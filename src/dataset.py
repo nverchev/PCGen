@@ -53,7 +53,7 @@ def load_h5(wild_path, num_points, k):
                     indices = np.load(neighbours_file).astype(np.single)
                 else:
                     indices = indices_k_neighbours(pcs, k)
-                    np.save(neighbours_file, indices).astype(np.single)
+                    np.save(neighbours_file, indices.astype(np.single))
                     print("Indexes file created in: ", neighbours_file)
             pcs = np.dstack([pcs, indices])
 
