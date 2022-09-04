@@ -46,7 +46,7 @@ def get_neighbours(x, k, indices):
         indices = indices
     else:
         indices = knn(x, k=k)  # (batch_size, num_points, k)
-        indices = indices.view(batch, 1, k * n_points).expand(-1,  n_feat, -1)
+    indices = indices.view(batch, 1, k * n_points).expand(-1,  n_feat, -1)
     neighbours = torch.gather(x, 2, indices).view(batch, n_feat, n_points, k)
     return neighbours
 
