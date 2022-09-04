@@ -49,8 +49,8 @@ def load_h5(wild_path, num_points, k):
             if k:
                 neighbours_file = h5_name[:-3] + f"_{k}_neighbours.npy"
                 if os.path.exists(neighbours_file):
-                    print('load', neighbours_file).astype(np.float)
-                    indices = np.load(neighbours_file)
+                    print('load', neighbours_file)
+                    indices = np.load(neighbours_file).astype(np.float)
                 else:
                     indices = indices_k_neighbours(pcs, k)
                     np.save(neighbours_file, indices).astype(np.float)
