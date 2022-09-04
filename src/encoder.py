@@ -19,8 +19,8 @@ class DGCNN_Vanilla(nn.Module):
         self.final_conv = nn.Conv1d(sum(self.h_dim), z_dim if vq else 2 * z_dim, kernel_size=1)
 
     def forward(self, x):
-        x, indices = x[..., :3],  x[..., 3:].long()
         x = x.transpose(2, 1)
+        x, indices = x[:, :3, :],  x[:, 3:, :].long()
         x = get_graph_features(x, k=self.k, indices=indices)
         x = self.edge_conv(x)
         x = x.max(dim=3, keepdim=False)[0]
@@ -47,9 +47,9 @@ class DGCNN(nn.Module):
         self.final_conv = nn.Conv1d(sum(self.h_dim), z_dim if vq else 2 * z_dim, kernel_size=1)
 
     def forward(self, x):
-        x, indices = x[..., :3],  x[..., 3:].long()
         xs = []
         x = x.transpose(2, 1)
+        x, indices = x[:, :3, :],  x[:, 3:, :].long()
         for conv in self.edge_convs:
             x = get_graph_features(x, k=self.k, indices=indices)  # [batch, features, num_points, k]
             indices = None  # finds new neighbours dynamically after first iteration
@@ -78,8 +78,8 @@ class FoldingNet(nn.Module):
                                           nn.Linear(self.h_dim[5], z_dim if vq else 2 * z_dim))
 
     def forward(self, x):
-        x, indices = x[..., :3],  x[..., 3:].long()
         x = x.transpose(2, 1)  # (batch_size, 3, num_points)
+        x, indices = x[:, :3, :],  x[:, 3:, :].long()
         x = get_local_covariance(x, self.k, indices)
         x = self.point_mlp(x)
         x = graph_max_pooling(x)
