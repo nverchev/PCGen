@@ -52,10 +52,10 @@ def load_h5(wild_path, num_points, k):
                     print('load', neighbours_file)
                     indices = np.load(neighbours_file)
                 else:
-                    indices = indices_k_neighbours(pcs, k).astype(np.float)
+                    indices = indices_k_neighbours(pcs, k)
                     np.save(neighbours_file, indices)
                     print("Indexes file created in: ", neighbours_file)
-            pcs = np.dstack([pcs, indices])
+            pcs = np.dstack([pcs, indices.astype(np.float)])
 
         pcd.append(pcs)
         labels.append(label)
