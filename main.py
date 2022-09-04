@@ -21,14 +21,15 @@ def parse_args():
                         help='Default is given by model_recon_loss_exp_name')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='reconstruction loss')
-    parser.add_argument('--vector_quantised', action='store_true', default=False, help='Replaces KLD')
+    parser.add_argument('--vae', type=str, default='VAE',
+                        choices=['NoVAE', 'VAE', 'VQVAE'], help='type of regularization')
     parser.add_argument('--dict_size', type=int, default=16, help='dictionary size for vector quantisation')
     parser.add_argument('--embed_dim', type=int, default=4, help='dim of the vector for vector quantisation')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--num_points', type=int, default=2048,
                         help='num of points of the training dataset')
-    parser.add_argument('--preprocess_neighbours',  action='store_false', default=True,
+    parser.add_argument('--no_preproc_neighbours',  action='store_true', default=False,
                         help='speed up training for more memory')
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--optim', type=str, default='Adam', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
@@ -39,7 +40,7 @@ def parse_args():
                         help='number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--z_dim', type=int, default=512, help='dimension of the latent space')
     parser.add_argument('--c_reg', type=float, default=1, help='coefficient for regularization')
-    parser.add_argument('--cuda', action='store_false', default=True, help='enables CUDA training')
+    parser.add_argument('--no_cuda', action='store_true', default=False, help='runs on CPU')
     parser.add_argument('--epochs', type=int, default=250)
     parser.add_argument('--m_training', type=int, default=2048,
                         help='Points  generated when training, 0 for  increasing sequence 128 -> 4096 ')
@@ -60,24 +61,23 @@ if __name__ == '__main__':
     decoder_name = args.decoder
     experiment = args.experiment
     recon_loss = args.recon_loss
-    vector_quantised = args.vector_quantised
     dict_size = args.dict_size
     embed_dim = args.embed_dim
-    vq = ['vq'] if vector_quantised else []
-    exp_name = args.model_path or '_'.join([encoder_name, decoder_name, recon_loss, *vq, experiment])
+    vae = args.vae
+    exp_name = args.model_path or '_'.join([encoder_name, decoder_name, recon_loss, VAE, experiment])
     final = experiment[:5] == 'final'
     dir_path = args.dir_path
     dataset_name = args.dataset
     num_points = args.num_points
     batch_size = args.batch_size
     k = args.k
-    preprocess_neighbours = args.preprocess_neighbours
+    preproc_neighbours = not args.no_preproc_neighbours
     opt_name = args.optim
     initial_learning_rate = args.lr
     weight_decay = args.wd
     z_dim = args.z_dim
     c_reg = args.c_reg
-    cuda = args.cuda
+    cuda = not args.no_cuda
     training_epochs = args.epochs
     m_training = args.m_training
     load = args.load
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         dir_path=dir_path,
         num_points=num_points,
         # preprocess k index to speed up training (invariant to affine transformations)
-        k=k if preprocess_neighbours else 0,
+        k=k if preproc_neighbours else 0,
         translation=False,
         rotation=True,
         batch_size=batch_size,
@@ -111,7 +111,7 @@ if __name__ == '__main__':
                           in_chan=3,
                           k=k,
                           m=m_training,
-                          vector_quantised=vector_quantised,
+                          vae=vae,
                           dict_size=dict_size,
                           embed_dim=embed_dim
                           )
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         minioClient=minioClient,
         model_path=os.path.join(dir_path, 'model'),
         recon_loss=recon_loss,
-        vector_quantised=vector_quantised,
+        vae=vae,
         c_reg=c_reg,
     )
 

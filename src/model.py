@@ -22,15 +22,15 @@ class TransferGrad(Function):
         return grad_output, None
 
 
-class VAE(nn.Module):
+class AE(nn.Module):
     settings = {}
-    vq = False
+    log_var = False
 
-    def __init__(self, encoder_name, decoder_name, z_dim, in_chan,  k=20, m=2048, **settings):
+    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k=20, m=2048, **settings):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
-        self.encode = get_encoder(encoder_name)(in_chan, z_dim, k, vq=self.vq)
+        self.encode = get_encoder(encoder_name)(in_chan, z_dim, k, log_var=self.log_var)
         self.decode = get_decoder(decoder_name)(z_dim, m)
         self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, 'k': k}
 
@@ -45,9 +45,7 @@ class VAE(nn.Module):
 
     def encoder(self, x):
         data = {}
-        x = self.encode(x)
-        data['mu'], data['log_var'] = x.chunk(2, 1)
-        data['z'] = self.sampling(data['mu'], data['log_var'])
+        data['z'] = self.encode(x)
         return data
 
     def decoder(self, data):
@@ -64,27 +62,41 @@ class VAE(nn.Module):
         return
 
 
-class VQVAE(VAE):
-    settings = {}
-    vq = True
+class VAE(AE):
+    log_var = True
+
+    def sampling(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return eps.mul(std).add_(mu) if self.training else mu
+
+    def encoder(self, x):
+        data = {}
+        x = self.encode(x)
+        data['mu'], data['log_var'] = x.chunk(2, 1)
+        data['z'] = self.sampling(data['mu'], data['log_var'])
+        return data
+
+
+class VQVAE(AE):
+
     def __init__(self, encoder_name, decoder_name, z_dim, in_chan, dict_size, embed_dim, k, m):
         # encoder gives vector quantised codes, therefore the z dim must be multiplied by the embed dim
+        super().__init__(encoder_name, decoder_name, embed_dim * z_dim, in_chan, k, m)
         self.dim_codes = z_dim
         self.dict_size = dict_size
         self.dim_embedding = embed_dim
-        super().__init__(encoder_name, decoder_name, embed_dim * z_dim, in_chan,  k, m)
         self.dictionary = torch.nn.Parameter(torch.randn(self.dim_codes, self.dict_size, self.dim_embedding))
         self.settings['dict_size'] = self.dict_size
         self.settings['dim_embedding'] = self.dim_embedding
 
-
     def quantise(self, mu):
         batch, embed = mu.size()
         mu2 = mu.view(batch * self.dim_codes, 1, self.dim_embedding)
-        dict = self.dictionary.repeat(batch, 1, 1)
-        dist = square_distance(mu2, dict)
+        dictionary = self.dictionary.repeat(batch, 1, 1)
+        dist = square_distance(mu2, dictionary)
         idx = dist.argmin(axis=2)
-        z_embed = dict.gather(1, idx.expand(-1, -1, self.dim_embedding))
+        z_embed = dictionary.gather(1, idx.expand(-1, -1, self.dim_embedding))
         z_embed = z_embed.view(batch, self.dim_codes * self.dim_embedding)
         z = TransferGrad().apply(mu, z_embed)
         one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=mu.device)
@@ -97,7 +109,6 @@ class VQVAE(VAE):
         data['mu'] = x
         data['z'], data['z_embed'], data['idx'] = self.quantise(x)
         return data
-
 
 
 class Classifier(nn.Module):
@@ -120,6 +131,12 @@ class Classifier(nn.Module):
         features = self.encode(x)
         return {'y': self.dense(features)}
 
-def get_model(vector_quantised, **model_settings):
-    Model = VQVAE if vector_quantised else VAE
+
+def get_model(vae, **model_settings):
+    if vae == 'NoVAE':
+        Model = AE
+    elif vae == 'VQVAE':
+        Model = VQVAE
+    else:
+        Model = VAE
     return Model(**model_settings)

@@ -86,6 +86,11 @@ class VAELoss(nn.Module):
             **recon_loss_dict
         }
 
+class NoVAELoss:
+    c_kld = 0.001
+
+    def __call__(self, inputs, outputs):
+        return {'reg': torch.tensor(0)}
 
 class KLDVAELoss:
     c_kld = 0.001
@@ -140,5 +145,10 @@ class ReconLoss:
 
 def get_vae_loss(block_args):
     get_recon_loss = ReconLoss(block_args['recon_loss'])
-    get_reg_loss = VQVAELoss() if block_args['vector_quantised'] else KLDVAELoss()
+    if block_args['vae'] == 'NoVAE':
+        get_reg_loss = NoVAELoss()
+    elif block_args['vae'] == 'VQVAE':
+        get_reg_loss = VQVAELoss()
+    else:
+        get_reg_loss = KLDVAELoss()
     return VAELoss(get_reg_loss, get_recon_loss, block_args['c_reg'])
