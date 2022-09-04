@@ -68,7 +68,7 @@ class FoldingNet(nn.Module):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 64, 128, 1024, 1024]
-        modules = [PointsConvBlock(in_chan, self.h_dim[0], act=nn.ReLU())]
+        modules = [PointsConvBlock(in_chan + in_chan ** 2, self.h_dim[0], act=nn.ReLU())]
         for i in range(2):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1], act=nn.ReLU()))
         self.point_mlp = nn.Sequential(*modules)

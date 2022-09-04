@@ -174,13 +174,17 @@ class Trainer(metaclass=ABCMeta):
         epoch_loss = {loss: value / num_batch for loss, value in epoch_loss.items()}
         if not save_outputs:
             for loss, value in epoch_loss.items():
-                dict_losses.get(loss, []).append(value)
+                dict_losses.setdefault(loss, []).append(value)
         if not self.quiet_mode:
             print('Average {} losses :'.format(partition))
             for loss, value in epoch_loss.items():
                 print('{}: {:.4f}'.format(loss, value), end='\t')
             print()
         return
+
+    @abstractmethod
+    def loss(self, output, inputs, targets):
+        pass
 
     def helper_inputs(self, inputs, labels):
         return {'x': inputs}
@@ -212,18 +216,14 @@ class Trainer(metaclass=ABCMeta):
 
     @staticmethod  # extends lists in dictionaries
     def extend_dict_list(old_dict, new_dict):
-        if old_dict == {}:
-            # struct is dict of lists / lists of lists of tensors
-            old_dict.update({key: ([[]] if isinstance(value, list) else []) for key, value in new_dict.items()})
-
         for key, value in new_dict.items():
             if isinstance(value, list):
-                for elem, new_elem in zip(old_dict[key], value):
+                for elem, new_elem in zip(old_dict.setdefault(key, [[]] * len(value)), value):
                     assert torch.is_tensor(new_elem)
                     elem.extend(new_elem)
             else:
                 assert torch.is_tensor(value)
-                old_dict[key].extend(value)
+                old_dict.setdefault(key, []).extend(value)
 
     @staticmethod  # indexes a list (inside of a list) inside of a dictionary
     def index_dict_list(dict_list, ind):
@@ -235,10 +235,6 @@ class Trainer(metaclass=ABCMeta):
                 new_v = v[ind].unsqueeze(0)
             list_dict[k] = new_v
         return list_dict
-
-    @abstractmethod
-    def loss(self, output, inputs, targets):
-        pass
 
     def save(self, new_exp_name=None):
         self.model.eval()

@@ -40,7 +40,8 @@ def load_h5(wild_path, num_points, k):
     pcd = []
     labels = []
     for h5_name in glob2.glob(wild_path):
-        with h5py.File(h5_name, 'r+') as f:
+        with h5py.File(h5_name, 'r'
+                                '') as f:
             # Dataset is already normalized
             print('load', h5_name)
             pcs = f['data'][:].astype('float32')
