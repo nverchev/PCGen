@@ -13,12 +13,17 @@ from src.plot_PC import pc_show
 
 '''
 This abstract class manages training and general utilities.
+The outputs from the network are saved in a dictionary and stored in a list.
+The dictionary also handles list of tensors as values.
+
+
 The loss is an abstract method later defined and returns a dictionary dict with 
 the different components of the criterion, plus eventually other useful metrics. 
 The loss is supposed to be already averaged on the batch and the epoch loss is slightly off 
- whenever the last batch is smaller. For large dataset and small batch size the error should be irrelevant.
+whenever the last batch is smaller. For large dataset and small batch size the error should be irrelevant.
 
 dict['Criterion'] = loss to backprop
+
 
 To save and load on a separate sever, it can handle a Minio object from the minio library.
 This object downloads and uploads the model to a separate storage.
@@ -201,6 +206,7 @@ class Trainer(metaclass=ABCMeta):
         plt.show()
         return
 
+    # Change device recursively to tensors inside a list or a dictionary
     @staticmethod
     def to_recursive(obj, device):  # changes device in dictionary and lists
         if isinstance(obj, list):
@@ -214,6 +220,7 @@ class Trainer(metaclass=ABCMeta):
                 raise ValueError(f'Datatype {type(obj)} does not contain tensors')
         return obj
 
+    # Separates batch into list and appends to (creates) structure (dict of lists, dict of lists of lists)
     @staticmethod  # extends lists in dictionaries
     def extend_dict_list(old_dict, new_dict):
         for key, value in new_dict.items():
@@ -225,7 +232,8 @@ class Trainer(metaclass=ABCMeta):
                 assert torch.is_tensor(value)
                 old_dict.setdefault(key, []).extend(value)
 
-    @staticmethod  # indexes a list (inside of a list) inside of a dictionary
+    # indexes a list (inside of a list) inside of a dictionary
+    @staticmethod
     def index_dict_list(dict_list, ind):
         list_dict = {}
         for k, v in dict_list.items():
@@ -249,6 +257,7 @@ class Trainer(metaclass=ABCMeta):
         print('Model saved at: ', paths['model'])
         return
 
+    # looks on the server (using minio) first, then on the local storage
     def load(self, epoch=None):
         directory = self.exp_name
 

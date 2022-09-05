@@ -43,15 +43,15 @@ def load_h5(wild_path, num_points, k):
         with h5py.File(h5_name, 'r'
                                 '') as f:
             # Dataset is already normalized
-            print('load', h5_name)
             pcs = f['data'][:].astype('float32')
             pcs = pcs[:, :num_points, :]
             label = f['label'][:].astype('int64')
+            print('Loaded: ', h5_name)
             if k:
                 neighbours_file = h5_name[:-3] + f"_{k}_neighbours.npy"
                 if os.path.exists(neighbours_file):
-                    print('load', neighbours_file)
                     indices = np.load(neighbours_file).astype(np.single)
+                    print('Load: ', neighbours_file)
                 else:
                     indices = indices_k_neighbours(pcs, k)
                     np.save(neighbours_file, indices.astype(np.single))
