@@ -43,10 +43,10 @@ class PCGen(nn.Module):
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
-        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
+        x = s if s is not None else torch.randn(1, self.sample_dim, self.m, device=device)
         # x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
         x = self.map_latent_mul1(x)
-        x = self.map_latent_mul2(x)
+        x = self.map_latent_mul2(x).expand(batch, -1, -1)
         x = z.unsqueeze(2) * x
         x = self.mlp(x)
         return x.transpose(2, 1)

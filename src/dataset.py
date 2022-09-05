@@ -49,7 +49,7 @@ def load_h5(wild_path, num_points, k):
             pcs = f['data'][:].astype('float32')
             pcs = pcs[:, :num_points, :]
             label = f['label'][:].astype('int64')
-            print('Loaded: ', h5_name)
+            print('Load: ', h5_name)
             if k:
                 neighbours_file = h5_name[:-3] + f"_{k}_neighbours.npy"
                 if os.path.exists(neighbours_file):

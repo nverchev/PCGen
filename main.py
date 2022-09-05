@@ -77,7 +77,7 @@ if __name__ == '__main__':
     weight_decay = args.wd
     z_dim = args.z_dim
     c_reg = args.c_reg
-    cuda = not args.no_cuda
+    device = torch.device('cuda:0' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
     training_epochs = args.epochs
     m_training = args.m_training
     load = args.load
@@ -127,7 +127,7 @@ if __name__ == '__main__':
         train_loader=train_loader,
         val_loader=val_loader,
         test_loader=test_loader,
-        device=torch.device('cuda:0' if torch.cuda.is_available() and cuda else 'cpu'),
+        device=device,
         batch_size=batch_size,
         schedule=CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
         minioClient=minioClient,
