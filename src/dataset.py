@@ -8,6 +8,7 @@ import requests
 import h5py
 import glob2
 from sklearn.neighbors import KDTree
+
 try:
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
@@ -28,6 +29,7 @@ def download_zip(dir_path, zip_name, url):
             zip_ref.extractall(data_dir)
     return zip_path[:-4]
 
+
 def indices_k_neighbours(pcs, k):
     indices_list = []
     for pc in pcs:
@@ -35,6 +37,7 @@ def indices_k_neighbours(pcs, k):
         indices = kdtree.query(pc, k, return_distance=False)
         indices_list.append(indices.reshape(-1, k))
     return np.stack(indices_list, axis=0)
+
 
 def load_h5(wild_path, num_points, k):
     pcd = []
@@ -157,7 +160,6 @@ class ShapeNetDataset:
         self.pcd['test'], self.labels['test'] = load_h5(files_path('test'), num_points, k)
         self.pcd['trainval'] = np.concatenate([self.pcd['train'], self.pcd['val']], axis=0)
         self.labels['trainval'] = np.concatenate([self.labels['train'], self.labels['val']], axis=0)
-
 
     def split(self, split):
         return PCDataset(pcd=self.pcd[split], labels=self.labels[split], **self.augmentation_settings)
