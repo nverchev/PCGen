@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 from src.modules import PointsConvBlock, LinearBlock, View
+from src.utils import graph_max_pooling
 CHAN_OUT = 3
 
 class MLPDecoder(nn.Module):
@@ -32,23 +33,23 @@ class PCGen(nn.Module):
         self.m = 2048
         self.m_training = m
         self.sample_dim = 16
-        self.map_latent_mul1 = PointsConvBlock(self.sample_dim, self.h_dim[0])
-        self.map_latent_mul2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], act=nn.Hardtanh())
+        self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0])
+        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], act=nn.Hardtanh())
         modules = []
         for i in range(1, len(self.h_dim) - 1):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
         modules.append(nn.Conv1d(self.h_dim[-1], CHAN_OUT, kernel_size=1))
-        self.mlp = nn.Sequential(*modules)
+        self.points_convs = nn.Sequential(*modules)
 
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
-        x = s if s is not None else torch.randn(1, self.sample_dim, self.m, device=device)
+        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m, device=device)
         # x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        x = self.map_latent_mul1(x)
-        x = self.map_latent_mul2(x).expand(batch, -1, -1)
+        x = self.map_samples1(x)
+        x = self.map_samples2(x)
         x = z.unsqueeze(2) * x
-        x = self.mlp(x)
+        x = self.points_convs(x)
         return x.transpose(2, 1)
     @property
     def m(self):
@@ -60,7 +61,6 @@ class PCGen(nn.Module):
     @m.setter
     def m(self, m):
         self._m = m
-
 
 class Gen_ADAIN(nn.Module):
 

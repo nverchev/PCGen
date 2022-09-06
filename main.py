@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument('--no_preproc_neighbours',  action='store_true', default=False,
                         help='speed up training for more memory')
     parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--optim', type=str, default='Adam', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
+    parser.add_argument('--optim', type=str, default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum, has momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
