@@ -251,6 +251,8 @@ class Trainer(metaclass=ABCMeta):
         torch.save(self.optimizer.state_dict(), paths['optim'])
         json.dump(self.train_losses, open(paths['train_hist'], 'w'))
         json.dump(self.val_losses, open(paths['val_hist'], 'w'))
+        if new_exp_name:
+            json.dump(self.settings, open(paths['settings'], 'w'))
         if self.minio is not None:
             for file in paths.values():
                 self.minio.fput_object(self.bin, self.minio_path(file), file)
