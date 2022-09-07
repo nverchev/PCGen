@@ -29,8 +29,6 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet'])
     parser.add_argument('--num_points', type=int, default=2048,
                         help='num of points of the training dataset')
-    parser.add_argument('--no_preproc_neighbours',  action='store_true', default=False,
-                        help='speed up training for more memory')
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--optim', type=str, default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum, has momentum = 0.9')
@@ -71,7 +69,6 @@ if __name__ == '__main__':
     num_points = args.num_points
     batch_size = args.batch_size
     k = args.k
-    preproc_neighbours = not args.no_preproc_neighbours
     opt_name = args.optim
     initial_learning_rate = args.lr
     weight_decay = args.wd
@@ -99,7 +96,7 @@ if __name__ == '__main__':
         dir_path=dir_path,
         num_points=num_points,
         # preprocess k index to speed up training (invariant to affine transformations)
-        k=k if preproc_neighbours else 0,
+        k=k,
         translation=False,
         rotation=True,
         batch_size=batch_size,

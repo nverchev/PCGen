@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.init as init
-import torch.nn.functional as F
-from src.modules import PointsConvBlock, LinearBlock, MaxChannel, EdgeConvBlock
+from src.modules import PointsConvBlock, LinearBlock, EdgeConvBlock
 from src.utils import get_graph_features, graph_max_pooling, get_local_covariance
 
 
@@ -16,13 +14,12 @@ class LDGCNN(nn.Module):
         for i in range(3):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
         self.points_convs = nn.Sequential(*modules)
-        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * z_dim if log_var else z_dim, kernel_size=1)
+        self.final_conv = PointsConvBlock(sum(self.h_dim), sum(self.h_dim))
+        self.linear = PointsConvBlock(sum(self.h_dim), 2 * z_dim if log_var else z_dim, act=None)
 
     def forward(self, x):
+        x, indices = x
         x = x.transpose(2, 1)
-        indices = None
-        if x.size(1) > 3:
-            x, indices = x[:, :3, :],  x[:, 3:, :].long()
         x = get_graph_features(x, k=self.k, indices=indices)
         x = self.edge_conv(x)
         x = x.max(dim=3, keepdim=False)[0]
@@ -50,10 +47,8 @@ class DGCNN(nn.Module):
 
     def forward(self, x):
         xs = []
+        x, indices = x
         x = x.transpose(2, 1)
-        indices = None
-        if x.size(1) > 3:
-            x, indices = x[:, :3, :],  x[:, 3:, :].long()
         for conv in self.edge_convs:
             x = get_graph_features(x, k=self.k, indices=indices)  # [batch, features, num_points, k]
             indices = None  # finds new neighbours dynamically after first iteration
@@ -82,10 +77,8 @@ class FoldingNet(nn.Module):
                                           nn.Linear(self.h_dim[5], 2 * z_dim if log_var else z_dim,))
 
     def forward(self, x):
-        x = x.transpose(2, 1)  # (batch_size, 3, num_points)
-        indices = None
-        if x.size(1) > 3:
-            x, indices = x[:, :3, :],  x[:, 3:, :].long()
+        x, indices = x
+        x = x.transpose(2, 1)
         x = get_local_covariance(x, self.k, indices)
         x = self.point_mlp(x)
         x = graph_max_pooling(x)
