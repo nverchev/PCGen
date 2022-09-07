@@ -139,7 +139,6 @@ class Modelnet40Dataset:
             split = 'train'
         elif split in ['train', 'val'] and 'val' not in self.pcd.keys():
             self.trainval_to_train_and_val()
-
         return PCDataset(pcd=self.pcd[split], indices=self.indices[split],
                          labels=self.labels[split], **self.augmentation_settings)
 
@@ -169,10 +168,12 @@ class ShapeNetDataset:
         for split in ['train', 'val', 'test']:
             self.pcd[split], self.indices[split], self.labels[split] = load_h5(files_path(split), num_points, k)
         self.pcd['trainval'] = np.concatenate([self.pcd['train'], self.pcd['val']], axis=0)
+        self.indices['trainval'] = np.concatenate([self.indices['train'], self.indices['val']], axis=0)
         self.labels['trainval'] = np.concatenate([self.labels['train'], self.labels['val']], axis=0)
 
     def split(self, split):
-        return PCDataset(pcd=self.pcd[split], labels=self.labels[split], **self.augmentation_settings)
+        return PCDataset(pcd=self.pcd[split], indices=self.indices[split],
+                         labels=self.labels[split], **self.augmentation_settings)
 
     def download(self):
         url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'

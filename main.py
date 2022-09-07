@@ -98,7 +98,7 @@ if __name__ == '__main__':
         # preprocess k index to speed up training (invariant to affine transformations)
         k=k,
         translation=False,
-        rotation=True,
+        rotation=False,
         batch_size=batch_size,
         final=final,
     )
