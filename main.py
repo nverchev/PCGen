@@ -144,6 +144,14 @@ if __name__ == '__main__':
         trainer.load(load)
 
     if not model_eval:
+        if load == -1 and decoder_name == 'TearingNet':
+            exp_name_split = exp_name.split('_')
+            exp_name_split[1] = 'FoldingNet'
+            exp_name_FoldingNet = os.path.join(dir_path, 'models', '_'.join(exp_name_split), 'model_epoch250.pt')
+            assert os.path.exists(exp_name_FoldingNet), "No pretrained experiment in " + exp_name_FoldingNet
+            state_dict = torch.load(exp_name_FoldingNet, map_location=device)
+            trainer.model.load_state_dict(state_dict,  strict=False)
+
         while training_epochs > trainer.epoch:
             if m_training == 0:
                 m = max(128, (4096 * trainer.epoch) // training_epochs)
