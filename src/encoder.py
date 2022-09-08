@@ -14,7 +14,7 @@ class LDGCNN(nn.Module):
         for i in range(3):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
         self.points_convs = nn.Sequential(*modules)
-        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * z_dim if log_var else z_dim)
+        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * z_dim if log_var else z_dim, 1)
 
     def forward(self, x):
         x, indices = x
