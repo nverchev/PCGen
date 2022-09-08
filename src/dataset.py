@@ -210,5 +210,5 @@ def get_dataset(dataset_name, batch_size, final, **dataset_settings):
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=batch_size, drop_last=False,
         shuffle=False, pin_memory=pin_memory)
-
+    del dataset
     return train_loader, val_loader, test_loader

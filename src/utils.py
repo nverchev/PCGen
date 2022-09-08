@@ -69,4 +69,3 @@ def get_graph_features(x, k=20, indices=None):
     feature = torch.cat([neighbours - x, x], dim=1).contiguous()
     # (batch_size, 2 * num_dims, num_points, k)
     return feature
-

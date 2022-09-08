@@ -14,14 +14,15 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
     parser.add_argument('--encoder', type=str, default='DGCNN', choices=['LDGCNN', 'DGCNN', 'FoldingNet'])
-    parser.add_argument('--decoder', type=str, default='PCGen', choices=['MLP', 'PCGen', 'AdaIN', 'FoldingNet'])
+    parser.add_argument('--decoder', type=str, default='PCGen', choices=['MLP', 'PCGen', 'AdaIN', 'FoldingNet',
+                                                                         'TearingNet'])
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Default is given by model_recon_loss_exp_name')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='reconstruction loss')
-    parser.add_argument('--vae', type=str, default='VAE',
+    parser.add_argument('--vae', type=str, default='NoVAE',
                         choices=['NoVAE', 'VAE', 'VQVAE'], help='type of regularization')
     parser.add_argument('--dict_size', type=int, default=16, help='dictionary size for vector quantisation')
     parser.add_argument('--embed_dim', type=int, default=4, help='dim of the vector for vector quantisation')
