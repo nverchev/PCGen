@@ -4,7 +4,7 @@ import numpy as np
 import torch.nn.functional as F
 from src.modules import PointsConvBlock, LinearBlock, View
 from src.utils import graph_max_pooling
-CHAN_OUT = 3
+OUT_CHAN = 3
 
 class MLPDecoder(nn.Module):
 
@@ -16,8 +16,8 @@ class MLPDecoder(nn.Module):
             modules.append(nn.ELU())
             modules.append(nn.Linear(self.h_dim[i], self.h_dim[i + 1]))
         modules.append(nn.ELU())
-        modules.append(nn.Linear(self.h_dim[-1], CHAN_OUT * m))
-        modules.append(View(-1, m, CHAN_OUT))
+        modules.append(nn.Linear(self.h_dim[-1], OUT_CHAN * m))
+        modules.append(View(-1, m, OUT_CHAN))
         self.mlp = nn.Sequential(*modules)
 
     def forward(self, z):
@@ -33,12 +33,13 @@ class PCGen(nn.Module):
         self.m = 2048
         self.m_training = m
         self.sample_dim = 16
-        self.map_samples1 = nn.Conv1d(self.sample_dim, self.h_dim[0], 1)
-        self.map_samples2 = nn.Conv1d(self.h_dim[0], self.h_dim[1], 1)
+        self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0], batch_norm=False)
+        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Tanh())
         modules = []
         for i in range(1, len(self.h_dim) - 1):
-            modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
-        modules.append(nn.Conv1d(self.h_dim[-1], CHAN_OUT, kernel_size=1))
+            modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1], batch_norm=False))
+
+        modules.append(nn.Conv1d(self.h_dim[-1], OUT_CHAN, kernel_size=1))
         self.points_convs = nn.Sequential(*modules)
 
     def forward(self, z, s=None):
@@ -46,8 +47,8 @@ class PCGen(nn.Module):
         device = z.device
         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m, device=device)
         # x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        x = F.leaky_relu_(self.map_samples1(x))
-        x = F.hardtanh_(self.map_samples2(x))
+        x = self.map_samples1(x)
+        x = self.map_samples2(x)
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
         return x.transpose(2, 1)
@@ -73,11 +74,11 @@ class Gen_ADAIN(nn.Module):
         map_samples = []
         map_latents = []
         for i in range(len(self.h_dim) - 1):
-            map_samples.append(PointsConvBlock(self.h_dim[i], self.h_dim[i+1]))
+            map_samples.append((self.h_dim[i], self.h_dim[i+1]))
             map_latents.append(PointsConvBlock(self.h_dim[i], 2 * self.h_dim[i+1]))
         self.map_samples = nn.ModuleList(map_samples)
         self.map_latents = nn.ModuleList(map_latents)
-        self.final = nn.Conv1d(self.h_dim[-1], CHAN_OUT, kernel_size=1)
+        self.final = nn.Conv1d(self.h_dim[-1], OUT_CHAN, kernel_size=1)
 
     def forward(self, z, s=None):
         batch = z.size()[0]
@@ -97,21 +98,15 @@ class FoldingLayer(nn.Module):
     The folding operation of FoldingNet
     '''
 
-    def __init__(self, in_channel: int, out_channels: list):
+    def __init__(self, in_channel: int, h_dim: list):
         super(FoldingLayer, self).__init__()
-
-        modules = []
-        for oc in out_channels[:-1]:
-            modules.append(PointsConvBlock(in_channel, oc, act=nn.ReLU()))
-            in_channel = oc
-        out_layer = nn.Conv1d(in_channel, out_channels[-1], 1)
-        modules.append(out_layer)
+        modules = [nn.Conv1d(in_channel, h_dim[0], kernel_size=1)]
+        for i in range(len(h_dim) - 1):
+            modules.extend([nn.ReLU(), nn.Conv1d(self.h_dim[i], self.h_dim[i + 1], kernel_size=1)])
         self.layers = nn.Sequential(*modules)
 
     def forward(self, grids, x):
-        # concatenate
-        x = torch.cat([grids, x], dim=1)
-        # shared mlp
+        x = torch.cat([grids, x], dim=1).contiguous()
         x = self.layers(x)
         return x
 
@@ -127,8 +122,8 @@ class FoldingNet(nn.Module):
         xx = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         self.grid = nn.Parameter(torch.stack(torch.meshgrid(xx, yy, indexing='ij')).view(2, -1), requires_grad=False)
-        self.fold1 = FoldingLayer(z_dim + 2, [self.h_dim[0], self.h_dim[1], CHAN_OUT])
-        self.fold2 = FoldingLayer(z_dim + 3, [self.h_dim[2], self.h_dim[3], CHAN_OUT])
+        self.fold1 = FoldingLayer(z_dim + 2, [self.h_dim[0], self.h_dim[1], OUT_CHAN])
+        self.fold2 = FoldingLayer(z_dim + 3, [self.h_dim[2], self.h_dim[3], OUT_CHAN])
 
     def forward(self, z, grid=None):
         batch_size = z.shape[0]

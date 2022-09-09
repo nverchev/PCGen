@@ -73,7 +73,7 @@ def normalize(cloud):
 
 
 def random_rotation(cloud):
-    theta = torch.pi * 2 * torch.rand(1)
+    theta = 2 * torch.pi * torch.rand(1)
     s = torch.sin(theta)
     rotation_matrix = torch.eye(2) * torch.cos(theta)
     rotation_matrix[0, 1] = -s
@@ -97,6 +97,87 @@ def jitter(cloud, sigma=0.01, clip=0.02):
     new_cloud = cloud.clone()
     new_cloud += torch.clamp(jitter, min=-clip, max=clip)
     return new_cloud
+
+class PlateDataset:
+    def __init__(self, half_thickness=0.1, n_points=2048, k=20, **other_settings):
+        self.half_thickness = half_thickness
+        self.width = 2 * self.half_thickness
+        self.radius = np.sqrt(1 - self.half_thickness ** 2)
+        self.n_points = n_points
+        self.plate = self.create_plate()
+        self.neighbours = torch.from_numpy(index_k_neighbours([self.plate], k)).long()
+
+    def create_plate(self):
+        sides = round(self.n_points * 2 * self.radius / (2 * (self.radius + self.half_thickness)))
+        thetas = 2 * np.pi * np.random.rand(sides)
+        rs = np.sqrt(np.random.rand(sides))
+        exps = rs * np.exp(thetas * 1j)
+        x1, y1 = exps.real, exps.imag
+        z1 = np.random.choice([self.half_thickness, -self.half_thickness], size=sides, replace=True)
+        thetas = 2 * np.pi * np.random.rand(self.n_points - sides)
+        exps = np.exp(thetas * 1j)
+        x2, y2 = exps.real, exps.imag
+        z2 = (2 * np.random.rand(self.n_points - sides) - 1) * self.half_thickness
+        x, y, z = np.hstack([x1, x2]), np.hstack([y1, y2]), np.hstack([z1, z2])
+        return np.stack([x, y, z], axis=1)
+
+    def create_hole(self, plate, pt):
+        global hole1_index, hole1, hole
+        hole_index = np.logical_and(abs(plate[:, 0] - pt[0]) < self.width, abs(plate[:, 1] - pt[1]) < self.width)
+        hole = plate[hole_index]
+        hole1_index = hole[:, 2] == self.half_thickness
+        hole2_index = np.logical_not(hole1_index)
+        hole1 = hole[hole1_index]
+        hole2 = hole[hole2_index]
+        pt = np.tile(pt.reshape(1, 3), [hole1.shape[0], 1])
+
+        close_side1 = np.where(np.expand_dims(hole1[:, 0] < pt[:, 0], axis=1),
+                               np.stack(
+                                   [pt[:, 0] - self.width, hole1[:, 1], pt[:, 0] - hole1[:, 0] - self.half_thickness],
+                                   axis=1),
+                               np.stack(
+                                   [pt[:, 0] + self.width, hole1[:, 1], hole1[:, 0] - pt[:, 0] - self.half_thickness],
+                                   axis=1))
+        pt = np.tile(pt[0].reshape(1, 3), [hole2.shape[0], 1])
+        close_side2 = np.where(np.expand_dims(hole2[:, 1] < pt[:, 1], axis=1),
+                               np.stack(
+                                   [hole2[:, 0], pt[:, 1] - self.width, pt[:, 1] - hole2[:, 1] - self.half_thickness],
+                                   axis=1),
+                               np.stack(
+                                   [hole2[:, 0], self.width + pt[:, 1], hole2[:, 1] - pt[:, 1] - self.half_thickness],
+                                   axis=1))
+        hole[hole1_index] = close_side1
+        hole[hole2_index] = close_side2
+        plate[hole_index] = hole
+        return plate
+
+    def sample_point(self):
+        radius = self.radius - np.sqrt(2) * self.width
+        theta = 2 * np.pi * np.random.rand(1)
+        expo = radius * np.exp(theta * 1j)
+        x, y = expo.real, expo.imag
+        z = np.random.choice([self.half_thickness, -self.half_thickness], 1)
+        return np.hstack([x, y, z])
+
+    def __len__(self):
+        return 1024
+
+    def __getitem__(self, index):
+        n_holes = np.random.randint(low=1, high=4)
+        plate = self.plate.copy()
+        pts = []
+        for _ in range(n_holes):
+            pt = None
+            while True:
+                pt = self.sample_point()
+                for past_pt in pts:
+                    if abs(past_pt[0] - pt[0]) < self.width and abs(past_pt[1] - pt[1]) < self.width:
+                        continue
+                pts.append(pt)
+                self.create_hole(plate, pt)
+                break
+        plate = torch.from_numpy(plate)
+        return [plate, self.neighbours], n_holes
 
 
 class PCDataset(Dataset):
@@ -164,7 +245,7 @@ class ShapeNetDataset:
         self.augmentation_settings = augmentation_settings
         data_path = self.download()
         files_path = lambda x: os.path.join(data_path, f'*{x}*.h5')
-        self.pcd,  self.indices, self.labels = {}, {}, {}
+        self.pcd, self.indices, self.labels = {}, {}, {}
         for split in ['train', 'val', 'test']:
             self.pcd[split], self.indices[split], self.labels[split] = load_h5(files_path(split), num_points, k)
         self.pcd['trainval'] = np.concatenate([self.pcd['train'], self.pcd['val']], axis=0)
@@ -181,6 +262,11 @@ class ShapeNetDataset:
 
 
 def get_dataset(dataset_name, batch_size, final, **dataset_settings):
+    pin_memory = torch.cuda.is_available()
+    if dataset_name == 'platedataset':
+        dataset = PlateDataset(**dataset_settings)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, pin_memory=pin_memory)
+        return loader, loader, loader
     if dataset_name == 'modelnet40':
         dataset = Modelnet40Dataset(**dataset_settings)
     elif dataset_name == 'shapenet':
@@ -189,7 +275,6 @@ def get_dataset(dataset_name, batch_size, final, **dataset_settings):
         print(dataset_name)
         raise ValueError()
 
-    pin_memory = torch.cuda.is_available()
     if final:
         train_dataset = dataset.split('trainval')
         train_loader = torch.utils.data.DataLoader(

@@ -106,7 +106,6 @@ if __name__ == '__main__':
     model_settigns = dict(encoder_name=encoder_name,
                           decoder_name=decoder_name,
                           z_dim=z_dim,
-                          in_chan=3,
                           k=k,
                           m=m_training,
                           vae=vae,

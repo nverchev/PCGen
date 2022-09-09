@@ -2,14 +2,14 @@ import torch
 import torch.nn as nn
 from src.modules import PointsConvBlock, LinearBlock, EdgeConvBlock
 from src.utils import get_graph_features, graph_max_pooling, get_local_covariance
-
+IN_CHAN = 3
 
 class LDGCNN(nn.Module):
-    def __init__(self, in_chan=3, z_dim=512, k=20, log_var=True):
+    def __init__(self, z_dim=512, k=20, log_var=True):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
-        self.edge_conv = EdgeConvBlock(2 * in_chan, self.h_dim[0])
+        self.edge_conv = EdgeConvBlock(2 * IN_CHAN, self.h_dim[0])
         modules = []
         for i in range(3):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
@@ -34,11 +34,11 @@ class LDGCNN(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, in_chan=3, z_dim=512, k=20, log_var=True):
+    def __init__(self, z_dim=512, k=20, log_var=True):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
-        edge_conv_list = [EdgeConvBlock(2 * in_chan, self.h_dim[0])]
+        edge_conv_list = [EdgeConvBlock(2 * IN_CHAN, self.h_dim[0])]
         for i in range(len(self.h_dim) - 1):
             edge_conv_list.append(EdgeConvBlock(2 * self.h_dim[i], self.h_dim[i + 1]))
         self.edge_convs = nn.Sequential(*edge_conv_list)
@@ -62,11 +62,11 @@ class DGCNN(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self, in_chan=3, z_dim=512, k=16, log_var=True):
+    def __init__(self, z_dim=512, k=16, log_var=True):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 64, 128, 1024, 1024]
-        modules = [PointsConvBlock(in_chan + in_chan ** 2, self.h_dim[0], act=nn.ReLU())]
+        modules = [PointsConvBlock(IN_CHAN + IN_CHAN ** 2, self.h_dim[0], act=nn.ReLU())]
         for i in range(2):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1], act=nn.ReLU()))
         self.point_mlp = nn.Sequential(*modules)

@@ -24,34 +24,40 @@ class MaxChannel(nn.Module):
 class LinearBlock(nn.Module):
 
     # Dense + Batch + Act
-    def __init__(self, in_dim, out_dim, act=act):
+    def __init__(self, in_dim, out_dim, act=act, batch_norm=True):
         super().__init__()
         self.dense = nn.Linear(in_dim, out_dim, bias=False)
-        self.bn = nn.BatchNorm1d(out_dim)
+        if batch_norm:
+            self.bn = nn.BatchNorm1d(out_dim)
         self.act = act
+        self.batch_norm = batch_norm
         self.in_dim = in_dim
         self.out_dim = out_dim
 
     def forward(self, x):
-        x = self.bn(self.dense(x))
+        x = self.dense(x)
+        if self.batch_norm:
+            x = self.bn(x)
         return x if self.act is None else self.act(x)
 
 
 # Input (Batch, Points, Features)
 class PointsConvBlock(LinearBlock):
     # Dense + Batch + Relu
-    def __init__(self, in_dim, out_dim, act=act):
+    def __init__(self, in_dim, out_dim, act=act, batch_norm=True):
         super().__init__(in_dim, out_dim, act)
         self.dense = nn.Conv1d(in_dim, out_dim, kernel_size=1, bias=False)
-        self.bn = nn.BatchNorm1d(out_dim)
+        if batch_norm:
+            self.bn = nn.BatchNorm1d(out_dim)
 
 
 class EdgeConvBlock(LinearBlock):
 
-    def __init__(self, in_dim, out_dim, act=act):
+    def __init__(self, in_dim, out_dim, act=act, batch_norm=True):
         super().__init__(in_dim, out_dim, act)
         self.dense = nn.Conv2d(in_dim, out_dim, kernel_size=1, bias=False)
-        self.bn = nn.BatchNorm2d(out_dim)
+        if batch_norm:
+            self.bn = nn.BatchNorm2d(out_dim)
 
 
 
