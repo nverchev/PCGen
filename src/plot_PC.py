@@ -13,7 +13,7 @@ def visualize_rotate(data):
 
     for t in np.arange(0, 5, 0.1):
         xe, ye, ze = rotate_z(x_eye, y_eye, z_eye, -t)
-        frames.append(dict(layout=dict(scene=dict(camera=dict(eye=dict(x=xe, y=ye, z=ze))))))
+        frames.append(dict(layout=dict(scene=dict(aspectmode='data', camera=dict(eye=dict(x=xe, y=ye, z=ze))))))
     fig = go.Figure(data=data,
                     layout=go.Layout(
                         updatemenus=[dict(type='buttons',
@@ -58,6 +58,6 @@ def pc_show(pcs, colors=None, colorscale='bluered'):
                                   line=dict(width=0.2,
                                             color='DarkSlateGrey')),
                       selector=dict(mode='markers'))
-    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0), yaxis=dict(scaleanchor="x", scaleratio=1))
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
 
