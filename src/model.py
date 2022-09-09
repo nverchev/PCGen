@@ -3,11 +3,11 @@ from abc import ABC
 
 import torch
 import torch.nn as nn
+from torch.autograd import Function
 from src.encoder import get_encoder
 from src.decoder import get_decoder
 from src.modules import LinearBlock
 from src.utils import square_distance
-from torch.autograd import Function
 
 
 class TransferGrad(Function):
@@ -26,11 +26,11 @@ class AE(nn.Module):
     settings = {}
     log_var = False
 
-    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, k=20, m=2048, **settings):
+    def __init__(self, encoder_name, decoder_name, z_dim, k=20, m=2048, **settings):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
-        self.encode = get_encoder(encoder_name)(in_chan, z_dim, k, log_var=self.log_var)
+        self.encode = get_encoder(encoder_name)(z_dim, k, log_var=self.log_var)
         self.decode = get_decoder(decoder_name)(z_dim, m)
         self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, 'k': k}
 
