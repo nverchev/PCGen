@@ -58,6 +58,6 @@ def pc_show(pcs, colors=None, colorscale='bluered'):
                                   line=dict(width=0.2,
                                             color='DarkSlateGrey')),
                       selector=dict(mode='markers'))
-    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0), xaxis = list(scaleanchor = "y", scaleratio = 1))
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0), xaxis=dict(scaleanchor="y", scaleratio=1))
     fig.show()
 
