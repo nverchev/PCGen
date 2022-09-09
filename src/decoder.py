@@ -33,8 +33,8 @@ class PCGen(nn.Module):
         self.m = 2048
         self.m_training = m
         self.sample_dim = 16
-        self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0])
-        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], act=nn.Hardtanh())
+        self.map_samples1 = nn.Conv1d(self.sample_dim, self.h_dim[0], 1)
+        self.map_samples2 = nn.Conv1d(self.h_dim[0], self.h_dim[1], 1)
         modules = []
         for i in range(1, len(self.h_dim) - 1):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
@@ -46,8 +46,8 @@ class PCGen(nn.Module):
         device = z.device
         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m, device=device)
         # x /= torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        x = self.map_samples1(x)
-        x = self.map_samples2(x)
+        x = F.leaky_relu_(self.map_samples1(x))
+        x = F.hardtanh_(self.map_samples2(x))
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
         return x.transpose(2, 1)
