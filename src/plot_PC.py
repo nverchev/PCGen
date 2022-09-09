@@ -15,7 +15,7 @@ def visualize_rotate(data):
         xe, ye, ze = rotate_z(x_eye, y_eye, z_eye, -t)
         frames.append(dict(layout=dict(scene=dict(camera=dict(eye=dict(x=xe, y=ye, z=ze))))))
     fig = go.Figure(data=data,
-                    layout=go.Layout(aspectmode='data',
+                    layout=go.Layout(scene=dict(aspectmode='data'),
                                      updatemenus=[dict(type='buttons',
                                                        showactive=False,
                                                        y=1,
