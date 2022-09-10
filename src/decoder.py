@@ -102,7 +102,7 @@ class FoldingLayer(nn.Module):
     def __init__(self, in_channel: int, h_dim: list):
         super(FoldingLayer, self).__init__()
         modules = [nn.Conv1d(in_channel, h_dim[0], kernel_size=1)]
-        for in_dim, out_dim in zip(self.h_dim[0:-1], self.h_dim[1:]):
+        for in_dim, out_dim in zip(h_dim[0:-1], h_dim[1:]):
             modules.extend([nn.ReLU(), nn.Conv1d(in_dim, out_dim, kernel_size=1)])
         self.layers = nn.Sequential(*modules)
 
