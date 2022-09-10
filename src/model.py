@@ -7,7 +7,7 @@ from torch.autograd import Function
 from src.encoder import get_encoder
 from src.decoder import get_decoder
 from src.modules import LinearBlock
-from src.utils import square_distance
+from src.losses import square_distance
 
 
 class TransferGrad(Function):
