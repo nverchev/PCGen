@@ -69,7 +69,7 @@ class VAELoss(nn.Module):
     def forward(self, outputs, inputs, targets):
         inputs = inputs[0]  # remove covariance
         recons = outputs['recon']
-        if len(recons.size()) == 4:
+        if recons.dim == 4:
             n_samples = recons.size()[1]
             inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
         reg_loss_dict = self.get_reg_loss(inputs, outputs)

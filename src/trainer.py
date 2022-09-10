@@ -46,7 +46,6 @@ class Trainer(metaclass=ABCMeta):
     def __init__(self, model, exp_name, device, optimizer, train_loader, val_loader=None,
                  test_loader=None, minioClient=None, models_path='./models', **block_args):
 
-        torch.manual_seed = 112358
         self.epoch = 0
         self.device = device  # to cuda or not to cuda?
         self.model = model.to(device)  # model is not copied
@@ -170,10 +169,10 @@ class Trainer(metaclass=ABCMeta):
                     self.test_outputs, self.to_recursive(outputs, 'detach_cpu'))
                 self.test_targets.extend(self.to_recursive(targets, 'detach_cpu'))
             if not self.quiet_mode and partition == 'train':
-                if batch_idx % (len(loader) // 10 or 1) == 0:
+                if batch_idx % (num_batch // 10 or 1) == 0:
                     iterable.set_postfix({'Seen': batch_idx * loader.batch_size,
                                           'Loss': criterion.item()})
-                if batch_idx == len(loader) - 1:  # clear after last
+                if batch_idx == num_batch - 1:  # clear after last
                     iterable.set_description('')
 
         epoch_loss = {loss: value / num_batch for loss, value in epoch_loss.items()}
@@ -237,7 +236,7 @@ class Trainer(metaclass=ABCMeta):
     def index_dict_list(dict_list, ind):
         list_dict = {}
         for k, v in dict_list.items():
-            if len(v) == 0 or isinstance(v[0], list):
+            if not v or isinstance(v[0], list):
                 new_v = [elem[ind].unsqueeze(0) for elem in v]
             else:
                 new_v = v[ind].unsqueeze(0)
@@ -277,7 +276,7 @@ class Trainer(metaclass=ABCMeta):
                 for file in os.listdir(local_path):
                     if file[:5] == 'model':
                         past_epochs.append(int(re.sub('\D', '', file)))
-            if len(past_epochs) == 0:
+            if not past_epochs:
                 print('No saved models found')
                 return
             else:

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+
 negative_slope = 0.2
 act = nn.LeakyReLU(negative_slope=0.2)
 
@@ -23,17 +24,18 @@ class MaxChannel(nn.Module):
 # Input (Batch, Features)
 class LinearBlock(nn.Module):
 
-    # Dense + Batch + Act
     def __init__(self, in_dim, out_dim, act=act, batch_norm=False):
         super().__init__()
-        self.dense = nn.Linear(in_dim, out_dim, bias=False)
-        if batch_norm:
-            self.bn = nn.BatchNorm1d(out_dim)
-        self.act = act
-        self.batch_norm = batch_norm
         self.in_dim = in_dim
         self.out_dim = out_dim
-        self.init(act)
+        self.act = act
+        self.batch_norm = batch_norm
+        self.bias = True
+        if batch_norm:
+            self.bn = self.get_bn_layer()
+            self.bias = False
+        self.dense = self.get_dense_layer()
+        #self.init(act)
 
     def init(self, act):
         if act is None:
@@ -43,33 +45,31 @@ class LinearBlock(nn.Module):
         elif act._get_name() == 'Hardtanh':
             nn.init.xavier_normal_(self.dense.weight, gain=nn.init.calculate_gain('tanh'))
 
+    def get_dense_layer(self):
+        return nn.Linear(self.in_dim, self.out_dim, bias=self.bias)
+
+    def get_bn_layer(self):
+        return nn.BatchNorm1d(self.out_dim)
+
     def forward(self, x):
-        x = self.dense(x) if self.batch_norm is None else self.bn(self.dense(x))
+        x = self.dense(x) if self.batch_norm is False else self.bn(self.dense(x))
         return x if self.act is None else self.act(x)
 
 
 # Input (Batch, Points, Features)
 class PointsConvBlock(LinearBlock):
-    # Dense + Batch + Relu
-    def __init__(self, in_dim, out_dim, act=act, batch_norm=False):
-        super().__init__(in_dim, out_dim, act)
-        self.dense = nn.Conv1d(in_dim, out_dim, kernel_size=1, bias=False)
-        if batch_norm:
-            self.bn = nn.BatchNorm1d(out_dim)
-        self.init(act)
 
+    def get_dense_layer(self):
+        return nn.Conv1d(self.in_dim, self.out_dim, kernel_size=1, bias=self.bias)
 
 
 class EdgeConvBlock(LinearBlock):
 
-    def __init__(self, in_dim, out_dim, act=act, batch_norm=False):
-        super().__init__(in_dim, out_dim, act)
-        self.dense = nn.Conv2d(in_dim, out_dim, kernel_size=1, bias=False)
-        if batch_norm:
-            self.bn = nn.BatchNorm2d(out_dim)
-        self.init(act)
+    def get_dense_layer(self):
+        return nn.Conv2d(self.in_dim, self.out_dim, kernel_size=1, bias=self.bias)
 
-
+    def get_bn_layer(self):
+        return nn.BatchNorm2d(self.out_dim)
 
 
 class STN(nn.Module):
@@ -91,6 +91,8 @@ class STN(nn.Module):
         x = self.net(x).view(-1, self.channels, self.channels)
         x += self.eye
         return x
+
+
 class GraphFilter(nn.Module):
 
     def __init__(self, grid_dims, graph_r, graph_eps, graph_lam):

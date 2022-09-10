@@ -2,7 +2,9 @@ import torch
 import torch.nn as nn
 from src.modules import PointsConvBlock, LinearBlock, EdgeConvBlock
 from src.utils import get_graph_features, graph_max_pooling, get_local_covariance
+
 IN_CHAN = 3
+
 
 class LDGCNN(nn.Module):
     def __init__(self, z_dim=512, k=20, log_var=True):
@@ -11,8 +13,8 @@ class LDGCNN(nn.Module):
         self.h_dim = [64, 64, 128, 256]
         self.edge_conv = EdgeConvBlock(2 * IN_CHAN, self.h_dim[0])
         modules = []
-        for i in range(3):
-            modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1]))
+        for in_dim, out_dim in zip(self.h_dim[:3], self.h_dim[1:]):
+            modules.append(PointsConvBlock(in_dim, out_dim))
         self.points_convs = nn.Sequential(*modules)
         self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * z_dim if log_var else z_dim, 1)
 
@@ -38,9 +40,9 @@ class DGCNN(nn.Module):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
-        edge_conv_list = [EdgeConvBlock(2 * IN_CHAN, self.h_dim[0])]
-        for i in range(len(self.h_dim) - 1):
-            edge_conv_list.append(EdgeConvBlock(2 * self.h_dim[i], self.h_dim[i + 1]))
+        edge_conv_list = [EdgeConvBlock(2 * IN_CHAN, self.h_dim[0], batch_norm=True)]
+        for in_dim, out_dim in zip(self.h_dim[:3], self.h_dim[1:]):
+            edge_conv_list.append(EdgeConvBlock(2 * in_dim, out_dim, batch_norm=True))
         self.edge_convs = nn.Sequential(*edge_conv_list)
         self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * z_dim if log_var else z_dim, kernel_size=1)
 
@@ -66,14 +68,14 @@ class FoldingNet(nn.Module):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 64, 128, 1024, 1024]
-        modules = [PointsConvBlock(IN_CHAN + IN_CHAN ** 2, self.h_dim[0], act=nn.ReLU())]
-        for i in range(2):
-            modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1], act=nn.ReLU()))
+        modules = [PointsConvBlock(IN_CHAN + IN_CHAN ** 2, self.h_dim[0], act=nn.ReLU(), batch_norm=False)]
+        for in_dim, out_dim in zip(self.h_dim[:2], self.h_dim[1:3]):
+            modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(), batch_norm=False))
         self.point_mlp = nn.Sequential(*modules)
-        self.conv1 = PointsConvBlock(self.h_dim[2], self.h_dim[3], act=nn.ReLU())
-        self.conv2 = PointsConvBlock(self.h_dim[3], self.h_dim[4], act=nn.ReLU())
-        self.features_mlp = nn.Sequential(LinearBlock(self.h_dim[4], self.h_dim[5], act=nn.ReLU()),
-                                          nn.Linear(self.h_dim[5], 2 * z_dim if log_var else z_dim,))
+        self.conv1 = PointsConvBlock(self.h_dim[2], self.h_dim[3], act=nn.ReLU(), batch_norm=False)
+        self.conv2 = PointsConvBlock(self.h_dim[3], self.h_dim[4], act=nn.ReLU(), batch_norm=False)
+        self.features_mlp = nn.Sequential(LinearBlock(self.h_dim[4], self.h_dim[5], act=nn.ReLU(), batch_norm=False),
+                                          nn.Linear(self.h_dim[5], 2 * z_dim if log_var else z_dim))
 
     def forward(self, x):
         x, indices = x

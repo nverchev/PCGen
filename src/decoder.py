@@ -4,25 +4,27 @@ import numpy as np
 import torch.nn.functional as F
 from src.modules import PointsConvBlock, LinearBlock, View
 from src.utils import graph_max_pooling
+
 OUT_CHAN = 3
 
-class MLPDecoder(nn.Module):
 
-    def __init__(self, z_dim, m):
-        super().__init__()
-        self.hdim = [256, 256]
-        modules = [nn.Linear(z_dim, self.h_dim[0])]
-        for i in range(len(self.h_dim) - 1):
-            modules.append(nn.ELU())
-            modules.append(nn.Linear(self.h_dim[i], self.h_dim[i + 1]))
-        modules.append(nn.ELU())
-        modules.append(nn.Linear(self.h_dim[-1], OUT_CHAN * m))
-        modules.append(View(-1, m, OUT_CHAN))
-        self.mlp = nn.Sequential(*modules)
-
-    def forward(self, z):
-        x = self.mlp(z)
-        return x
+# class MLPDecoder(nn.Module):
+#
+#     def __init__(self, z_dim, m):
+#         super().__init__()
+#         self.hdim = [256, 256, 256, 256]
+#         modules = [nn.Linear(z_dim, self.h_dim[0])]
+#         for i in range(len(self.h_dim) - 1):
+#             modules.append(nn.ELU())
+#             modules.append(nn.Linear(self.h_dim[i], self.h_dim[i + 1]))
+#         modules.append(nn.ELU())
+#         modules.append(nn.Linear(self.h_dim[-1], OUT_CHAN * m))
+#         modules.append(View(-1, m, OUT_CHAN))
+#         self.mlp = nn.Sequential(*modules)
+#
+#     def forward(self, z):
+#         x = self.mlp(z)
+#         return x
 
 
 class PCGen(nn.Module):
@@ -36,8 +38,8 @@ class PCGen(nn.Module):
         self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0], batch_norm=False)
         self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Hardtanh())
         modules = []
-        for i in range(1, len(self.h_dim) - 1):
-            modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1], batch_norm=False))
+        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+            modules.append(PointsConvBlock(in_dim, out_dim, batch_norm=False))
 
         modules.append(nn.Conv1d(self.h_dim[-1], OUT_CHAN, kernel_size=1))
         self.points_convs = nn.Sequential(*modules)
@@ -52,6 +54,7 @@ class PCGen(nn.Module):
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
         return x.transpose(2, 1)
+
     @property
     def m(self):
         if self.training:
@@ -62,35 +65,35 @@ class PCGen(nn.Module):
     @m.setter
     def m(self, m):
         self._m = m
-
-class Gen_ADAIN(nn.Module):
-
-    def __init__(self, z_dim, m):
-        super().__init__()
-        self.h_dim = [z_dim] * 5
-        self.m = 2048
-        self.m_training = m
-        self.sample_dim = z_dim
-        map_samples = []
-        map_latents = []
-        for i in range(len(self.h_dim) - 1):
-            map_samples.append((self.h_dim[i], self.h_dim[i+1]))
-            map_latents.append(PointsConvBlock(self.h_dim[i], 2 * self.h_dim[i+1]))
-        self.map_samples = nn.ModuleList(map_samples)
-        self.map_latents = nn.ModuleList(map_latents)
-        self.final = nn.Conv1d(self.h_dim[-1], OUT_CHAN, kernel_size=1)
-
-    def forward(self, z, s=None):
-        batch = z.size()[0]
-        device = z.device
-        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
-        z = z.unsqueeze(2)
-        for map_sample, map_latent in zip(self.map_samples, self.map_latents):
-            x = map_sample(x)
-            y_mean, y_bias = map_latent(z).chunk(2, 1)
-            x = y_mean * (x - x.mean(2, keepdim=True) / x.var(2, keepdim=True)) + y_bias
-        x = self.final(x)
-        return x.transpose(2, 1)
+#
+# class Gen_ADAIN(nn.Module):
+#
+#     def __init__(self, z_dim, m):
+#         super().__init__()
+#         self.h_dim = [z_dim] * 5
+#         self.m = 2048
+#         self.m_training = m
+#         self.sample_dim = z_dim
+#         map_samples = []
+#         map_latents = []
+#         for i in range(len(self.h_dim) - 1):
+#             map_samples.append((self.h_dim[i], self.h_dim[i + 1]))
+#             map_latents.append(PointsConvBlock(self.h_dim[i], 2 * self.h_dim[i + 1]))
+#         self.map_samples = nn.ModuleList(map_samples)
+#         self.map_latents = nn.ModuleList(map_latents)
+#         self.final = nn.Conv1d(self.h_dim[-1], OUT_CHAN, kernel_size=1)
+#
+#     def forward(self, z, s=None):
+#         batch = z.size()[0]
+#         device = z.device
+#         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
+#         z = z.unsqueeze(2)
+#         for map_sample, map_latent in zip(self.map_samples, self.map_latents):
+#             x = map_sample(x)
+#             y_mean, y_bias = map_latent(z).chunk(2, 1)
+#             x = y_mean * (x - x.mean(2, keepdim=True) / x.var(2, keepdim=True)) + y_bias
+#         x = self.final(x)
+#         return x.transpose(2, 1)
 
 
 class FoldingLayer(nn.Module):
@@ -101,8 +104,8 @@ class FoldingLayer(nn.Module):
     def __init__(self, in_channel: int, h_dim: list):
         super(FoldingLayer, self).__init__()
         modules = [nn.Conv1d(in_channel, h_dim[0], kernel_size=1)]
-        for i in range(len(h_dim) - 1):
-            modules.extend([nn.ReLU(), nn.Conv1d(self.h_dim[i], self.h_dim[i + 1], kernel_size=1)])
+        for in_dim, out_dim in zip(self.h_dim[0:-1], self.h_dim[1:]):
+            modules.extend([nn.ReLU(), nn.Conv1d(in_dim, out_dim, kernel_size=1)])
         self.layers = nn.Sequential(*modules)
 
     def forward(self, grids, x):
@@ -122,8 +125,8 @@ class FoldingNet(nn.Module):
         xx = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         self.grid = nn.Parameter(torch.stack(torch.meshgrid(xx, yy, indexing='ij')).view(2, -1), requires_grad=False)
-        self.fold1 = FoldingLayer(z_dim + 2, [self.h_dim[0], self.h_dim[1], OUT_CHAN])
-        self.fold2 = FoldingLayer(z_dim + 3, [self.h_dim[2], self.h_dim[3], OUT_CHAN])
+        self.fold1 = FoldingLayer(z_dim + 2, self.h_dim[0:2] + [OUT_CHAN])
+        self.fold2 = FoldingLayer(z_dim + 3, self.h_dim[2:4] + [OUT_CHAN])
 
     def forward(self, z, grid=None):
         batch_size = z.shape[0]
@@ -150,16 +153,17 @@ class TearingNetGraphModel(FoldingNet):
         self.h_dim.extend([512, 512, 64, 512, 512, 2])
 
         modules = [nn.Conv2d(self.z_dim + 5, self.h_dim[4], kernel_size=1)]
-        for i in range(4, 6):
+        for in_dim, out_dim in zip(self.h_dim[4:6], self.h_dim[5:7]):
             modules.append(nn.ReLU())
-            modules.append(nn.Conv2d(self.h_dim[i], self.h_dim[i+1], kernel_size=1))
+            modules.append(nn.Conv2d(in_dim, out_dim, kernel_size=1))
         self.tearing1 = nn.Sequential(*modules)
 
         modules = [nn.Conv2d(self.z_dim + 5 + self.h_dim[6], self.h_dim[7], kernel_size=1)]
-        for i in range(7, 9):
+        for in_dim, out_dim in zip(self.h_dim[7:9], self.h_dim[8:10]):
             modules.append(nn.ReLU())
-            modules.append(nn.Conv2d(self.h_dim[i], self.h_dim[i+1], kernel_size=1))
+            modules.append(nn.Conv2d(in_dim, out_dim, kernel_size=1))
         self.tearing2 = nn.Sequential(*modules)
+
     def forward(self, z, grid=None):
         batch_size = z.shape[0]
         grid = self.grid.to(z.device)
@@ -213,11 +217,12 @@ class TearingNetGraphModel(FoldingNet):
     #     pc_filt = pc_filt.view(batch_size, 3, -1).permute([0, 2, 1])
     #     return pc_filt, wght_all
 
+
 def get_decoder(decoder_name):
     decoder_dict = {
-        'MLP': MLPDecoder,
+        # 'MLP': MLPDecoder,
         'PCGen': PCGen,
-        'AdaIN': Gen_ADAIN,
+        # 'AdaIN': Gen_ADAIN,
         'FoldingNet': FoldingNet,
         'TearingNet': TearingNetGraphModel,
     }

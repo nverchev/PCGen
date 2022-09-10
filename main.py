@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 import argparse
 import pykeops
 from src.dataset import get_dataset
@@ -35,7 +36,7 @@ def parse_args():
                         help='SGD_momentum, has momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
-    parser.add_argument('--k', type=int, default=20,
+    parser.add_argument('--k', type=int, default=40,
                         help='number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--z_dim', type=int, default=512, help='dimension of the latent space')
     parser.add_argument('--c_reg', type=float, default=1, help='coefficient for regularization')
@@ -82,6 +83,7 @@ if __name__ == '__main__':
     model_eval = args.eval
     minio_credential = args.minio_credential
 
+
     if minio_credential:
         from minio import Minio
 
@@ -92,6 +94,8 @@ if __name__ == '__main__':
     else:
         minioClient = None
 
+    torch.manual_seed = 112358
+    np.random.seed = 112358
     data_loader_settings = dict(
         dataset_name=dataset_name,
         dir_path=dir_path,
