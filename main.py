@@ -36,7 +36,7 @@ def parse_args():
                         help='SGD_momentum, has momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
-    parser.add_argument('--k', type=int, default=40,
+    parser.add_argument('--k', type=int, default=20,
                         help='number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--z_dim', type=int, default=512, help='dimension of the latent space')
     parser.add_argument('--c_reg', type=float, default=1, help='coefficient for regularization')

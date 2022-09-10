@@ -1,71 +1,65 @@
-import torch
-from pykeops.torch import LazyTensor
+import os
+import zipfile
+import numpy as np
+import requests
+import h5py
+import glob2
+from sklearn.neighbors import KDTree
+
+try:
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except:
+    pass
+
+def download_zip(dir_path, zip_name, url):
+    data_dir = os.path.join(dir_path, '../dataset')
+    if not os.path.exists(data_dir):
+        os.mkdir(data_dir)
+    zip_path = os.path.join(data_dir, zip_name)
+    if not os.path.exists(zip_path):
+        r = requests.get(url, verify=False)
+        open(zip_path, 'wb').write(r.content)
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(data_dir)
+    return zip_path[:-4]
 
 
-# tensor_dims = (batch, (samples,) vertices, coordinates )
-def square_distance(t1, t2):
-    t1 = LazyTensor(t1[:, :, None, :])
-    t2 = LazyTensor(t2[:, None, :, :])
-    dist = ((t1 - t2) ** 2).sum(-1)
-    return dist
+def index_k_neighbours(pcs, k):
+    indices_list = []
+    for pc in pcs:
+        kdtree = KDTree(pc)
+        indices = kdtree.query(pc, k, return_distance=False)
+        indices_list.append(indices.reshape(-1, k))
+    return np.stack(indices_list, axis=0)
 
 
-# def square_distance(t1, t2):
-#     t2 = t2.transpose(-1, -2)
-#     dist = -2 * torch.matmul(t1, t2)
-#     dist += torch.sum(t1 ** 2, -1, keepdim=True)
-#     dist += torch.sum(t2 ** 2, -2, keepdim=True)
-#     return dist
-#
+def load_h5(wild_path, num_points, k):
+    pcd = []
+    indices = []
+    labels = []
+    for h5_name in glob2.glob(wild_path):
+        with h5py.File(h5_name, 'r+') as f:
+            print('Load: ', h5_name)
+            # Dataset is already normalized
+            pcs = f['data'][:].astype('float32')
+            pcs = pcs[:, :num_points, :]
+            label = f['label'][:].astype('int64')
+            index_k = f'index_{k}'
+            if index_k in f.keys():
+                index = f[index_k][:].astype(np.short)
+            else:
+                index = index_k_neighbours(pcs, k).astype(np.short)
+                f.create_dataset(index_k, data=index)
+
+        pcd.append(pcs)
+        indices.append(index)
+        labels.append(label)
+    pcd = np.concatenate(pcd, axis=0)
+    indices = np.concatenate(indices, axis=0)
+    labels = np.concatenate(labels, axis=0)
+    return pcd, indices, labels.ravel()
 
 
-def self_square_distance(t1):
-    # dims order is different than square distance: [batch, features, points]
-    t2 = t1.transpose(-1, -2)
-    square_component = torch.sum(t1 ** 2, 1, keepdim=True)
-    dist = -2 * torch.matmul(t2, t1)
-    dist += square_component
-    dist += square_component.transpose(-1, -2)
-    return dist
 
-# Not very efficient (not sure why)
-# def knn(x, k):
-#     d_ij = square_distance(x, x)
-#     idx = d_ij.argKmin(k, dim=2)
-#     return idx
-
-
-def knn(x, k):
-    d_ij = self_square_distance(x)
-    indices = d_ij.topk(k=k, largest=False, dim=-1)[1]
-    return indices
-
-def get_neighbours(x, k, indices):
-    batch, n_feat, n_points = x.size()
-    if indices is not None:
-        indices = indices
-    else:
-        indices = knn(x, k=k)  # (batch_size, num_points, k)
-    indices = indices.contiguous().view(batch, 1, k * n_points).expand(-1,  n_feat, -1)
-    neighbours = torch.gather(x, 2, indices).view(batch, n_feat, n_points, k)
-    return neighbours
-
-def get_local_covariance(x, k=16, indices=None):
-    neighbours = get_neighbours(x, k, indices)
-    neighbours -= neighbours.mean(3, keepdim=True)
-    covariances = torch.matmul(neighbours.transpose(1, 2), neighbours.permute(0, 2, 3, 1))
-    x = torch.cat([x, covariances.flatten(start_dim=2).transpose(1, 2)], dim=1).contiguous()
-    return x
-
-def graph_max_pooling(x, k=16, indices=None):
-    neighbours = get_neighbours(x, k, indices)
-    max_pooling = torch.max(neighbours, dim=-1)[0]
-    return max_pooling
-
-
-def get_graph_features(x, k=20, indices=None):
-    neighbours = get_neighbours(x, k, indices)
-    x = x.unsqueeze(3).expand(-1, -1, -1, k)
-    feature = torch.cat([neighbours - x, x], dim=1).contiguous()
-    # (batch_size, 2 * num_dims, num_points, k)
-    return feature

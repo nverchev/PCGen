@@ -3,8 +3,6 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 from src.modules import PointsConvBlock, LinearBlock, View
-from src.utils import graph_max_pooling
-
 OUT_CHAN = 3
 
 
@@ -41,7 +39,7 @@ class PCGen(nn.Module):
         for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
             modules.append(PointsConvBlock(in_dim, out_dim, batch_norm=False))
 
-        modules.append(nn.Conv1d(self.h_dim[-1], OUT_CHAN, kernel_size=1))
+        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, act=None, batch_norm=False))
         self.points_convs = nn.Sequential(*modules)
 
     def forward(self, z, s=None):

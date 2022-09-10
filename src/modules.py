@@ -24,7 +24,7 @@ class MaxChannel(nn.Module):
 # Input (Batch, Features)
 class LinearBlock(nn.Module):
 
-    def __init__(self, in_dim, out_dim, act=act, batch_norm=False):
+    def __init__(self, in_dim, out_dim, act=act, batch_norm=True):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -35,7 +35,7 @@ class LinearBlock(nn.Module):
             self.bn = self.get_bn_layer()
             self.bias = False
         self.dense = self.get_dense_layer()
-        #self.init(act)
+        self.init(act)
 
     def init(self, act):
         if act is None:

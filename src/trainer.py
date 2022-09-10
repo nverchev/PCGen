@@ -327,7 +327,6 @@ class VAETrainer(Trainer):
 
         return
 
-
     def test(self, partition='val', m=2048):
         self.model.decode.m = m
         super().test(partition=partition)

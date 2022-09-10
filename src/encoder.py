@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from src.modules import PointsConvBlock, LinearBlock, EdgeConvBlock
-from src.utils import get_graph_features, graph_max_pooling, get_local_covariance
+from src.neighbour_op import get_graph_features, graph_max_pooling, get_local_covariance
 
 IN_CHAN = 3
 
@@ -16,7 +16,7 @@ class LDGCNN(nn.Module):
         for in_dim, out_dim in zip(self.h_dim[:3], self.h_dim[1:]):
             modules.append(PointsConvBlock(in_dim, out_dim))
         self.points_convs = nn.Sequential(*modules)
-        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * z_dim if log_var else z_dim, 1)
+        self.final_conv = PointsConvBlock(sum(self.h_dim), 2 * z_dim if log_var else z_dim, act=None, batch_norm=False)
 
     def forward(self, x):
         x, indices = x

@@ -4,9 +4,24 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import geomloss
-from abc import ABCMeta, abstractmethod
-from src.utils import square_distance
+from pykeops.torch import LazyTensor
 
+
+# tensor_dims = (batch, (samples,) vertices, coordinates )
+def square_distance(t1, t2):
+    t1 = LazyTensor(t1[:, :, None, :])
+    t2 = LazyTensor(t2[:, None, :, :])
+    dist = ((t1 - t2) ** 2).sum(-1)
+    return dist
+
+
+# def square_distance(t1, t2):
+#     t2 = t2.transpose(-1, -2)
+#     dist = -2 * torch.matmul(t1, t2)
+#     dist += torch.sum(t1 ** 2, -1, keepdim=True)
+#     dist += torch.sum(t2 ** 2, -2, keepdim=True)
+#     return dist
+#
 
 # Chamfer Distance
 
@@ -86,11 +101,13 @@ class VAELoss(nn.Module):
             **recon_loss_dict
         }
 
+
 class NoVAELoss:
     c_kld = 0.001
 
     def __call__(self, inputs, outputs):
         return {'reg': torch.tensor(0)}
+
 
 class KLDVAELoss:
     c_kld = 0.001
