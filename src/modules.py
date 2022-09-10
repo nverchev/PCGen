@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+negative_slope = 0.2
 act = nn.LeakyReLU(negative_slope=0.2)
 
 
@@ -24,7 +24,7 @@ class MaxChannel(nn.Module):
 class LinearBlock(nn.Module):
 
     # Dense + Batch + Act
-    def __init__(self, in_dim, out_dim, act=act, batch_norm=True):
+    def __init__(self, in_dim, out_dim, act=act, batch_norm=False):
         super().__init__()
         self.dense = nn.Linear(in_dim, out_dim, bias=False)
         if batch_norm:
@@ -33,31 +33,42 @@ class LinearBlock(nn.Module):
         self.batch_norm = batch_norm
         self.in_dim = in_dim
         self.out_dim = out_dim
+        self.init(act)
+
+    def init(self, act):
+        if act is None:
+            nn.init.normal_(self.dense.weight)
+        elif act._get_name() == 'LeakyReLU':
+            nn.init.kaiming_uniform_(self.dense.weight, a=negative_slope)
+        elif act._get_name() == 'Hardtanh':
+            nn.init.xavier_normal_(self.dense.weight, gain=nn.init.calculate_gain('tanh'))
 
     def forward(self, x):
-        x = self.dense(x)
-        if self.batch_norm:
-            x = self.bn(x)
+        x = self.dense(x) if self.batch_norm is None else self.bn(self.dense(x))
         return x if self.act is None else self.act(x)
 
 
 # Input (Batch, Points, Features)
 class PointsConvBlock(LinearBlock):
     # Dense + Batch + Relu
-    def __init__(self, in_dim, out_dim, act=act, batch_norm=True):
+    def __init__(self, in_dim, out_dim, act=act, batch_norm=False):
         super().__init__(in_dim, out_dim, act)
         self.dense = nn.Conv1d(in_dim, out_dim, kernel_size=1, bias=False)
         if batch_norm:
             self.bn = nn.BatchNorm1d(out_dim)
+        self.init(act)
+
 
 
 class EdgeConvBlock(LinearBlock):
 
-    def __init__(self, in_dim, out_dim, act=act, batch_norm=True):
+    def __init__(self, in_dim, out_dim, act=act, batch_norm=False):
         super().__init__(in_dim, out_dim, act)
         self.dense = nn.Conv2d(in_dim, out_dim, kernel_size=1, bias=False)
         if batch_norm:
             self.bn = nn.BatchNorm2d(out_dim)
+        self.init(act)
+
 
 
 

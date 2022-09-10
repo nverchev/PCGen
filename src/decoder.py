@@ -34,7 +34,7 @@ class PCGen(nn.Module):
         self.m_training = m
         self.sample_dim = 16
         self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0], batch_norm=False)
-        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Tanh())
+        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Hardtanh())
         modules = []
         for i in range(1, len(self.h_dim) - 1):
             modules.append(PointsConvBlock(self.h_dim[i], self.h_dim[i + 1], batch_norm=False))
