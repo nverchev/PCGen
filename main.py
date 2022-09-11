@@ -145,6 +145,7 @@ if __name__ == '__main__':
         trainer.load()
     elif load > 0:
         trainer.load(load)
+    trainer.save()
 
     if not model_eval:
         if load == -1 and decoder_name == 'TearingNet':
