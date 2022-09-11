@@ -20,8 +20,8 @@ def square_distance(t1, t2):
 #     dist = -2 * torch.matmul(t1, t2)
 #     dist += torch.sum(t1 ** 2, -1, keepdim=True)
 #     dist += torch.sum(t2 ** 2, -2, keepdim=True)
-#     return dist
-#
+#     return dist.unsqueeze(3)
+
 
 # Chamfer Distance
 

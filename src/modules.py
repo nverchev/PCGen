@@ -19,6 +19,7 @@ class MaxChannel(nn.Module):
 
     def forward(self, x, axis=-1):
         return torch.max(x, axis)[0]
+import numpy as np
 
 
 # Input (Batch, Features)
@@ -36,10 +37,9 @@ class LinearBlock(nn.Module):
             self.bias = False
         self.dense = self.get_dense_layer()
         self.init(act)
-
     def init(self, act):
         if act is None:
-            nn.init.normal_(self.dense.weight)
+            pass
         elif act._get_name() == 'LeakyReLU':
             nn.init.kaiming_uniform_(self.dense.weight, a=negative_slope)
         elif act._get_name() == 'Hardtanh':
