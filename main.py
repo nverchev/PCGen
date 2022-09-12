@@ -21,6 +21,7 @@ def parse_args():
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Default is given by model_recon_loss_exp_name')
+    parser.add_argument('--gf', action='store_true', default=False, help='graph filtering after decoder')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='reconstruction loss')
     parser.add_argument('--vae', type=str, default='NoVAE',
@@ -59,12 +60,14 @@ if __name__ == '__main__':
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
+    graph_filtering = args.gf
     experiment = args.experiment
     recon_loss = args.recon_loss
     dict_size = args.dict_size
     embed_dim = args.embed_dim
     vae = args.vae
-    exp_name = args.model_path or '_'.join([encoder_name, decoder_name, recon_loss, vae, experiment])
+    gf = 'GF' if graph_filtering else ''
+    exp_name = args.model_path or '_'.join([encoder_name, decoder_name + gf, recon_loss, vae, experiment])
     final = experiment[:5] == 'final'
     dir_path = args.dir_path
     dataset_name = args.dataset
@@ -82,7 +85,6 @@ if __name__ == '__main__':
     load = args.load
     model_eval = args.eval
     minio_credential = args.minio_credential
-
 
     if minio_credential:
         from minio import Minio
@@ -109,6 +111,7 @@ if __name__ == '__main__':
     )
     model_settigns = dict(encoder_name=encoder_name,
                           decoder_name=decoder_name,
+                          gf=graph_filtering,
                           z_dim=z_dim,
                           k=k,
                           m=m_training,

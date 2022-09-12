@@ -26,12 +26,12 @@ class AE(nn.Module):
     settings = {}
     log_var = False
 
-    def __init__(self, encoder_name, decoder_name, z_dim, k=20, m=2048, **settings):
+    def __init__(self, encoder_name, decoder_name, z_dim, gf, k=20, m=2048, **settings):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
         self.encode = get_encoder(encoder_name)(z_dim, k, log_var=self.log_var)
-        self.decode = get_decoder(decoder_name)(z_dim, m)
+        self.decode = get_decoder(decoder_name)(z_dim, m, gf)
         self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, 'k': k}
 
     def forward(self, x):
@@ -50,7 +50,7 @@ class AE(nn.Module):
 
     def decoder(self, data):
         z = data['z']
-        x = self.decode(z)
+        x = self.decode(z).transpose(2, 1)
         data['recon'] = x
         return data
 
