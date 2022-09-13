@@ -62,7 +62,7 @@ class Trainer(metaclass=ABCMeta):
         self.converge = 1  # if 0 kills session
         self.minio = minioClient
         self.models_path = models_path
-        self.minio_path = staticmethod(lambda path: path[len(models_path):]).__func__  # removes model path
+        self.minio_path = staticmethod(lambda path: path[len(models_path+1):]).__func__  # removes model path
         self.test_targets, self.test_outputs = [], {}  # stored in RAM
         settings_path = self.paths()['settings']
         json.dump(self.settings, open(settings_path, 'w'), default=vars, indent=4)
