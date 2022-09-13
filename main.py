@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
         while training_epochs > trainer.epoch:
             if m_training == 0:
-                m = max(128, (4096 * trainer.epoch) // training_epochs)
+                m = max(512, (4096 * trainer.epoch) // training_epochs)
                 trainer.update_m_training(m)
             trainer.train(10)
             trainer.save()
