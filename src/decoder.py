@@ -3,7 +3,7 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 from src.modules import PointsConvBlock, LinearBlock, View
-
+from src.neighbour_op import get_neighbours
 OUT_CHAN = 3
 
 
@@ -30,7 +30,7 @@ class PCGen(nn.Module):
 
     def __init__(self, z_dim, m, gf=True):
         super().__init__()
-        self.h_dim = [256, z_dim, 512, 512, 512, 64]
+        self.h_dim = [256, z_dim, 512, 256, 128, 64]
         self.m = 2048
         self.m_training = m
         self.gf = gf
@@ -53,12 +53,27 @@ class PCGen(nn.Module):
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
         if self.gf:
-            x, graph_wght = self.graph_filter(x)
+            x, graph_wght = self.graph_filtering(x)
         return x
 
-    def graph_filtering(self, x):
-        return x, None
+    # def graph_filtering(self, x):
+    #     dist, neighbours = get_neighbours(x, k=4, indices=None)
+    #     dist = dist[:, :, 1:]  # dist[:, :,  0] == 0
+    #     neighbours = neighbours[:, :, :, 1:]
+    #     sigma2 = torch.sqrt(dist.mean(-1, keepdims=True))
+    #     weights = torch.exp(-dist / sigma2)
+    #     weights = weights / torch.sum(weights, dim=-1, keepdims=True)
+    #     weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours
+    #     x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
+    #     return x, None
 
+    def graph_filtering(self, x):
+        dist, neighbours = get_neighbours(x, k=8, indices=None)
+        weights = dist
+        weights = weights / torch.sum(weights, dim=-1, keepdims=True)
+        weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours
+        x = 0.5 * x + 0.5 * weighted_neighbours.sum(-1)
+        return x, None
     @property
     def m(self):
         if self.training:
@@ -142,9 +157,9 @@ class FoldingNet(nn.Module):
         batch_size = z.shape[0]
         if grid is None:
             grid = self.grid.unsqueeze(0).repeat(batch_size, 1, 1)
-        x = z.unsqueeze(2).repeat(1, 1, self.m_grid)
-        x = self.fold1(grid, x)
-        x = self.fold2(x, x)
+        z = z.unsqueeze(2).repeat(1, 1, self.m_grid)
+        x = self.fold1(grid, z)
+        x = self.fold2(x, z)
         if self.gf:
             x, graph_wght = self.graph_filter(x, grid, batch_size)
         return x

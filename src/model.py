@@ -31,7 +31,7 @@ class AE(nn.Module):
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
         self.encode = get_encoder(encoder_name)(z_dim, k, log_var=self.log_var)
-        self.decode = get_decoder(decoder_name)(z_dim, m, gf)
+        self.decode = get_decoder(decoder_name)(z_dim, m, gf=gf)
         self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, 'k': k}
 
     def forward(self, x):

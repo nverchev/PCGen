@@ -109,7 +109,7 @@ if __name__ == '__main__':
         batch_size=batch_size,
         final=final,
     )
-    model_settigns = dict(encoder_name=encoder_name,
+    model_settings = dict(encoder_name=encoder_name,
                           decoder_name=decoder_name,
                           gf=graph_filtering,
                           z_dim=z_dim,
@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
-    model = get_model(**model_settigns)
+    model = get_model(**model_settings)
 
     trainer_settings = dict(
         opt_name=opt_name,
@@ -141,7 +141,7 @@ if __name__ == '__main__':
         c_reg=c_reg,
     )
 
-    block_args = {**data_loader_settings, **model_settigns, **trainer_settings}
+    block_args = {**data_loader_settings, **model_settings, **trainer_settings}
     trainer = get_vae_trainer(model, exp_name, block_args)
     # loads last model
     if load == 0:
