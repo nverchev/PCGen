@@ -56,24 +56,23 @@ class PCGen(nn.Module):
             x, graph_wght = self.graph_filtering(x)
         return x
 
+    def graph_filtering(self, x):
+        dist, neighbours = get_neighbours(x, k=4, indices=None)
+        dist = dist[:, :, 1:]  # dist[:, :,  0] == 0
+        neighbours = neighbours[:, :, :, 1:]
+        sigma2 = torch.sqrt(dist.mean(-1, keepdims=True))
+        weights = torch.softmax(-dist / sigma2, dim=-1)
+        weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours
+        x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
+        return x, None
+
     # def graph_filtering(self, x):
-    #     dist, neighbours = get_neighbours(x, k=4, indices=None)
-    #     dist = dist[:, :, 1:]  # dist[:, :,  0] == 0
-    #     neighbours = neighbours[:, :, :, 1:]
-    #     sigma2 = torch.sqrt(dist.mean(-1, keepdims=True))
-    #     weights = torch.exp(-dist / sigma2)
+    #     dist, neighbours = get_neighbours(x, k=8, indices=None)
+    #     weights = dist
     #     weights = weights / torch.sum(weights, dim=-1, keepdims=True)
     #     weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours
-    #     x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
+    #     x = 0.7 * x + 0.3 * weighted_neighbours.sum(-1)
     #     return x, None
-
-    def graph_filtering(self, x):
-        dist, neighbours = get_neighbours(x, k=8, indices=None)
-        weights = dist
-        weights = weights / torch.sum(weights, dim=-1, keepdims=True)
-        weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours
-        x = 0.5 * x + 0.5 * weighted_neighbours.sum(-1)
-        return x, None
     @property
     def m(self):
         if self.training:
