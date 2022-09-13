@@ -53,7 +53,7 @@ class PCGen(nn.Module):
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
         if self.gf:
-            x, graph_wght = self.graph_filtering(x)
+            x = self.graph_filtering(x)
         return x
 
     def graph_filtering(self, x):
@@ -160,13 +160,14 @@ class FoldingNet(nn.Module):
         x = self.fold1(grid, z)
         x = self.fold2(x, z)
         if self.gf:
-            x, graph_wght = self.graph_filter(x, grid, batch_size)
+            x = self.graph_filter(x, grid, batch_size)
         return x
 
     def graph_filter(self, pc, grid, batch_size):
         grid_exp = grid.view(batch_size, 2, self.num_grid, self.num_grid)
         pc_exp = pc.view(batch_size, 3, self.num_grid, self.num_grid)
         graph_feature = torch.cat((grid_exp, pc_exp), 1).contiguous()
+
         # Compute the graph weights
         wght_hori = graph_feature[:, :, :-1, :] - graph_feature[:, :, 1:, :]  # horizontal weights
         wght_vert = graph_feature[:, :, :, :-1] - graph_feature[:, :, :, 1:]  # vertical weights
@@ -175,29 +176,21 @@ class FoldingNet(nn.Module):
         wght_hori = (wght_hori > self.graph_r) * wght_hori
         wght_vert = (wght_vert > self.graph_r) * wght_vert
 
-        wght_lft = F.pad(wght_hori, pad=[1, 0, 0, 0])
-        wght_rgh = F.pad(wght_hori, pad=[0, 1, 0, 0])
-        wght_lft1 = torch.cat((torch.zeros([batch_size, 1, self.num_grid]).cuda(), wght_hori), 1)  # add left
-        wght_rgh1 = torch.cat((wght_hori, torch.zeros([batch_size, 1, self.num_grid]).cuda()), 1)  # add right
+        wght_lft = F.pad(wght_hori, pad=[0, 0, 1, 0])
+        wght_rgh = F.pad(wght_hori, pad=[0, 0, 0, 1])
         wght_top = F.pad(wght_vert, pad=[1, 0])
         wght_bot = F.pad(wght_vert, pad=[0, 1])
-        wght_top1 = torch.cat((torch.zeros([batch_size, self.num_grid, 1]).cuda(), wght_vert), 2)  # add top
-        wght_bot1 = torch.cat((wght_vert, torch.zeros([batch_size, self.num_grid, 1]).cuda()), 2)  # add bottom
-        assert torch.all(wght_lft1 == wght_lft)
-        assert torch.all(wght_rgh1 == wght_rgh)
-        assert torch.all(wght_top1 == wght_top)
-        assert torch.all(wght_bot1 == wght_bot)
+
 
         D = torch.stack((wght_lft, wght_rgh, wght_top, wght_bot), dim=1)
         D = torch.sum(D, dim=1).unsqueeze(1).expand(-1, 3, -1, -1)
         wght_hori = wght_hori.unsqueeze(1).expand(-1, 3, -1, -1)
         wght_vert = wght_vert.unsqueeze(1).expand(-1, 3, -1, -1)
-        pc_filt = F.pad((pc_exp[:, :, :-1, :] * wght_hori), [1, 0, 0, 0])
-        pc_filt += F.pad((pc_exp[:, :, :-1, :] * wght_hori), [0, 1, 0, 0])
-        pc_filt += F.pad((pc_exp[:, :, :-1, :] * wght_vert), [1, 0])
-        pc_filt += F.pad((pc_exp[:, :, :-1, :] * wght_hori), [1, 0])
-
-        pc_filt = (1 - self.graph_lam * D) * pc_exp + self.graph_lam * pc_filt
+        pc_filt1 = F.pad((pc_exp[:, :, :-1, :] * wght_hori), [0, 0, 1, 0])
+        pc_filt1 += F.pad((pc_exp[:, :, 1:, :] * wght_hori), [0, 0, 0, 1])
+        pc_filt1 += F.pad((pc_exp[:, :, :, :-1] * wght_vert), [1, 0])
+        pc_filt1 += F.pad((pc_exp[:, :, :, 1:] * wght_vert), [0, 1])
+        pc_filt = (1 - self.graph_lam * D) * pc_exp + self.graph_lam * pc_filt1
         pc_filt = pc_filt.view(batch_size, 3, -1)
         return pc_filt
 
