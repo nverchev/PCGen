@@ -57,12 +57,12 @@ class PCGen(nn.Module):
         return x
 
     def graph_filtering(self, x):
-        dist, neighbours = get_neighbours(x, k=8, indices=None)
-        dist = dist[:, :, 1:]  # dist[:, :,  0] == 0
-        neighbours = neighbours[:, :, :, 1:]
-        sigma2 = torch.sqrt(dist.mean(-1, keepdims=True))
-        weights = torch.softmax(-dist / sigma2, dim=-1)
-        weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours
+        dist, neighbours = get_neighbours(x, k=4, indices=None)
+        dist1 = dist[..., 1:]  # dist[:, :,  0] == 0
+        neighbours1 = neighbours[..., 1:]
+        sigma2 = torch.sqrt(dist1.mean(-1, keepdims=True))
+        weights = torch.softmax(-dist1 / sigma2, dim=-1)
+        weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours1
         x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
         return x
 
@@ -212,7 +212,7 @@ class TearingNet(FoldingNet):
         grid = grid.unsqueeze(0).repeat(batch_size, 1, 1)
         x = super().forward(z, grid)
         grid_exp = grid.view(batch_size, 2, self.num_grid, self.num_grid)
-        x_exp = x.transpose(2, 1).view(-1, 3, self.num_grid, self.num_grid)
+        x_exp = x.view(-1, 3, self.num_grid, self.num_grid)
         z_exp = z.view(-1, self.z_dim, 1, 1).expand(-1, -1, self.num_grid, self.num_grid)
         in1 = torch.cat((grid_exp, x_exp, z_exp), 1).contiguous()
         # Compute the torn 2D grid
