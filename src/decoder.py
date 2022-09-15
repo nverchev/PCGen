@@ -30,7 +30,7 @@ class PCGen(nn.Module):
 
     def __init__(self, z_dim, m, gf=True):
         super().__init__()
-        self.h_dim = [256, z_dim, 512, 256, 128, 64]
+        self.h_dim = [256, z_dim, 512, 512, 512, 64]
         self.m = 2048
         self.m_training = m
         self.gf = gf
@@ -47,7 +47,7 @@ class PCGen(nn.Module):
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
-        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m, device=device)
+        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m_training, device=device)
         x = self.map_samples1(x)
         x = self.map_samples2(x)
         x = z.unsqueeze(2) * x
@@ -63,9 +63,8 @@ class PCGen(nn.Module):
         sigma2 = torch.sqrt(dist1.mean(-1, keepdims=True))
         weights = torch.softmax(-dist1 / sigma2, dim=-1)
         weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours1
-        x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
+        x = 2 * x - 1 * weighted_neighbours.sum(-1)
         return x
-
 
     @property
     def m(self):
