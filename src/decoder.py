@@ -47,7 +47,7 @@ class PCGen(nn.Module):
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
-        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m_training, device=device)
+        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m, device=device)
         x = self.map_samples1(x)
         x = self.map_samples2(x)
         x = z.unsqueeze(2) * x
