@@ -38,7 +38,7 @@ def jitter(cloud, sigma=0.01, clip=0.02):
     return new_cloud
 
 
-class CoinDataset(Dataset):
+class PiercedCoinsDataset(Dataset):
     def __init__(self, half_thickness=0.1, n_points=2048, k=20, **other_settings):
         self.half_thickness = half_thickness
         self.width = 2 * self.half_thickness
@@ -202,8 +202,8 @@ class ShapeNetDataset:
 
 def get_dataset(dataset_name, batch_size, final, **dataset_settings):
     pin_memory = torch.cuda.is_available()
-    if dataset_name == 'coin':
-        dataset = CoinDataset(**dataset_settings)
+    if dataset_name == 'coins':
+        dataset = PiercedCoinsDataset(**dataset_settings)
         loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, pin_memory=pin_memory)
         return loader, loader, loader
     if dataset_name == 'modelnet40':

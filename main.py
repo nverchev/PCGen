@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--dict_size', type=int, default=16, help='dictionary size for vector quantisation')
     parser.add_argument('--embed_dim', type=int, default=4, help='dim of the vector for vector quantisation')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
-    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet', 'coin'])
+    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet', 'coins'])
     parser.add_argument('--num_points', type=int, default=2048,
                         help='num of points of the training dataset')
     parser.add_argument('--batch_size', type=int, default=16)
