@@ -8,8 +8,55 @@ from sklearn import svm, metrics
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
+from collections import UserDict
+
 from src.losses import get_vae_loss
 from src.plot_PC import pc_show
+
+
+# Apply recursively lists or dictionaries
+def apply(obj, check, f):  # changes device in dictionary and lists
+    if isinstance(obj, list):
+        obj = [apply(item, check, f) for item in obj]
+    elif isinstance(obj, dict):
+        obj = {k: apply(v, check, f) for k, v in obj.items()}
+    elif check(obj):
+        return f(obj)
+    else:
+        raise ValueError(f' Cannot apply {f} on Datatype {type(obj)}')
+    return obj
+
+
+# Dict for list of (list of) Tensor
+class TorchDictList(UserDict):
+
+    def __getitem__(self, key_or_index):
+        if isinstance(key_or_index, int):
+            return self._index_dict_list(key_or_index)
+        return super().__getitem__(key_or_index)
+
+    # Indexes a list (inside of a list) inside of a dictionary
+    def _index_dict_list(self, ind):
+        out_dict = {}
+        for k, v in self.items():
+            if not v or isinstance(v[0], list):
+                new_v = [elem[ind].unsqueeze(0) for elem in v]
+            else:
+                new_v = v[ind].unsqueeze(0)
+            out_dict[k] = new_v
+        return out_dict
+
+    # Separates batch into list and appends to (creates) structure (dict of lists, dict of lists of lists)
+    def extend_dict(self, new_dict):
+        for key, value in new_dict.items():
+            if isinstance(value, list):
+                for elem, new_elem in zip(super().setdefault(key, [[]] * len(value)), value):
+                    assert torch.is_tensor(new_elem)
+                    elem.extend(new_elem)
+            else:
+                assert torch.is_tensor(value)
+                super().setdefault(key, []).extend(value)
+
 
 '''
 This abstract class manages training and general utilities.
@@ -58,12 +105,11 @@ class Trainer(metaclass=ABCMeta):
         self.val_loader = val_loader
         self.test_loader = test_loader
         self.train_losses, self.val_losses, self.test_losses = {}, {}, {}
-        self.test_targets, self.test_outputs = [], {}
         self.converge = 1  # if 0 kills session
         self.minio = minioClient
         self.models_path = models_path
-        self.minio_path = staticmethod(lambda path: path[len(models_path)+1:]).__func__  # removes model path
-        self.test_targets, self.test_outputs = [], {}  # stored in RAM
+        self.minio_path = staticmethod(lambda path: path[len(models_path) + 1:]).__func__  # removes model path
+        self.test_targets, self.test_outputs = [], TorchDictList()  # stored in RAM
         settings_path = self.paths()['settings']
         json.dump(self.settings, open(settings_path, 'w'), default=vars, indent=4)
 
@@ -142,7 +188,7 @@ class Trainer(metaclass=ABCMeta):
         else:
             raise ValueError('partition options are: "train", "val", "test" ')
         if save_outputs:
-            self.test_targets, self.test_outputs = [], {}
+            self.test_targets, self.test_outputs = [], TorchDictList()
 
         epoch_loss = {}
         num_batch = len(loader)
@@ -150,7 +196,7 @@ class Trainer(metaclass=ABCMeta):
         for batch_idx, (inputs, targets) in iterable:
             if self.converge == 0:
                 return
-            inputs, targets = self.to_recursive([inputs, targets], self.device)
+            inputs, targets = self.recursive_to([inputs, targets], self.device)
             inputs_aux = self.helper_inputs(inputs, targets)
             outputs = self.model(**inputs_aux)
             batch_loss = self.loss(outputs, inputs, targets)
@@ -165,9 +211,8 @@ class Trainer(metaclass=ABCMeta):
                 self.optimizer.zero_grad()
             if save_outputs and \
                     self.max_output > (batch_idx + 1) * loader.batch_size:
-                self.extend_dict_list(
-                    self.test_outputs, self.to_recursive(outputs, 'detach_cpu'))
-                self.test_targets.extend(self.to_recursive(targets, 'detach_cpu'))
+                self.test_outputs.extend_dict(self.recursive_to(outputs, 'detach_cpu'))
+                self.test_targets.extend(self.recursive_to(targets, 'detach_cpu'))
             if not self.quiet_mode and partition == 'train':
                 if batch_idx % (num_batch // 10 or 1) == 0:
                     iterable.set_postfix({'Seen': batch_idx * loader.batch_size,
@@ -207,41 +252,10 @@ class Trainer(metaclass=ABCMeta):
 
     # Change device recursively to tensors inside a list or a dictionary
     @staticmethod
-    def to_recursive(obj, device):  # changes device in dictionary and lists
-        if isinstance(obj, list):
-            obj = [Trainer.to_recursive(item, device) for item in obj]
-        elif isinstance(obj, dict):
-            obj = {k: Trainer.to_recursive(v, device) for k, v in obj.items()}
-        else:
-            try:
-                obj = obj.detach().cpu() if device == 'detach_cpu' else obj.to(device)
-            except AttributeError:
-                raise ValueError(f'Datatype {type(obj)} does not contain tensors')
-        return obj
-
-    # Separates batch into list and appends to (creates) structure (dict of lists, dict of lists of lists)
-    @staticmethod  # extends lists in dictionaries
-    def extend_dict_list(old_dict, new_dict):
-        for key, value in new_dict.items():
-            if isinstance(value, list):
-                for elem, new_elem in zip(old_dict.setdefault(key, [[]] * len(value)), value):
-                    assert torch.is_tensor(new_elem)
-                    elem.extend(new_elem)
-            else:
-                assert torch.is_tensor(value)
-                old_dict.setdefault(key, []).extend(value)
-
-    # indexes a list (inside of a list) inside of a dictionary
-    @staticmethod
-    def index_dict_list(dict_list, ind):
-        list_dict = {}
-        for k, v in dict_list.items():
-            if not v or isinstance(v[0], list):
-                new_v = [elem[ind].unsqueeze(0) for elem in v]
-            else:
-                new_v = v[ind].unsqueeze(0)
-            list_dict[k] = new_v
-        return list_dict
+    def recursive_to(obj, device):  # changes device in dictionary and lists
+        if device == 'detach_cpu':
+            return apply(obj, check=torch.is_tensor, f=lambda x: x.detach().cpu())
+        return apply(obj, check=torch.is_tensor, f=lambda x: x.to(device))
 
     def save(self, new_exp_name=None):
         self.model.eval()
@@ -374,6 +388,7 @@ class VAETrainer(Trainer):
 
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)
+
 
 def get_vae_trainer(model, exp_name, block_args):
     return VAETrainer(model, exp_name, block_args)
