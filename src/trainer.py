@@ -14,14 +14,14 @@ from src.losses import get_vae_loss
 from src.plot_PC import pc_show
 
 
-# Apply recursively lists or dictionaries
+# Apply recursively lists or dictionaries until check
 def apply(obj, check, f):  # changes device in dictionary and lists
-    if isinstance(obj, list):
+    if check(obj):
+        return f(obj)
+    elif isinstance(obj, list):
         obj = [apply(item, check, f) for item in obj]
     elif isinstance(obj, dict):
         obj = {k: apply(v, check, f) for k, v in obj.items()}
-    elif check(obj):
-        return f(obj)
     else:
         raise ValueError(f' Cannot apply {f} on Datatype {type(obj)}')
     return obj
