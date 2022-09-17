@@ -109,7 +109,7 @@ class Trainer(metaclass=ABCMeta):
         self.minio = minioClient
         self.models_path = models_path
         self.minio_path = staticmethod(lambda path: path[len(models_path) + 1:]).__func__  # removes model path
-        self.test_targets, self.test_outputs = [], TorchDictList()  # stored in RAM
+        self.test_targets, self.test_outputs = None, None
         settings_path = self.paths()['settings']
         json.dump(self.settings, open(settings_path, 'w'), default=vars, indent=4)
 
@@ -334,11 +334,10 @@ class VAETrainer(Trainer):
     saved_accuracies = {}
 
     def __init__(self, model, exp_name, block_args):
+        super().__init__(model, exp_name, **block_args)
         self.acc = None
         self.cf = None
         self._loss = get_vae_loss(block_args)
-        super().__init__(model, exp_name, **block_args)
-
         return
 
     def test(self, partition='val', m=2048):
