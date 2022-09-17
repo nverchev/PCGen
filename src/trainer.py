@@ -342,8 +342,10 @@ class VAETrainer(Trainer):
         return
 
     def test(self, partition='val', m=2048):
+        m_old = self.model.decode.m
         self.model.decode.m = m
         super().test(partition=partition)
+        self.model.decode.m = m_old
         return
 
     def update_m_training(self, m):
