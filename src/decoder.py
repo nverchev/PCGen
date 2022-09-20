@@ -30,18 +30,18 @@ class PCGen(nn.Module):
 
     def __init__(self, z_dim, m, gf=True):
         super().__init__()
-        self.h_dim = [256, z_dim, 512, 512, 512, 64]
+        self.h_dim = [256, z_dim, 512, 256, 128, 64]
         self.m = 2048
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
-        self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0], batch_norm=False)
-        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Hardtanh())
+        self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Hardtanh(inplace=True))
         modules = []
         for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-            modules.append(PointsConvBlock(in_dim, out_dim, batch_norm=False))
+            modules.append(PointsConvBlock(in_dim, out_dim, batch_norm=False, act=nn.ReLU(inplace=True)))
 
-        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, act=None, batch_norm=False))
+        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
         self.points_convs = nn.Sequential(*modules)
 
     def forward(self, z, s=None):
@@ -63,7 +63,7 @@ class PCGen(nn.Module):
         sigma2 = torch.sqrt(dist1.mean(-1, keepdims=True))
         weights = torch.softmax(-dist1 / sigma2, dim=-1)
         weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours1
-        x = 2 * x - 1 * weighted_neighbours.sum(-1)
+        x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
         return x
 
     @property
@@ -78,37 +78,6 @@ class PCGen(nn.Module):
         self._m = m
 
 
-#
-# class Gen_ADAIN(nn.Module):
-#
-#     def __init__(self, z_dim, m):
-#         super().__init__()
-#         self.h_dim = [z_dim] * 5
-#         self.m = 2048
-#         self.m_training = m
-#         self.sample_dim = z_dim
-#         map_samples = []
-#         map_latents = []
-#         for i in range(len(self.h_dim) - 1):
-#             map_samples.append((self.h_dim[i], self.h_dim[i + 1]))
-#             map_latents.append(PointsConvBlock(self.h_dim[i], 2 * self.h_dim[i + 1]))
-#         self.map_samples = nn.ModuleList(map_samples)
-#         self.map_latents = nn.ModuleList(map_latents)
-#         self.final = nn.Conv1d(self.h_dim[-1], OUT_CHAN, kernel_size=1)
-#
-#     def forward(self, z, s=None):
-#         batch = z.size()[0]
-#         device = z.device
-#         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m).to(device)
-#         z = z.unsqueeze(2)
-#         for map_sample, map_latent in zip(self.map_samples, self.map_latents):
-#             x = map_sample(x)
-#             y_mean, y_bias = map_latent(z).chunk(2, 1)
-#             x = y_mean * (x - x.mean(2, keepdim=True) / x.var(2, keepdim=True)) + y_bias
-#         x = self.final(x)
-#         return x.transpose(2, 1)
-
-
 class FoldingLayer(nn.Module):
     '''
     The folding operation of FoldingNet
@@ -118,7 +87,7 @@ class FoldingLayer(nn.Module):
         super(FoldingLayer, self).__init__()
         modules = [nn.Conv1d(in_channel, h_dim[0], kernel_size=1)]
         for in_dim, out_dim in zip(h_dim[0:-1], h_dim[1:]):
-            modules.extend([nn.ReLU(), nn.Conv1d(in_dim, out_dim, kernel_size=1)])
+            modules.extend([nn.ReLU(inplace=True), nn.Conv1d(in_dim, out_dim, kernel_size=1)])
         self.layers = nn.Sequential(*modules)
 
     def forward(self, grids, x):
@@ -195,13 +164,13 @@ class TearingNet(FoldingNet):
 
         modules = [nn.Conv2d(self.z_dim + 5, self.h_dim[4], kernel_size=1)]
         for in_dim, out_dim in zip(self.h_dim[4:6], self.h_dim[5:7]):
-            modules.append(nn.ReLU())
+            modules.append(nn.ReLU(inplace=True))
             modules.append(nn.Conv2d(in_dim, out_dim, kernel_size=1))
         self.tearing1 = nn.Sequential(*modules)
 
         modules = [nn.Conv2d(self.z_dim + 5 + self.h_dim[6], self.h_dim[7], kernel_size=1)]
         for in_dim, out_dim in zip(self.h_dim[7:9], self.h_dim[8:10]):
-            modules.append(nn.ReLU())
+            modules.append(nn.ReLU(inplace=True))
             modules.append(nn.Conv2d(in_dim, out_dim, kernel_size=1))
         self.tearing2 = nn.Sequential(*modules)
 
@@ -225,12 +194,10 @@ class TearingNet(FoldingNet):
             x, graph_wght = self.graph_filter(x, grid, batch_size)
         return x
 
-
 def get_decoder(decoder_name):
     decoder_dict = {
         # 'MLP': MLPDecoder,
         'PCGen': PCGen,
-        # 'AdaIN': Gen_ADAIN,
         'FoldingNet': FoldingNet,
         'TearingNet': TearingNet,
     }
