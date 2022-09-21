@@ -6,26 +6,6 @@ from src.modules import PointsConvBlock, LinearBlock, View
 from src.neighbour_op import get_neighbours
 OUT_CHAN = 3
 
-
-# class MLPDecoder(nn.Module):
-#
-#     def __init__(self, z_dim, m):
-#         super().__init__()
-#         self.hdim = [256, 256, 256, 256]
-#         modules = [nn.Linear(z_dim, self.h_dim[0])]
-#         for i in range(len(self.h_dim) - 1):
-#             modules.append(nn.ELU())
-#             modules.append(nn.Linear(self.h_dim[i], self.h_dim[i + 1]))
-#         modules.append(nn.ELU())
-#         modules.append(nn.Linear(self.h_dim[-1], OUT_CHAN * m))
-#         modules.append(View(-1, m, OUT_CHAN))
-#         self.mlp = nn.Sequential(*modules)
-#
-#     def forward(self, z):
-#         x = self.mlp(z)
-#         return x
-
-
 class PCGen(nn.Module):
 
     def __init__(self, z_dim, m, gf=True):
@@ -102,6 +82,7 @@ class FoldingNet(nn.Module):
         self.z_dim = z_dim
         self.h_dim = [512] * 4
         self.gf = gf
+        self.m = m
         self.num_grid = round(np.sqrt(m))
         self.m_grid = self.num_grid ** 2
         xx = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
@@ -159,9 +140,8 @@ class FoldingNet(nn.Module):
 
 class TearingNet(FoldingNet):
     def __init__(self, z_dim, m, gf):
-        super().__init__(z_dim, m, gf=False)
+        super().__init__(z_dim, m, gf=gf)
         self.h_dim.extend([512, 512, 64, 512, 512, 2])
-
         modules = [nn.Conv2d(self.z_dim + 5, self.h_dim[4], kernel_size=1)]
         for in_dim, out_dim in zip(self.h_dim[4:6], self.h_dim[5:7]):
             modules.append(nn.ReLU(inplace=True))
@@ -261,7 +241,6 @@ class AtlasNetv2(nn.Module):
 
 def get_decoder(decoder_name):
     decoder_dict = {
-        # 'MLP': MLPDecoder,
         'PCGen': PCGen,
         'FoldingNet': FoldingNet,
         'TearingNet': TearingNet,
