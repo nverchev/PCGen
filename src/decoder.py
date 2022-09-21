@@ -2,54 +2,28 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from src.modules import EdgeConvBlock, PointsConvBlock
+from src.modules import PointsConvBlock, LinearBlock
 from src.neighbour_op import graph_filtering
 
 OUT_CHAN = 3
 
 
-class PCGen(nn.Module):
+class FullyConnected(nn.Module):
 
-    def __init__(self, z_dim, m, gf=True):
+    def __init__(self, z_dim, m, gf):
         super().__init__()
-        self.h_dim = [256, z_dim, 512, 256, 128, 64]
-        self.m = 2048
-        self.m_training = m
+        self.z_dim = z_dim
+        self.h_dim = [256] * 2
         self.gf = gf
-        self.sample_dim = 16
-        self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False,
-                                            act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-            modules.append(PointsConvBlock(in_dim, out_dim, batch_norm=False, act=nn.ReLU(inplace=True)))
+        self.m = m
+        modules = [LinearBlock(z_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True)),
+                   LinearBlock(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.ReLU(inplace=True)),
+                   LinearBlock(self.h_dim[1], OUT_CHAN * m, batch_norm=False, act=None)]
+        self.mlp = nn.Sequential(*modules)
 
-        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.points_convs = nn.Sequential(*modules)
-
-    def forward(self, z, s=None):
-        batch = z.size()[0]
-        device = z.device
-        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m, device=device)
-        x = self.map_samples1(x)
-        x = self.map_samples2(x)
-        x = z.unsqueeze(2) * x
-        x = self.points_convs(x)
-        if self.gf:
-            x = graph_filtering(x)
-        return x
-
-    @property
-    def m(self):
-        if self.training:
-            return self.m_training
-        else:
-            return self._m
-
-    @m.setter
-    def m(self, m):
-        self._m = m
-
+    def forward(self, z):
+        x = self.mlp(z)
+        return x.view(-1, OUT_CHAN, self.m)
 
 class FoldingLayer(nn.Module):
     """
@@ -272,11 +246,53 @@ class AtlasNetv2(nn.Module):
         return x
 
 
+class PCGen(nn.Module):
+
+    def __init__(self, z_dim, m, gf=True):
+        super().__init__()
+        self.h_dim = [256, z_dim, 512, 256, 128, 64]
+        self.m = 2048
+        self.m_training = m
+        self.gf = gf
+        self.sample_dim = 16
+        self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False,
+                                            act=nn.Hardtanh(inplace=True))
+        modules = []
+        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+            modules.append(PointsConvBlock(in_dim, out_dim, batch_norm=False, act=nn.ReLU(inplace=True)))
+
+        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+        self.points_convs = nn.Sequential(*modules)
+
+    def forward(self, z, s=None):
+        batch = z.size()[0]
+        device = z.device
+        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m, device=device)
+        x = self.map_samples1(x)
+        x = self.map_samples2(x)
+        x = z.unsqueeze(2) * x
+        x = self.points_convs(x)
+        if self.gf:
+            x = graph_filtering(x)
+        return x
+
+    @property
+    def m(self):
+        if self.training:
+            return self.m_training
+        else:
+            return self._m
+
+    @m.setter
+    def m(self, m):
+        self._m = m
 def get_decoder(decoder_name):
     decoder_dict = {
-        'PCGen': PCGen,
+        'Full': FullyConnected,
         'FoldingNet': FoldingNet,
         'TearingNet': TearingNet,
         'AtlasNet': AtlasNetv2,
+        'PCGen': PCGen,
     }
     return decoder_dict[decoder_name]
