@@ -229,39 +229,6 @@ class AtlasNetv2(nn.Module):
         return torch.cat(outs, 2)
 
 
-# AtlasNet
-class MLPAdj(nn.Module):
-    def __init__(self, dim):
-        """Atlas decoder"""
-
-        super().__init__()
-        self.h_dim = [dim, dim // 2, dim // 4]
-
-        modules = [EdgeConvBlock(dim, self.h_dim[0], act=nn.ReLU(inplace=True))]
-        for in_dim, out_dim in zip(self.h_dim[0:-1], self.h_dim[1:]):
-            modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
-        self.layers = nn.Sequential(*modules)
-
-    def forward(self, x):
-        return self.layers(x)
-
-
-class PatchDeformationMLP(nn.Module):
-    """deformation of a 2D patch into a 3D surface"""
-
-    def __init__(self, patchDeformDim=3, h_dim=128):
-        super().__init__()
-        self.h_dim = h_dim
-        modules = [PointsConvBlock(2, self.h_dim, act=nn.ReLU(inplace=True)),
-                   PointsConvBlock(self.h_dim, self.h_dim, act=nn.ReLU(inplace=True)),
-                   PointsConvBlock(self.h_dim, patchDeformDim, batch_norm=False, act=nn.Tanh())]
-        self.layers = nn.Sequential(*modules)
-
-    def forward(self, x):
-        return self.layers(x)
-
-
 class AtlasNetv2(nn.Module):
     """Atlas net PatchDeformMLPAdj"""
 
