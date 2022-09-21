@@ -1,9 +1,5 @@
-import torch
-import pykeops
 from deepspeed.profiling.flops_profiler import get_model_profile
 from main import main
-
-pykeops.set_verbose(False)
 
 def profile_model():
     model, dummy_input = main(profiler=True)

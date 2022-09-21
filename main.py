@@ -129,6 +129,7 @@ def main(profiler=False):
         dummy_input = [torch.ones(batch_size, num_points, 3, device=device),
                 torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
         return model.to(device), dummy_input
+
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     trainer_settings = dict(
