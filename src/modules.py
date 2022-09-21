@@ -40,16 +40,17 @@ class LinearBlock(nn.Module):
 
     def init(self, act):
         if act is None:
-            nn.init.xavier_uniform_(self.dense.weight, gain=1)
+            pass
+            # nn.init.xavier_uniform_(self.dense.weight, gain=1)
         elif act._get_name() == 'ReLU':
             # nn.init.kaiming_uniform_(self.dense.weight, nonlinearity='relu')
-            pass  # default is better than theoretically approved one
+            pass  # default works better than theoretically approved one
         elif act._get_name() == 'LeakyReLU':
             # nn.init.kaiming_uniform_(self.dense.weight, a=negative_slope)
-            pass  # default is better than theoretically approved one
+            pass  # default works better than theoretically approved one
         elif act._get_name() == 'Hardtanh':
             # nn.init.xavier_normal_(self.dense.weight, gain=nn.init.calculate_gain('tanh'))
-            pass  # default is better than theoretically approved one
+            pass  # default works better than theoretically approved one
 
     def get_dense_layer(self):
         return nn.Linear(self.in_dim, self.out_dim, bias=self.bias)

@@ -181,7 +181,7 @@ class AtlasNetv2(nn.Module):
         super().__init__()
         self.z_dim = z_dim
         self.m = m
-        self.npatch = 8
+        self.npatch = 16
         self.patchDeformDim = 10
         self.h_dim = 128
         self.patchDeformation = nn.ModuleList(
@@ -203,47 +203,49 @@ class AtlasNetv2(nn.Module):
         return torch.cat(outs, 2)
 
 
-class AtlasNetv2(nn.Module):
-    """Atlas net PatchDeformMLPAdj"""
+# Self standing implementation with grouped convolutions. Inference time is halved by 2 but efficient backward pass has
+# not yet been implemented by in pytorch.
 
-    def __init__(self, z_dim, m, gf):
-        super().__init__()
-        self.z_dim = z_dim
-        self.m = m
-        self.gf = gf
-        self.num_patch = 8
-        self.m_patch = self.m // self.num_patch
-        self.deform_patch_dim = 10
-        self.h_dims = [128]
-
-        total_in = 2 * self.num_patch
-        dim = self.h_dims[0] * self.num_patch
-        total_out = self.deform_patch_dim * self.num_patch
-        modules = [PointsConvBlock(total_in, dim, act=nn.ReLU(inplace=True), groups=self.num_patch),
-                   PointsConvBlock(dim, dim, act=nn.ReLU(inplace=True), groups=self.num_patch),
-                   PointsConvBlock(dim, total_out, batch_norm=False, act=nn.Tanh(), groups=self.num_patch)]
-        self.patchDeformation = nn.Sequential(*modules)
-
-        dim = (self.deform_patch_dim + self.z_dim) * self.num_patch
-        self.dims = [dim, dim // 2, dim // 4]
-        modules = [PointsConvBlock(dim, dim, act=nn.ReLU(inplace=True), groups=self.num_patch)]
-        for in_dim, out_dim in zip(self.adj_dims[0:-1], self.dims[1:]):
-            modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(inplace=True), groups=self.num_patch))
-        modules.append(PointsConvBlock(self.dims[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh(), groups=self.num_patch))
-        self.mlp_adj = nn.Sequential(*modules)
-
-    def forward(self, z):
-        batch = z.size(0)
-        device = z.device
-        x = z.unsqueeze(2).expand(-1, -1, self.num_patch * self.m_patch)
-        x = x.view(-1, self.z_dim * self.num_patch, self.m_patch).contiguous()
-        rand_grid = torch.rand(batch, 2 * self.num_patch, self.m_patch, device=device)
-        deformed_grid = self.patchDeformation(rand_grid).view(-1, self.num_patch, self.deform_patch_dim, self.m_patch)
-        x = torch.cat([deformed_grid, x.unsqueeze(2)], dim=2).view(batch, -1, self.m_patch).contiguous()
-        x = self.mlp_adj(x).view(-1, OUT_CHAN, self.m)
-        if self.gf:
-            x = graph_filtering(x)
-        return x
+# class AtlasNetv2(nn.Module):
+#     """Atlas net PatchDeformMLPAdj"""
+#
+#     def __init__(self, z_dim, m, gf):
+#         super().__init__()
+#         self.z_dim = z_dim
+#         self.m = m
+#         self.gf = gf
+#         self.num_patch = 8
+#         self.m_patch = self.m // self.num_patch
+#         self.deform_patch_dim = 8
+#         self.h_dim = [128]
+#
+#         total_in = 2 * self.num_patch
+#         dim = self.h_dim[0] * self.num_patch
+#         total_out = self.deform_patch_dim * self.num_patch
+#         modules = [PointsConvBlock(total_in, dim, act=nn.ReLU(inplace=True), groups=self.num_patch),
+#                    PointsConvBlock(dim, dim, act=nn.ReLU(inplace=True), groups=self.num_patch),
+#                    PointsConvBlock(dim, total_out, batch_norm=False, act=nn.Tanh(), groups=self.num_patch)]
+#         self.patchDeformation = nn.Sequential(*modules)
+#
+#         dim = (self.deform_patch_dim + self.z_dim) * self.num_patch
+#         dims = [dim, dim // 2, dim // 4]
+#         modules = [PointsConvBlock(dim, dim, act=nn.ReLU(inplace=True), groups=self.num_patch)]
+#         for in_dim, out_dim in zip(dims[0:-1], dims[1:]):
+#             modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(inplace=True), groups=self.num_patch))
+#         modules.append(PointsConvBlock(dims[-1], OUT_CHAN * self.num_patch, batch_norm=False, act=nn.Tanh(), groups=self.num_patch))
+#         self.mlp_adj = nn.Sequential(*modules)
+#
+#     def forward(self, z):
+#         batch = z.size(0)
+#         device = z.device
+#         x = z.view(batch, 1, self.z_dim, 1).expand(-1, self.num_patch, -1, self.m_patch)
+#         rand_grid = torch.rand(batch, self.num_patch * 2, self.m_patch, device=device)
+#         deformed_grid = self.patchDeformation(rand_grid).view(-1, self.num_patch, self.deform_patch_dim, self.m_patch)
+#         x = torch.cat([deformed_grid, x], dim=2).contiguous().view(batch, -1, self.m_patch)
+#         x = self.mlp_adj(x).view(batch, OUT_CHAN, self.m)
+#         if self.gf:
+#             x = graph_filtering(x)
+#         return x
 
 
 class PCGen(nn.Module):
