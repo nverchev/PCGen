@@ -55,8 +55,7 @@ def parse_args():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
-
+def main(profiler=False):
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
@@ -119,11 +118,19 @@ if __name__ == '__main__':
                           dict_size=dict_size,
                           embed_dim=embed_dim
                           )
+    model = get_model(**model_settings)
+    if profiler:
+        if model_eval:
+            model.decode.m = m_training
+            model.eval()
+        else:
+            model.decode.m_training = m_training
 
+        dummy_input = [torch.ones(batch_size, num_points, 3, device=device),
+                torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
+        return model.to(device), dummy_input
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
-    model = get_model(**model_settings)
-
     trainer_settings = dict(
         opt_name=opt_name,
         optimizer=optimizer,
@@ -156,7 +163,7 @@ if __name__ == '__main__':
             exp_name_FoldingNet = os.path.join(dir_path, 'models', '_'.join(exp_name_split), 'model_epoch250.pt')
             assert os.path.exists(exp_name_FoldingNet), "No pretrained experiment in " + exp_name_FoldingNet
             state_dict = torch.load(exp_name_FoldingNet, map_location=device)
-            trainer.model.load_state_dict(state_dict,  strict=False)
+            trainer.model.load_state_dict(state_dict, strict=False)
 
         while training_epochs > trainer.epoch:
             if m_training == 0:
@@ -167,3 +174,7 @@ if __name__ == '__main__':
             trainer.test(partition='test' if final else 'val')
 
     trainer.test(partition='test' if final else 'val')
+
+
+if __name__ == '__main__':
+    main()
