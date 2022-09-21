@@ -1,6 +1,7 @@
 from deepspeed.profiling.flops_profiler import get_model_profile
 from main import main
 
+
 def profile_model():
     model, dummy_input = main(profiler=True)
     flops, macs, params = get_model_profile(model=model,
@@ -14,8 +15,6 @@ def profile_model():
                                             output_file=None,
                                             ignore_modules=None)
 
+
 if __name__ == '__main__':
     profile_model()
-
-
-

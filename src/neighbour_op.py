@@ -1,5 +1,6 @@
 import torch
 
+
 def self_square_distance(t1):
     # dims order is different than square distance: [batch, features, points]
     t2 = t1.transpose(-1, -2)
@@ -8,6 +9,7 @@ def self_square_distance(t1):
     dist += square_component
     dist += square_component.transpose(-1, -2)
     return dist
+
 
 # Not very efficient (not sure why)
 # def knn(x, k):
@@ -21,6 +23,7 @@ def knn(x, k):
     indices = d_ij.topk(k=k, largest=False, dim=-1)
     return indices
 
+
 def get_neighbours(x, k, indices):
     batch, n_feat, n_points = x.size()
     if indices is not None:
@@ -28,9 +31,10 @@ def get_neighbours(x, k, indices):
         dist = None
     else:
         dist, indices = knn(x, k=k)  # (batch_size, num_points, k)
-    indices = indices.contiguous().view(batch, 1, k * n_points).expand(-1,  n_feat, -1)
+    indices = indices.contiguous().view(batch, 1, k * n_points).expand(-1, n_feat, -1)
     neighbours = torch.gather(x, 2, indices).view(batch, n_feat, n_points, k)
     return dist, neighbours
+
 
 def get_local_covariance(x, k=16, indices=None):
     neighbours = get_neighbours(x, k, indices)[1]
@@ -38,6 +42,7 @@ def get_local_covariance(x, k=16, indices=None):
     covariances = torch.matmul(neighbours.transpose(1, 2), neighbours.permute(0, 2, 3, 1))
     x = torch.cat([x, covariances.flatten(start_dim=2).transpose(1, 2)], dim=1).contiguous()
     return x
+
 
 def graph_max_pooling(x, k=16, indices=None):
     neighbours = get_neighbours(x, k, indices)[1]
@@ -52,3 +57,13 @@ def get_graph_features(x, k=20, indices=None):
     # (batch_size, 2 * num_dims, num_points, k)
     return feature
 
+
+def graph_filtering(x):
+    dist, neighbours = get_neighbours(x, k=4, indices=None)
+    dist1 = dist[..., 1:]  # dist[:, :,  0] == 0
+    neighbours1 = neighbours[..., 1:]
+    sigma2 = torch.sqrt(dist1.mean(-1, keepdims=True))
+    weights = torch.softmax(-dist1 / sigma2, dim=-1)
+    weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours1
+    x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
+    return x

@@ -24,17 +24,18 @@ class MaxChannel(nn.Module):
 # Input (Batch, Features)
 class LinearBlock(nn.Module):
 
-    def __init__(self, in_dim, out_dim, act=act, batch_norm=True):
+    def __init__(self, in_dim, out_dim, act=act, batch_norm=True, groups=1):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
-        self.act = act
+        self.groups = groups
         self.batch_norm = batch_norm
         self.bias = True
         if batch_norm:
             self.bn = self.get_bn_layer()
             self.bias = False
         self.dense = self.get_dense_layer()
+        self.act = act
         self.init(act)
 
     def init(self, act):
@@ -65,13 +66,13 @@ class LinearBlock(nn.Module):
 class PointsConvBlock(LinearBlock):
 
     def get_dense_layer(self):
-        return nn.Conv1d(self.in_dim, self.out_dim, kernel_size=1, bias=self.bias)
+        return nn.Conv1d(self.in_dim, self.out_dim, kernel_size=1, bias=self.bias, groups=self.groups)
 
 
 class EdgeConvBlock(LinearBlock):
 
     def get_dense_layer(self):
-        return nn.Conv2d(self.in_dim, self.out_dim, kernel_size=1, bias=self.bias)
+        return nn.Conv2d(self.in_dim, self.out_dim, kernel_size=1, bias=self.bias, groups=self.groups)
 
     def get_bn_layer(self):
         return nn.BatchNorm2d(self.out_dim)

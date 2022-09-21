@@ -2,9 +2,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from src.modules import PointsConvBlock, LinearBlock, View
-from src.neighbour_op import get_neighbours
+from src.modules import EdgeConvBlock, PointsConvBlock
+from src.neighbour_op import graph_filtering
+
 OUT_CHAN = 3
+
 
 class PCGen(nn.Module):
 
@@ -16,7 +18,8 @@ class PCGen(nn.Module):
         self.gf = gf
         self.sample_dim = 16
         self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Hardtanh(inplace=True))
+        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False,
+                                            act=nn.Hardtanh(inplace=True))
         modules = []
         for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
             modules.append(PointsConvBlock(in_dim, out_dim, batch_norm=False, act=nn.ReLU(inplace=True)))
@@ -33,17 +36,7 @@ class PCGen(nn.Module):
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
         if self.gf:
-            x = self.graph_filtering(x)
-        return x
-
-    def graph_filtering(self, x):
-        dist, neighbours = get_neighbours(x, k=4, indices=None)
-        dist1 = dist[..., 1:]  # dist[:, :,  0] == 0
-        neighbours1 = neighbours[..., 1:]
-        sigma2 = torch.sqrt(dist1.mean(-1, keepdims=True))
-        weights = torch.softmax(-dist1 / sigma2, dim=-1)
-        weighted_neighbours = weights.unsqueeze(1).expand(-1,  3, -1, -1) * neighbours1
-        x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
+            x = graph_filtering(x)
         return x
 
     @property
@@ -59,9 +52,9 @@ class PCGen(nn.Module):
 
 
 class FoldingLayer(nn.Module):
-    '''
+    """
     The folding operation of FoldingNet
-    '''
+    """
 
     def __init__(self, in_channel: int, h_dim: list):
         super(FoldingLayer, self).__init__()
@@ -112,28 +105,27 @@ class FoldingNet(nn.Module):
         graph_feature = torch.cat((grid_exp, pc_exp), 1).contiguous()
 
         # Compute the graph weights
-        wght_hori = graph_feature[:, :, :-1, :] - graph_feature[:, :, 1:, :]  # horizontal weights
-        wght_vert = graph_feature[:, :, :, :-1] - graph_feature[:, :, :, 1:]  # vertical weights
-        wght_hori = torch.exp(-torch.sum(wght_hori ** 2, dim=1) / self.graph_eps_sqr)  # Gaussian weight
-        wght_vert = torch.exp(-torch.sum(wght_vert ** 2, dim=1) / self.graph_eps_sqr)
-        wght_hori = (wght_hori > self.graph_r) * wght_hori
-        wght_vert = (wght_vert > self.graph_r) * wght_vert
+        delta_x = graph_feature[:, :, :-1, :] - graph_feature[:, :, 1:, :]  # horizontal weights
+        delta_y = graph_feature[:, :, :, :-1] - graph_feature[:, :, :, 1:]  # vertical weights
+        delta_x = torch.exp(-torch.sum(delta_x ** 2, dim=1) / self.graph_eps_sqr)  # Gaussian weight
+        delta_y = torch.exp(-torch.sum(delta_y ** 2, dim=1) / self.graph_eps_sqr)
+        delta_x = (delta_x > self.graph_r) * delta_x
+        delta_y = (delta_y > self.graph_r) * delta_y
 
-        wght_lft = F.pad(wght_hori, pad=[0, 0, 1, 0])
-        wght_rgh = F.pad(wght_hori, pad=[0, 0, 0, 1])
-        wght_top = F.pad(wght_vert, pad=[1, 0])
-        wght_bot = F.pad(wght_vert, pad=[0, 1])
+        delta_x_left = F.pad(delta_x, pad=[0, 0, 1, 0])
+        delta_x_right = F.pad(delta_x, pad=[0, 0, 0, 1])
+        delta_y_top = F.pad(delta_y, pad=[1, 0])
+        delta_y_bottom = F.pad(delta_y, pad=[0, 1])
 
-
-        D = torch.stack((wght_lft, wght_rgh, wght_top, wght_bot), dim=1)
-        D = torch.sum(D, dim=1).unsqueeze(1).expand(-1, 3, -1, -1)
-        wght_hori = wght_hori.unsqueeze(1).expand(-1, 3, -1, -1)
-        wght_vert = wght_vert.unsqueeze(1).expand(-1, 3, -1, -1)
-        pc_filt1 = F.pad((pc_exp[:, :, :-1, :] * wght_hori), [0, 0, 1, 0])
-        pc_filt1 += F.pad((pc_exp[:, :, 1:, :] * wght_hori), [0, 0, 0, 1])
-        pc_filt1 += F.pad((pc_exp[:, :, :, :-1] * wght_vert), [1, 0])
-        pc_filt1 += F.pad((pc_exp[:, :, :, 1:] * wght_vert), [0, 1])
-        pc_filt = (1 - self.graph_lam * D) * pc_exp + self.graph_lam * pc_filt1
+        delta = torch.stack((delta_x_left, delta_x_right, delta_y_top, delta_y_bottom), dim=1)
+        delta = torch.sum(delta, dim=1).unsqueeze(1).expand(-1, 3, -1, -1)
+        delta_x = delta_x.unsqueeze(1).expand(-1, 3, -1, -1)
+        delta_y = delta_y.unsqueeze(1).expand(-1, 3, -1, -1)
+        pc_filt1 = F.pad((pc_exp[:, :, :-1, :] * delta_x), [0, 0, 1, 0])
+        pc_filt1 += F.pad((pc_exp[:, :, 1:, :] * delta_x), [0, 0, 0, 1])
+        pc_filt1 += F.pad((pc_exp[:, :, :, :-1] * delta_y), [1, 0])
+        pc_filt1 += F.pad((pc_exp[:, :, :, 1:] * delta_y), [0, 1])
+        pc_filt = (1 - self.graph_lam * delta) * pc_exp + self.graph_lam * pc_filt1
         pc_filt = pc_filt.view(batch_size, 3, -1)
         return pc_filt
 
@@ -171,8 +163,9 @@ class TearingNet(FoldingNet):
         grid = grid + out2
         x = super().forward(z, grid)
         if self.gf:
-            x, graph_wght = self.graph_filter(x, grid, batch_size)
+            x = self.graph_filter(x, grid, batch_size)
         return x
+
 
 # AtlasNet
 class MLPAdj(nn.Module):
@@ -182,7 +175,7 @@ class MLPAdj(nn.Module):
         super().__init__()
         self.h_dim = [dim, dim // 2, dim // 4]
 
-        modules = [PointsConvBlock(self.z_dim, self.h_dim[0], act=nn.ReLU(inplace=True))]
+        modules = [PointsConvBlock(dim, self.h_dim[0], act=nn.ReLU(inplace=True))]
         for in_dim, out_dim in zip(self.h_dim[0:-1], self.h_dim[1:]):
             modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(inplace=True)))
         modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
@@ -196,7 +189,6 @@ class PatchDeformationMLP(nn.Module):
     """deformation of a 2D patch into a 3D surface"""
 
     def __init__(self, patchDeformDim=3, h_dim=128):
-
         super().__init__()
         self.h_dim = h_dim
         modules = [PointsConvBlock(2, self.h_dim, act=nn.ReLU(inplace=True)),
@@ -206,7 +198,6 @@ class PatchDeformationMLP(nn.Module):
 
     def forward(self, x):
         return self.layers(x)
-
 
 
 class AtlasNetv2(nn.Module):
@@ -230,13 +221,88 @@ class AtlasNetv2(nn.Module):
         for i in range(0, self.npatch):
             m_patch = self.m // self.npatch
             rand_grid = torch.rand(batch, 2, m_patch, device=device)
-            rand_grid = F.pad(rand_grid, [0, self.patchDim - 2, 0, 0])
             rand_grid = self.patchDeformation[i](rand_grid)
             y = x.unsqueeze(2).expand(-1, -1, m_patch).contiguous()
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
 
         return torch.cat(outs, 2)
+
+
+# AtlasNet
+class MLPAdj(nn.Module):
+    def __init__(self, dim):
+        """Atlas decoder"""
+
+        super().__init__()
+        self.h_dim = [dim, dim // 2, dim // 4]
+
+        modules = [EdgeConvBlock(dim, self.h_dim[0], act=nn.ReLU(inplace=True))]
+        for in_dim, out_dim in zip(self.h_dim[0:-1], self.h_dim[1:]):
+            modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
+        self.layers = nn.Sequential(*modules)
+
+    def forward(self, x):
+        return self.layers(x)
+
+
+class PatchDeformationMLP(nn.Module):
+    """deformation of a 2D patch into a 3D surface"""
+
+    def __init__(self, patchDeformDim=3, h_dim=128):
+        super().__init__()
+        self.h_dim = h_dim
+        modules = [PointsConvBlock(2, self.h_dim, act=nn.ReLU(inplace=True)),
+                   PointsConvBlock(self.h_dim, self.h_dim, act=nn.ReLU(inplace=True)),
+                   PointsConvBlock(self.h_dim, patchDeformDim, batch_norm=False, act=nn.Tanh())]
+        self.layers = nn.Sequential(*modules)
+
+    def forward(self, x):
+        return self.layers(x)
+
+
+class AtlasNetv2(nn.Module):
+    """Atlas net PatchDeformMLPAdj"""
+
+    def __init__(self, z_dim, m, gf):
+        super().__init__()
+        self.z_dim = z_dim
+        self.m = m
+        self.gf = gf
+        self.num_patch = 8
+        self.m_patch = self.m // self.num_patch
+        self.deform_patch_dim = 10
+        self.h_dims = [128]
+
+        total_in = 2 * self.num_patch
+        dim = self.h_dims[0] * self.num_patch
+        total_out = self.deform_patch_dim * self.num_patch
+        modules = [PointsConvBlock(total_in, dim, act=nn.ReLU(inplace=True), groups=self.num_patch),
+                   PointsConvBlock(dim, dim, act=nn.ReLU(inplace=True), groups=self.num_patch),
+                   PointsConvBlock(dim, total_out, batch_norm=False, act=nn.Tanh(), groups=self.num_patch)]
+        self.patchDeformation = nn.Sequential(*modules)
+
+        dim = (self.deform_patch_dim + self.z_dim) * self.num_patch
+        self.dims = [dim, dim // 2, dim // 4]
+        modules = [PointsConvBlock(dim, dim, act=nn.ReLU(inplace=True), groups=self.num_patch)]
+        for in_dim, out_dim in zip(self.adj_dims[0:-1], self.dims[1:]):
+            modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(inplace=True), groups=self.num_patch))
+        modules.append(PointsConvBlock(self.dims[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh(), groups=self.num_patch))
+        self.mlp_adj = nn.Sequential(*modules)
+
+    def forward(self, z):
+        batch = z.size(0)
+        device = z.device
+        x = z.unsqueeze(2).expand(-1, -1, self.num_patch * self.m_patch)
+        x = x.view(-1, self.z_dim * self.num_patch, self.m_patch).contiguous()
+        rand_grid = torch.rand(batch, 2 * self.num_patch, self.m_patch, device=device)
+        deformed_grid = self.patchDeformation(rand_grid).view(-1, self.num_patch, self.deform_patch_dim, self.m_patch)
+        x = torch.cat([deformed_grid, x.unsqueeze(2)], dim=2).view(batch, -1, self.m_patch).contiguous()
+        x = self.mlp_adj(x).view(-1, OUT_CHAN, self.m)
+        if self.gf:
+            x = graph_filtering(x)
+        return x
 
 
 def get_decoder(decoder_name):
