@@ -15,7 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Point Cloud Encoder - Generator')
 
     parser.add_argument('--encoder', type=str, default='DGCNN', choices=['LDGCNN', 'DGCNN', 'FoldingNet'])
-    parser.add_argument('--decoder', type=str, default='PCGen', choices=['MLP', 'PCGen', 'AdaIN', 'FoldingNet',
+    parser.add_argument('--decoder', type=str, default='PCGen', choices=['PCGen', 'AtlasNet', 'FoldingNet',
                                                                          'TearingNet'])
     parser.add_argument('--experiment', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
