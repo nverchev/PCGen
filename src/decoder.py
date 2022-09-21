@@ -194,11 +194,77 @@ class TearingNet(FoldingNet):
             x, graph_wght = self.graph_filter(x, grid, batch_size)
         return x
 
+# AtlasNet
+class MLPAdj(nn.Module):
+    def __init__(self, dim):
+        """Atlas decoder"""
+
+        super().__init__()
+        self.h_dim = [dim, dim // 2, dim // 4]
+
+        modules = [PointsConvBlock(self.z_dim, self.h_dim[0], act=nn.ReLU(inplace=True))]
+        for in_dim, out_dim in zip(self.h_dim[0:-1], self.h_dim[1:]):
+            modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
+        self.layers = nn.Sequential(*modules)
+
+    def forward(self, x):
+        return self.layers(x)
+
+
+class PatchDeformationMLP(nn.Module):
+    """deformation of a 2D patch into a 3D surface"""
+
+    def __init__(self, patchDeformDim=3, h_dim=128):
+
+        super().__init__()
+        self.h_dim = h_dim
+        modules = [PointsConvBlock(2, self.h_dim, act=nn.ReLU(inplace=True)),
+                   PointsConvBlock(self.h_dim, self.h_dim, act=nn.ReLU(inplace=True)),
+                   PointsConvBlock(self.h_dim, patchDeformDim, batch_norm=False, act=nn.Tanh())]
+        self.layers = nn.Sequential(*modules)
+
+    def forward(self, x):
+        return self.layers(x)
+
+
+
+class AtlasNetv2(nn.Module):
+    """Atlas net PatchDeformMLPAdj"""
+
+    def __init__(self, z_dim, m, gf):
+        super().__init__()
+        self.z_dim = z_dim
+        self.m = m
+        self.npatch = 8
+        self.patchDeformDim = 10
+        self.h_dim = 128
+        self.patchDeformation = nn.ModuleList(
+            PatchDeformationMLP(patchDeformDim=self.patchDeformDim, h_dim=self.h_dim) for _ in range(self.npatch))
+        self.decoder = nn.ModuleList([MLPAdj(dim=self.patchDeformDim + self.z_dim) for _ in range(self.npatch)])
+
+    def forward(self, x):
+        batch = x.size(0)
+        device = x.device
+        outs = []
+        for i in range(0, self.npatch):
+            m_patch = self.m // self.npatch
+            rand_grid = torch.rand(batch, 2, m_patch, device=device)
+            rand_grid = F.pad(rand_grid, [0, self.patchDim - 2, 0, 0])
+            rand_grid = self.patchDeformation[i](rand_grid)
+            y = x.unsqueeze(2).expand(-1, -1, m_patch).contiguous()
+            y = torch.cat((rand_grid, y), 1).contiguous()
+            outs.append(self.decoder[i](y))
+
+        return torch.cat(outs, 2)
+
+
 def get_decoder(decoder_name):
     decoder_dict = {
         # 'MLP': MLPDecoder,
         'PCGen': PCGen,
         'FoldingNet': FoldingNet,
         'TearingNet': TearingNet,
+        'AtlasNet': AtlasNetv2,
     }
     return decoder_dict[decoder_name]
