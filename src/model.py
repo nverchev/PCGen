@@ -112,7 +112,7 @@ class VQVAE(AE):
 
     def decoder(self, data):
         cw = data['cw']
-        x = self.decode(z).transpose(2, 1)
+        x = self.decode(cw).transpose(2, 1)
         data['recon'] = x
         return data
 
