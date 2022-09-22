@@ -22,7 +22,7 @@ class MaxChannel(nn.Module):
 
 
 # Input (Batch, Features)
-class LinearBlock(nn.Module):
+class LinearLayer(nn.Module):
 
     def __init__(self, in_dim, out_dim, act=act, batch_norm=True, groups=1):
         super().__init__()
@@ -40,14 +40,14 @@ class LinearBlock(nn.Module):
 
     def init(self, act):
         if act is None:
-            pass
             # nn.init.xavier_uniform_(self.dense.weight, gain=1)
+            pass  # default works better than theoretically approved one
         elif act._get_name() == 'ReLU':
             # nn.init.kaiming_uniform_(self.dense.weight, nonlinearity='relu')
             pass  # default works better than theoretically approved one
         elif act._get_name() == 'LeakyReLU':
-            # nn.init.kaiming_uniform_(self.dense.weight, a=negative_slope)
-            pass  # default works better than theoretically approved one
+            nn.init.kaiming_uniform_(self.dense.weight, a=negative_slope)
+            pass
         elif act._get_name() == 'Hardtanh':
             # nn.init.xavier_normal_(self.dense.weight, gain=nn.init.calculate_gain('tanh'))
             pass  # default works better than theoretically approved one
@@ -64,13 +64,13 @@ class LinearBlock(nn.Module):
 
 
 # Input (Batch, Points, Features)
-class PointsConvBlock(LinearBlock):
+class PointsConvLayer(LinearLayer):
 
     def get_dense_layer(self):
         return nn.Conv1d(self.in_dim, self.out_dim, kernel_size=1, bias=self.bias, groups=self.groups)
 
 
-class EdgeConvBlock(LinearBlock):
+class EdgeConvLayer(LinearLayer):
 
     def get_dense_layer(self):
         return nn.Conv2d(self.in_dim, self.out_dim, kernel_size=1, bias=self.bias, groups=self.groups)
@@ -79,22 +79,3 @@ class EdgeConvBlock(LinearBlock):
         return nn.BatchNorm2d(self.out_dim)
 
 
-class STN(nn.Module):
-
-    def __init__(self, channels=3):
-        super().__init__()
-        self.channels = channels
-        self.net = nn.Sequential(PointsConvBlock(channels, 64),
-                                 PointsConvBlock(64, 128),
-                                 PointsConvBlock(128, 1024),
-                                 MaxChannel(),
-                                 LinearBlock(1024, 512),
-                                 LinearBlock(512, 256),
-                                 nn.Linear(256, channels ** 2))
-
-        self.register_buffer('eye', torch.eye(channels))  # changes device automatically
-
-    def forward(self, x):
-        x = self.net(x).view(-1, self.channels, self.channels)
-        x += self.eye
-        return x

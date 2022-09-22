@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from src.modules import PointsConvBlock, LinearBlock
+from src.layers import PointsConvLayer, LinearLayer
 from src.neighbour_op import graph_filtering
 
 OUT_CHAN = 3
@@ -16,24 +16,22 @@ class FullyConnected(nn.Module):
         self.h_dim = [256] * 2
         self.gf = gf
         self.m = m
-        modules = [LinearBlock(z_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True)),
-                   LinearBlock(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.ReLU(inplace=True)),
-                   LinearBlock(self.h_dim[1], OUT_CHAN * m, batch_norm=False, act=None)]
+        modules = [LinearLayer(z_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True)),
+                   LinearLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.ReLU(inplace=True)),
+                   LinearLayer(self.h_dim[1], OUT_CHAN * m, batch_norm=False, act=None)]
         self.mlp = nn.Sequential(*modules)
 
     def forward(self, z):
         x = self.mlp(z)
         return x.view(-1, OUT_CHAN, self.m)
 
-class FoldingLayer(nn.Module):
-    """
-    The folding operation of FoldingNet
-    """
 
-    def __init__(self, in_channel: int, h_dim: list):
-        super(FoldingLayer, self).__init__()
+class FoldingBlock(nn.Module):
+
+    def __init__(self, in_channel: int, h_dim: list, out_dim: int):
+        super().__init__()
         modules = [nn.Conv1d(in_channel, h_dim[0], kernel_size=1)]
-        for in_dim, out_dim in zip(h_dim[0:-1], h_dim[1:]):
+        for in_dim, out_dim in zip(h_dim, h_dim[1:] + [out_dim]):
             modules.extend([nn.ReLU(inplace=True), nn.Conv1d(in_dim, out_dim, kernel_size=1)])
         self.layers = nn.Sequential(*modules)
 
@@ -55,8 +53,8 @@ class FoldingNet(nn.Module):
         xx = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         self.grid = nn.Parameter(torch.stack(torch.meshgrid(xx, yy, indexing='ij')).view(2, -1), requires_grad=False)
-        self.fold1 = FoldingLayer(z_dim + 2, self.h_dim[0:2] + [OUT_CHAN])
-        self.fold2 = FoldingLayer(z_dim + 3, self.h_dim[2:4] + [OUT_CHAN])
+        self.fold1 = FoldingBlock(z_dim + 2, self.h_dim[0:2] + [OUT_CHAN])
+        self.fold2 = FoldingBlock(z_dim + 3, self.h_dim[2:4] + [OUT_CHAN])
         self.graph_r = 1e-12
         self.graph_eps = 0.02
         self.graph_eps_sqr = self.graph_eps ** 2
@@ -133,7 +131,7 @@ class TearingNet(FoldingNet):
         out1 = self.tearing1(in1)  # 1st tearing
         in2 = torch.cat((in1, out1), 1)
         out2 = self.tearing2(in2)  # 2nd tearing
-        out2 = out2.contiguous().view(batch_size, 2, self.num_grid * self.num_grid)
+        out2 = out2.reshape(batch_size, 2, self.num_grid * self.num_grid)
         grid = grid + out2
         x = super().forward(z, grid)
         if self.gf:
@@ -142,38 +140,6 @@ class TearingNet(FoldingNet):
 
 
 # AtlasNet
-class MLPAdj(nn.Module):
-    def __init__(self, dim):
-        """Atlas decoder"""
-
-        super().__init__()
-        self.h_dim = [dim, dim // 2, dim // 4]
-
-        modules = [PointsConvBlock(dim, self.h_dim[0], act=nn.ReLU(inplace=True))]
-        for in_dim, out_dim in zip(self.h_dim[0:-1], self.h_dim[1:]):
-            modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
-        self.layers = nn.Sequential(*modules)
-
-    def forward(self, x):
-        return self.layers(x)
-
-
-class PatchDeformationMLP(nn.Module):
-    """deformation of a 2D patch into a 3D surface"""
-
-    def __init__(self, patchDeformDim=3, h_dim=128):
-        super().__init__()
-        self.h_dim = h_dim
-        modules = [PointsConvBlock(2, self.h_dim, act=nn.ReLU(inplace=True)),
-                   PointsConvBlock(self.h_dim, self.h_dim, act=nn.ReLU(inplace=True)),
-                   PointsConvBlock(self.h_dim, patchDeformDim, batch_norm=False, act=nn.Tanh())]
-        self.layers = nn.Sequential(*modules)
-
-    def forward(self, x):
-        return self.layers(x)
-
-
 class AtlasNetv2(nn.Module):
     """Atlas net PatchDeformMLPAdj"""
 
@@ -181,19 +147,18 @@ class AtlasNetv2(nn.Module):
         super().__init__()
         self.z_dim = z_dim
         self.m = m
-        self.npatch = 16
-        self.patchDeformDim = 10
-        self.h_dim = 128
-        self.patchDeformation = nn.ModuleList(
-            PatchDeformationMLP(patchDeformDim=self.patchDeformDim, h_dim=self.h_dim) for _ in range(self.npatch))
-        self.decoder = nn.ModuleList([MLPAdj(dim=self.patchDeformDim + self.z_dim) for _ in range(self.npatch)])
+        self.num_patches = 16
+        self.deformed_patch_dim = 10
+        self.h_dim = [128]
+        self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
+        self.decoder = nn.ModuleList([self.get_mlp_adj() for _ in range(self.num_patches)])
 
     def forward(self, x):
         batch = x.size(0)
         device = x.device
         outs = []
-        for i in range(0, self.npatch):
-            m_patch = self.m // self.npatch
+        for i in range(0, self.num_patches):
+            m_patch = self.m // self.num_patches
             rand_grid = torch.rand(batch, 2, m_patch, device=device)
             rand_grid = self.patchDeformation[i](rand_grid)
             y = x.unsqueeze(2).expand(-1, -1, m_patch).contiguous()
@@ -202,8 +167,24 @@ class AtlasNetv2(nn.Module):
 
         return torch.cat(outs, 2)
 
+    def get_patch_deformation(self):
+        dim = self.h_dim[0]
+        modules = [PointsConvLayer(2, dim, act=nn.ReLU(inplace=True)),
+                   PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True)),
+                   PointsConvLayer(dim, self.deformed_patch_dim, batch_norm=False, act=nn.Tanh())]
+        return nn.Sequential(*modules)
 
-# Self standing implementation with grouped convolutions. Inference time is halved by 2 but efficient backward pass has
+    def get_mlp_adj(self):
+        dim = self.deformed_patch_dim + self.z_dim
+        dims = [dim, dim // 2, dim // 4]
+        modules = [PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True))]
+        for in_dim, out_dim in zip(dims[0:-1], dims[1:]):
+            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+        modules.append(PointsConvLayer(dims[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
+        return nn.Sequential(*modules)
+
+
+# AtlasNet with grouped convolutions. Inference time is halved by 2 but efficient backward pass has
 # not yet been implemented by in pytorch.
 
 # class AtlasNetv2(nn.Module):
@@ -257,14 +238,14 @@ class PCGen(nn.Module):
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
-        self.map_samples1 = PointsConvBlock(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_samples2 = PointsConvBlock(self.h_dim[0], self.h_dim[1], batch_norm=False,
+        self.map_samples1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_samples2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                             act=nn.Hardtanh(inplace=True))
         modules = []
         for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-            modules.append(PointsConvBlock(in_dim, out_dim, batch_norm=False, act=nn.ReLU(inplace=True)))
+            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
 
-        modules.append(PointsConvBlock(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+        modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
         self.points_convs = nn.Sequential(*modules)
 
     def forward(self, z, s=None):
@@ -289,6 +270,8 @@ class PCGen(nn.Module):
     @m.setter
     def m(self, m):
         self._m = m
+
+
 def get_decoder(decoder_name):
     decoder_dict = {
         'Full': FullyConnected,

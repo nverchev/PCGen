@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.autograd import Function
 from src.encoder import get_encoder
 from src.decoder import get_decoder
-from src.modules import LinearBlock
+from src.layers import LinearLayer
 from src.losses import square_distance
 
 
@@ -120,9 +120,9 @@ class Classifier(nn.Module):
         self.encode = get_encoder(encoder_name)(k, task='classify')
         num_features = 2048
         self.dense = nn.Sequential(
-            LinearBlock(num_features, 512),
+            LinearLayer(num_features, 512),
             nn.Dropout(0.5),
-            LinearBlock(512, 256),
+            LinearLayer(512, 256),
             nn.Dropout(0.5),
             nn.Linear(256, num_classes))
         self.settings = {'encode_h_dim': self.encode.h_dim, 'dense_h_dim': [512, 256], 'k': k}
