@@ -26,12 +26,12 @@ class AE(nn.Module):
     settings = {}
     log_var = False
 
-    def __init__(self, encoder_name, decoder_name, z_dim, gf, k=20, m=2048, **settings):
+    def __init__(self, encoder_name, decoder_name, cw_dim, gf, k=20, m=2048, **settings):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
-        self.encode = get_encoder(encoder_name)(z_dim, k, log_var=self.log_var)
-        self.decode = get_decoder(decoder_name)(z_dim, m, gf=gf)
+        self.encode = get_encoder(encoder_name)(cw_dim, k, log_var=self.log_var)
+        self.decode = get_decoder(decoder_name)(cw_dim, m, gf=gf)
         self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, 'k': k}
 
     def forward(self, x):
@@ -45,11 +45,11 @@ class AE(nn.Module):
 
     def encoder(self, x):
         data = {}
-        data['z'] = self.encode(x)
+        data['cw'] = self.encode(x)
         return data
 
     def decoder(self, data):
-        z = data['z']
+        cw = data['cw']
         x = self.decode(z).transpose(2, 1)
         data['recon'] = x
         return data
@@ -74,16 +74,16 @@ class VAE(AE):
         data = {}
         x = self.encode(x)
         data['mu'], data['log_var'] = x.chunk(2, 1)
-        data['z'] = self.sampling(data['mu'], data['log_var'])
+        data['cw'] = self.sampling(data['mu'], data['log_var'])
         return data
 
 
 class VQVAE(AE):
 
-    def __init__(self, encoder_name, decoder_name, z_dim, in_chan, dict_size, embed_dim, k, m):
-        # encoder gives vector quantised codes, therefore the z dim must be multiplied by the embed dim
-        super().__init__(encoder_name, decoder_name, embed_dim * z_dim, in_chan, k, m)
-        self.dim_codes = z_dim
+    def __init__(self, encoder_name, decoder_name, cw_dim, in_chan, dict_size, embed_dim, k, m):
+        # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
+        super().__init__(encoder_name, decoder_name, embed_dim * cw_dim, in_chan, k, m)
+        self.dim_codes = cw_dim
         self.dict_size = dict_size
         self.dim_embedding = embed_dim
         self.dictionary = torch.nn.Parameter(torch.randn(self.dim_codes, self.dict_size, self.dim_embedding))
@@ -98,7 +98,7 @@ class VQVAE(AE):
         idx = dist.argmin(axis=2)
         z_embed = dictionary.gather(1, idx.expand(-1, -1, self.dim_embedding))
         z_embed = z_embed.view(batch, self.dim_codes * self.dim_embedding)
-        z = TransferGrad().apply(mu, z_embed)
+        cw = TransferGrad().apply(mu, z_embed)
         one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=mu.device)
         one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)
         return z, z_embed, one_hot_idx
@@ -107,9 +107,14 @@ class VQVAE(AE):
         data = {}
         x = self.encode(x)
         data['mu'] = x
-        data['z'], data['z_embed'], data['idx'] = self.quantise(x)
+        data['cw'], data['z_embed'], data['idx'] = self.quantise(x)
         return data
 
+    def decoder(self, data):
+        cw = data['cw']
+        x = self.decode(z).transpose(2, 1)
+        data['recon'] = x
+        return data
 
 class Classifier(nn.Module):
     settings = {}

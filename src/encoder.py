@@ -7,7 +7,7 @@ IN_CHAN = 3
 
 
 class LDGCNN(nn.Module):
-    def __init__(self, z_dim=512, k=20, log_var=True):
+    def __init__(self, cw_dim=512, k=20, log_var=True):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
@@ -16,7 +16,7 @@ class LDGCNN(nn.Module):
         for in_dim, out_dim in zip(self.h_dim[:3], self.h_dim[1:]):
             modules.append(PointsConvLayer(in_dim, out_dim))
         self.points_convs = nn.Sequential(*modules)
-        self.final_conv = PointsConvLayer(sum(self.h_dim), 2 * z_dim if log_var else z_dim, act=None, batch_norm=False)
+        self.final_conv = PointsConvLayer(sum(self.h_dim), 2 * cw_dim if log_var else cw_dim, act=None, batch_norm=False)
 
     def forward(self, x):
         x, indices = x
@@ -36,7 +36,7 @@ class LDGCNN(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, z_dim=512, k=20, log_var=True):
+    def __init__(self, cw_dim=512, k=20, log_var=True):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
@@ -44,7 +44,7 @@ class DGCNN(nn.Module):
         for in_dim, out_dim in zip(self.h_dim[:3], self.h_dim[1:]):
             edge_conv_list.append(EdgeConvLayer(2 * in_dim, out_dim, batch_norm=True))
         self.edge_convs = nn.Sequential(*edge_conv_list)
-        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * z_dim if log_var else z_dim, kernel_size=1)
+        self.final_conv = nn.Conv1d(sum(self.h_dim), 2 * cw_dim if log_var else cw_dim, kernel_size=1)
 
     def forward(self, x):
         xs = []
@@ -64,7 +64,7 @@ class DGCNN(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self, z_dim=512, k=16, log_var=True):
+    def __init__(self, cw_dim=512, k=16, log_var=True):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 64, 128, 1024, 1024]
@@ -75,7 +75,7 @@ class FoldingNet(nn.Module):
         self.conv1 = PointsConvLayer(self.h_dim[2], self.h_dim[3], act=nn.ReLU(), batch_norm=False)
         self.conv2 = PointsConvLayer(self.h_dim[3], self.h_dim[4], act=nn.ReLU(), batch_norm=False)
         self.features_mlp = nn.Sequential(LinearLayer(self.h_dim[4], self.h_dim[5], act=nn.ReLU(), batch_norm=False),
-                                          nn.Linear(self.h_dim[5], 2 * z_dim if log_var else z_dim))
+                                          nn.Linear(self.h_dim[5], 2 * cw_dim if log_var else cw_dim))
 
     def forward(self, x):
         x, indices = x

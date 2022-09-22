@@ -10,13 +10,13 @@ OUT_CHAN = 3
 
 class FullyConnected(nn.Module):
 
-    def __init__(self, z_dim, m, gf):
+    def __init__(self, cw_dim, m, gf):
         super().__init__()
-        self.z_dim = z_dim
+        self.cw_dim = cw_dim
         self.h_dim = [256] * 2
         self.gf = gf
         self.m = m
-        modules = [LinearLayer(z_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True)),
+        modules = [LinearLayer(cw_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True)),
                    LinearLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.ReLU(inplace=True)),
                    LinearLayer(self.h_dim[1], OUT_CHAN * m, batch_norm=False, act=None)]
         self.mlp = nn.Sequential(*modules)
@@ -42,9 +42,9 @@ class FoldingBlock(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self, z_dim, m, gf):
+    def __init__(self, cw_dim, m, gf):
         super().__init__()
-        self.z_dim = z_dim
+        self.cw_dim = cw_dim
         self.h_dim = [512] * 4
         self.gf = gf
         self.m = m
@@ -53,8 +53,8 @@ class FoldingNet(nn.Module):
         xx = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         self.grid = nn.Parameter(torch.stack(torch.meshgrid(xx, yy, indexing='ij')).view(2, -1), requires_grad=False)
-        self.fold1 = FoldingBlock(z_dim + 2, self.h_dim[0:2] + [OUT_CHAN])
-        self.fold2 = FoldingBlock(z_dim + 3, self.h_dim[2:4] + [OUT_CHAN])
+        self.fold1 = FoldingBlock(cw_dim + 2, self.h_dim[0:2] + [OUT_CHAN])
+        self.fold2 = FoldingBlock(cw_dim + 3, self.h_dim[2:4] + [OUT_CHAN])
         self.graph_r = 1e-12
         self.graph_eps = 0.02
         self.graph_eps_sqr = self.graph_eps ** 2
@@ -103,16 +103,16 @@ class FoldingNet(nn.Module):
 
 
 class TearingNet(FoldingNet):
-    def __init__(self, z_dim, m, gf):
-        super().__init__(z_dim, m, gf=gf)
+    def __init__(self, cw_dim, m, gf):
+        super().__init__(cw_dim, m, gf=gf)
         self.h_dim.extend([512, 512, 64, 512, 512, 2])
-        modules = [nn.Conv2d(self.z_dim + 5, self.h_dim[4], kernel_size=1)]
+        modules = [nn.Conv2d(self.cw_dim + 5, self.h_dim[4], kernel_size=1)]
         for in_dim, out_dim in zip(self.h_dim[4:6], self.h_dim[5:7]):
             modules.append(nn.ReLU(inplace=True))
             modules.append(nn.Conv2d(in_dim, out_dim, kernel_size=1))
         self.tearing1 = nn.Sequential(*modules)
 
-        modules = [nn.Conv2d(self.z_dim + 5 + self.h_dim[6], self.h_dim[7], kernel_size=1)]
+        modules = [nn.Conv2d(self.cw_dim + 5 + self.h_dim[6], self.h_dim[7], kernel_size=1)]
         for in_dim, out_dim in zip(self.h_dim[7:9], self.h_dim[8:10]):
             modules.append(nn.ReLU(inplace=True))
             modules.append(nn.Conv2d(in_dim, out_dim, kernel_size=1))
@@ -125,7 +125,7 @@ class TearingNet(FoldingNet):
         x = super().forward(z, grid)
         grid_exp = grid.view(batch_size, 2, self.num_grid, self.num_grid)
         x_exp = x.view(-1, 3, self.num_grid, self.num_grid)
-        z_exp = z.view(-1, self.z_dim, 1, 1).expand(-1, -1, self.num_grid, self.num_grid)
+        z_exp = z.view(-1, self.cw_dim, 1, 1).expand(-1, -1, self.num_grid, self.num_grid)
         in1 = torch.cat((grid_exp, x_exp, z_exp), 1).contiguous()
         # Compute the torn 2D grid
         out1 = self.tearing1(in1)  # 1st tearing
@@ -143,9 +143,9 @@ class TearingNet(FoldingNet):
 class AtlasNetv2(nn.Module):
     """Atlas net PatchDeformMLPAdj"""
 
-    def __init__(self, z_dim, m, gf):
+    def __init__(self, cw_dim, m, gf):
         super().__init__()
-        self.z_dim = z_dim
+        self.cw_dim = cw_dim
         self.m = m
         self.gf = gf
         self.num_patches = 16
@@ -162,7 +162,7 @@ class AtlasNetv2(nn.Module):
         return nn.Sequential(*modules)
 
     def get_mlp_adj(self):
-        dim = self.deformed_patch_dim + self.z_dim
+        dim = self.deformed_patch_dim + self.cw_dim
         dims = [dim, dim // 2, dim // 4]
         modules = [PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True))]
         for in_dim, out_dim in zip(dims[0:-1], dims[1:]):
@@ -193,9 +193,9 @@ class AtlasNetv2(nn.Module):
 # class AtlasNetv2(nn.Module):
 #     """Atlas net PatchDeformMLPAdj"""
 #
-#     def __init__(self, z_dim, m, gf):
+#     def __init__(self, cw_dim, m, gf):
 #         super().__init__()
-#         self.z_dim = z_dim
+#         self.cw_dim = cw_dim
 #         self.m = m
 #         self.gf = gf
 #         self.num_patch = 8
@@ -211,7 +211,7 @@ class AtlasNetv2(nn.Module):
 #                    PointsConvBlock(dim, total_out, batch_norm=False, act=nn.Tanh(), groups=self.num_patch)]
 #         self.patchDeformation = nn.Sequential(*modules)
 #
-#         dim = (self.deform_patch_dim + self.z_dim) * self.num_patch
+#         dim = (self.deform_patch_dim + self.cw_dim) * self.num_patch
 #         dims = [dim, dim // 2, dim // 4]
 #         modules = [PointsConvBlock(dim, dim, act=nn.ReLU(inplace=True), groups=self.num_patch)]
 #         for in_dim, out_dim in zip(dims[0:-1], dims[1:]):
@@ -222,7 +222,7 @@ class AtlasNetv2(nn.Module):
 #     def forward(self, z):
 #         batch = z.size(0)
 #         device = z.device
-#         x = z.view(batch, 1, self.z_dim, 1).expand(-1, self.num_patch, -1, self.m_patch)
+#         x = z.view(batch, 1, self.cw_dim, 1).expand(-1, self.num_patch, -1, self.m_patch)
 #         rand_grid = torch.rand(batch, self.num_patch * 2, self.m_patch, device=device)
 #         deformed_grid = self.patchDeformation(rand_grid).view(-1, self.num_patch, self.deform_patch_dim, self.m_patch)
 #         x = torch.cat([deformed_grid, x], dim=2).contiguous().view(batch, -1, self.m_patch)
@@ -234,9 +234,9 @@ class AtlasNetv2(nn.Module):
 
 class PCGen(nn.Module):
 
-    def __init__(self, z_dim, m, gf=True):
+    def __init__(self, cw_dim, m, gf=True):
         super().__init__()
-        self.h_dim = [256, z_dim, 512, 256, 128, 64]
+        self.h_dim = [256, cw_dim, 512, 256, 128, 64]
         self.m = 2048
         self.m_training = m
         self.gf = gf

@@ -355,8 +355,8 @@ class VAETrainer(Trainer):
         self.train_loader.dataset.rotation = False
         self.test(partition='train')
         self.train_loader.dataset.rotation = True
-        x_train = np.array([z.numpy() for z in self.test_outputs['z']])
-        y_train = np.array([z.numpy() for z in self.test_targets])
+        x_train = np.array([cw.numpy() for cw in self.test_outputs['cw']])
+        y_train = np.array([cw.numpy() for cw in self.test_targets])
         shuffle = np.random.permutation(y_train.shape[0])
         x_train = x_train[shuffle]
         y_train = y_train[shuffle]
@@ -364,8 +364,8 @@ class VAETrainer(Trainer):
         self.clf.fit(x_train, y_train)
         partition = 'test' if final else 'val'
         self.test(partition=partition)
-        x_test = np.array([z.numpy() for z in self.test_outputs['z']])
-        y_test = np.array([z.numpy() for z in self.test_targets])
+        x_test = np.array([cw.numpy() for cw in self.test_outputs['cw']])
+        y_test = np.array([cw.numpy() for cw in self.test_targets])
         y_hat = self.clf.predict(x_test)
         self.acc = (y_hat == y_test).sum() / y_hat.shape[0]
         print('Accuracy: ', self.acc)
@@ -379,13 +379,12 @@ class VAETrainer(Trainer):
 
     def latent_visualisation(self, highlight_label):
         from sklearn.decomposition import PCA
-        z = torch.stack(self.test_outputs['z'])
+        cw = torch.stack(self.test_outputs['cw'])
         pca = PCA(3)
-        z_np = z.numpy()
-        z_red = pca.fit_transform(z_np)
+        cw_pca = pca.fit_transform(cw.numpy())
         labels = torch.stack(self.test_targets).cpu().numpy()
-        highlight_z = z_red[(highlight_label == labels)]
-        pc_show([torch.FloatTensor(z_red), highlight_z], colors=['blue', 'red'])
+        highlight_cw = cw_pca[(highlight_label == labels)]
+        pc_show([torch.FloatTensor(cw_pca), highlight_cw], colors=['blue', 'red'])
 
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)
