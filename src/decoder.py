@@ -147,25 +147,12 @@ class AtlasNetv2(nn.Module):
         super().__init__()
         self.z_dim = z_dim
         self.m = m
+        self.gf = gf
         self.num_patches = 16
         self.deformed_patch_dim = 10
         self.h_dim = [128]
         self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
         self.decoder = nn.ModuleList([self.get_mlp_adj() for _ in range(self.num_patches)])
-
-    def forward(self, x):
-        batch = x.size(0)
-        device = x.device
-        outs = []
-        for i in range(0, self.num_patches):
-            m_patch = self.m // self.num_patches
-            rand_grid = torch.rand(batch, 2, m_patch, device=device)
-            rand_grid = self.patchDeformation[i](rand_grid)
-            y = x.unsqueeze(2).expand(-1, -1, m_patch).contiguous()
-            y = torch.cat((rand_grid, y), 1).contiguous()
-            outs.append(self.decoder[i](y))
-
-        return torch.cat(outs, 2)
 
     def get_patch_deformation(self):
         dim = self.h_dim[0]
@@ -182,6 +169,22 @@ class AtlasNetv2(nn.Module):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
         modules.append(PointsConvLayer(dims[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
         return nn.Sequential(*modules)
+
+    def forward(self, x):
+        batch = x.size(0)
+        device = x.device
+        outs = []
+        for i in range(0, self.num_patches):
+            m_patch = self.m // self.num_patches
+            rand_grid = torch.rand(batch, 2, m_patch, device=device)
+            rand_grid = self.patchDeformation[i](rand_grid)
+            y = x.unsqueeze(2).expand(-1, -1, m_patch).contiguous()
+            y = torch.cat((rand_grid, y), 1).contiguous()
+            outs.append(self.decoder[i](y))
+        x = torch.cat(outs, 2).contiguous()
+        if self.gf:
+            x = graph_filtering(x)
+        return x
 
 
 # AtlasNet with grouped convolutions. Inference time is halved by 2 but efficient backward pass has
