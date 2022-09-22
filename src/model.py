@@ -96,18 +96,18 @@ class VQVAE(AE):
         dictionary = self.dictionary.repeat(batch, 1, 1)
         dist = square_distance(mu2, dictionary)
         idx = dist.argmin(axis=2)
-        z_embed = dictionary.gather(1, idx.expand(-1, -1, self.dim_embedding))
-        z_embed = z_embed.view(batch, self.dim_codes * self.dim_embedding)
-        cw = TransferGrad().apply(mu, z_embed)
+        cw_embed = dictionary.gather(1, idx.expand(-1, -1, self.dim_embedding))
+        cw_embed = cw_embed.view(batch, self.dim_codes * self.dim_embedding)
+        cw = TransferGrad().apply(mu, cw_embed)
         one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=mu.device)
         one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)
-        return z, z_embed, one_hot_idx
+        return cw, cw_embed, one_hot_idx
 
     def encoder(self, x):
         data = {}
         x = self.encode(x)
         data['mu'] = x
-        data['cw'], data['z_embed'], data['idx'] = self.quantise(x)
+        data['cw'], data['cw_embed'], data['idx'] = self.quantise(x)
         return data
 
     def decoder(self, data):
@@ -115,6 +115,7 @@ class VQVAE(AE):
         x = self.decode(cw).transpose(2, 1)
         data['recon'] = x
         return data
+
 
 class Classifier(nn.Module):
     settings = {}
