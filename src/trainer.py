@@ -91,7 +91,7 @@ class Trainer(metaclass=ABCMeta):
     max_output = np.inf  # maximum amount of stored evaluated test samples
 
     def __init__(self, model, exp_name, device, optimizer, train_loader, val_loader=None,
-                 test_loader=None, minioClient=None, models_path='./models', **block_args):
+                 test_loader=None, minio_client=None, models_path='./models', **block_args):
 
         self.epoch = 0
         self.device = device  # to cuda or not to cuda?
@@ -106,7 +106,7 @@ class Trainer(metaclass=ABCMeta):
         self.test_loader = test_loader
         self.train_losses, self.val_losses, self.test_losses = {}, {}, {}
         self.converge = 1  # if 0 kills session
-        self.minio = minioClient
+        self.minio = minio_client
         self.models_path = models_path
         self.minio_path = staticmethod(lambda path: path[len(models_path) + 1:]).__func__  # removes model path
         self.test_targets, self.test_outputs = None, None

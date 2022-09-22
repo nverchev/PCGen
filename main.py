@@ -26,8 +26,6 @@ def parse_args():
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='reconstruction loss')
     parser.add_argument('--vae', type=str, default='NoVAE',
                         choices=['NoVAE', 'VAE', 'VQVAE'], help='type of regularization')
-    parser.add_argument('--dict_size', type=int, default=16, help='dictionary size for vector quantisation')
-    parser.add_argument('--embed_dim', type=int, default=4, help='dim of the vector for vector quantisation')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet', 'coins'])
     parser.add_argument('--num_points', type=int, default=2048,
@@ -39,7 +37,9 @@ def parse_args():
     parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
     parser.add_argument('--k', type=int, default=20,
                         help='number of neighbours of a point (counting the point itself) in DGCNN]')
-    parser.add_argument('--z_dim', type=int, default=512, help='dimension of the latent space')
+    parser.add_argument('--cw_dim', type=int, default=512, help='dimension of the latent space')
+    parser.add_argument('--dict_size', type=int, default=16, help='dictionary size for vector quantisation')
+    parser.add_argument('--dim_embedding', type=int, default=4, help='dim of the vector for vector quantisation')
     parser.add_argument('--c_reg', type=float, default=1, help='coefficient for regularization')
     parser.add_argument('--no_cuda', action='store_true', default=False, help='runs on CPU')
     parser.add_argument('--epochs', type=int, default=250)
@@ -62,8 +62,6 @@ def main(profiler=False):
     graph_filtering = args.gf
     experiment = args.experiment
     recon_loss = args.recon_loss
-    dict_size = args.dict_size
-    embed_dim = args.embed_dim
     vae = args.vae
     gf = 'GF' if graph_filtering else ''
     exp_name = args.model_path or '_'.join([encoder_name, decoder_name + gf, recon_loss, vae, experiment])
@@ -76,7 +74,9 @@ def main(profiler=False):
     opt_name = args.optim
     initial_learning_rate = args.lr
     weight_decay = args.wd
-    z_dim = args.z_dim
+    cw_dim = args.cw_dim
+    dict_size = args.dict_size
+    dim_embedding = args.dim_embedding
     c_reg = args.c_reg
     device = torch.device('cuda:0' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
     training_epochs = args.epochs
@@ -91,9 +91,9 @@ def main(profiler=False):
         with open(minio_credential) as f:
             server, access_key, secret_key = f.readline().split(';')
             secret_key = secret_key.strip()
-            minioClient = Minio(server, access_key=access_key, secret_key=secret_key, secure=True)
+            minio_client = Minio(server, access_key=access_key, secret_key=secret_key, secure=True)
     else:
-        minioClient = None
+        minio_client = None
 
     torch.manual_seed = 112358
     np.random.seed = 112358
@@ -111,12 +111,12 @@ def main(profiler=False):
     model_settings = dict(encoder_name=encoder_name,
                           decoder_name=decoder_name,
                           gf=graph_filtering,
-                          z_dim=z_dim,
+                          cw_dim=cw_dim,
                           k=k,
                           m=m_training,
                           vae=vae,
                           dict_size=dict_size,
-                          embed_dim=embed_dim
+                          dim_embedding=dim_embedding
                           )
     model = get_model(**model_settings)
     if profiler:
@@ -127,7 +127,7 @@ def main(profiler=False):
             model.decode.m_training = m_training
 
         dummy_input = [torch.ones(batch_size, num_points, 3, device=device),
-                torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
+                       torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
         return model.to(device), dummy_input
 
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
@@ -142,7 +142,7 @@ def main(profiler=False):
         device=device,
         batch_size=batch_size,
         schedule=CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
-        minioClient=minioClient,
+        minio_client=minio_client,
         model_path=os.path.join(dir_path, 'model'),
         recon_loss=recon_loss,
         vae=vae,

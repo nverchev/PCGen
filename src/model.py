@@ -50,7 +50,7 @@ class AE(nn.Module):
 
     def decoder(self, data):
         cw = data['cw']
-        x = self.decode(z).transpose(2, 1)
+        x = self.decode(cw).transpose(2, 1)
         data['recon'] = x
         return data
 
@@ -80,12 +80,12 @@ class VAE(AE):
 
 class VQVAE(AE):
 
-    def __init__(self, encoder_name, decoder_name, cw_dim, in_chan, dict_size, embed_dim, k, m):
+    def __init__(self, encoder_name, decoder_name, cw_dim, in_chan, dict_size, dim_embedding, k, m):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
-        super().__init__(encoder_name, decoder_name, embed_dim * cw_dim, in_chan, k, m)
-        self.dim_codes = cw_dim
+        super().__init__(encoder_name, decoder_name, cw_dim, in_chan, k, m)
+        self.dim_codes = cw_dim // dim_embedding
         self.dict_size = dict_size
-        self.dim_embedding = embed_dim
+        self.dim_embedding = dim_embedding
         self.dictionary = torch.nn.Parameter(torch.randn(self.dim_codes, self.dict_size, self.dim_embedding))
         self.settings['dict_size'] = self.dict_size
         self.settings['dim_embedding'] = self.dim_embedding
@@ -108,12 +108,6 @@ class VQVAE(AE):
         x = self.encode(x)
         data['mu'] = x
         data['cw'], data['cw_embed'], data['idx'] = self.quantise(x)
-        return data
-
-    def decoder(self, data):
-        cw = data['cw']
-        x = self.decode(cw).transpose(2, 1)
-        data['recon'] = x
         return data
 
 
