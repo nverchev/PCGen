@@ -5,7 +5,6 @@ from src.neighbour_op import get_graph_features, graph_max_pooling, get_local_co
 
 IN_CHAN = 3
 
-
 class LDGCNN(nn.Module):
     def __init__(self, cw_dim=512, k=20, log_var=True):
         super().__init__()

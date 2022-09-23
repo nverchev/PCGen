@@ -65,7 +65,7 @@ class AE(nn.Module):
 class VAE(AE):
     log_var = True
 
-    def sampling(self, mu, log_var):
+    def sample(self, mu, log_var):
         std = torch.exp(0.5 * log_var)
         eps = torch.randn_like(std)
         return eps.mul(std).add_(mu) if self.training else mu
@@ -74,19 +74,28 @@ class VAE(AE):
         data = {}
         x = self.encode(x)
         data['mu'], data['log_var'] = x.chunk(2, 1)
-        data['cw'] = self.sampling(data['mu'], data['log_var'])
+        data['cw'] = self.sample(data['mu'], data['log_var'])
         return data
 
 
-class VQVAE(AE):
+class VQVAE(VAE):
+    log_var = False
 
-    def __init__(self, encoder_name, decoder_name, cw_dim, in_chan, dict_size, dim_embedding, k, m):
+    def __init__(self, encoder_name, decoder_name, cw_dim, gf, dict_size, dim_embedding, k, m):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
-        super().__init__(encoder_name, decoder_name, cw_dim, in_chan, k, m)
+        super().__init__(encoder_name, decoder_name, cw_dim, gf, k, m)
         self.dim_codes = cw_dim // dim_embedding
         self.dict_size = dict_size
         self.dim_embedding = dim_embedding
         self.dictionary = torch.nn.Parameter(torch.randn(self.dim_codes, self.dict_size, self.dim_embedding))
+        self.encode_cw = nn.Sequential(LinearLayer(cw_dim, cw_dim // 4, act=None),
+                                       LinearLayer(cw_dim // 4, cw_dim // 16),
+                                       LinearLayer(cw_dim // 16, cw_dim // 32))
+        self.decode_cw = nn.Sequential(LinearLayer(cw_dim // 64, cw_dim // 16),
+                                       LinearLayer(cw_dim // 16, cw_dim // 4),
+                                       LinearLayer(cw_dim // 4, cw_dim, act=None))
+
+
         self.settings['dict_size'] = self.dict_size
         self.settings['dim_embedding'] = self.dim_embedding
 
@@ -98,16 +107,28 @@ class VQVAE(AE):
         idx = dist.argmin(axis=2)
         cw_embed = dictionary.gather(1, idx.expand(-1, -1, self.dim_embedding))
         cw_embed = cw_embed.view(batch, self.dim_codes * self.dim_embedding)
-        cw = TransferGrad().apply(mu, cw_embed)
         one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=mu.device)
         one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)
-        return cw, cw_embed, one_hot_idx
+        return cw_embed, one_hot_idx
 
     def encoder(self, x):
         data = {}
         x = self.encode(x)
-        data['mu'] = x
-        data['cw'], data['cw_embed'], data['idx'] = self.quantise(x)
+        data['cw_approx'] = x
+        data['mu'], data['log_var'] = self.encode_cw(x).chunk(2, 1)
+        data['z'] = self.sample(data['mu'], data['log_var'])
+        return data
+
+    def decoder(self, data):
+        data['cw_recon'] = self.decode_cw(data['z'])
+        if self.training and 'cw_approx' in data:
+            data['cw_embed'], data['idx'] = self.quantise(data['cw_approx'])
+            data['cw'] = TransferGrad().apply(data['cw_approx'], data['cw_embed'])
+        else:
+            data['cw_embed'], data['idx'] = self.quantise(data['cw_recon'])
+            data['cw'] = data['cw_embed']
+        x = self.decode(data['cw']).transpose(2, 1)
+        data['recon'] = x
         return data
 
 

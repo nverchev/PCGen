@@ -123,10 +123,14 @@ class VQVAELoss:
     c_vq = 0.1
 
     def __call__(self, inputs, outputs):
-        mu_loss = ((outputs['mu'] - outputs['cw'].detach()) ** 2).sum(-1).mean()
-        embed_loss = ((outputs['mu'].detach() - outputs['cw_embed']) ** 2).sum(-1).mean()
-        return {'reg': self.c_vq * (embed_loss + mu_loss / 4),
-                'Embed Loss': embed_loss
+        encoder_loss = ((outputs['cw_approx'] - outputs['cw'].detach()) ** 2).sum(-1).mean()
+        embed_loss = ((outputs['cw_approx'].detach() - outputs['cw_embed']) ** 2).sum(-1).mean()
+        embed_recon_loss = ((outputs['cw_recon'] - outputs['cw_embed'].detach()) ** 2).sum(-1).mean()
+        KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
+        return {'reg': self.c_vq * (embed_loss + embed_recon_loss + encoder_loss / 4 + KLD_free),
+                'Embed Loss': embed_loss,
+                'Embed_recon_loss': embed_recon_loss,
+                'KLD': KLD
                 }
 
 

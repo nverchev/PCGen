@@ -55,7 +55,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(profiler=False):
+def main(return_model=False):
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
@@ -119,7 +119,7 @@ def main(profiler=False):
                           dim_embedding=dim_embedding
                           )
     model = get_model(**model_settings)
-    if profiler:
+    if return_model:
         if model_eval:
             model.decode.m = m_training
             model.eval()
