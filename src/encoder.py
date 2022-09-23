@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from src.layers import PointsConvLayer, LinearLayer, EdgeConvLayer
+from src.layer import PointsConvLayer, LinearLayer, EdgeConvLayer
 from src.neighbour_op import get_graph_features, graph_max_pooling, get_local_covariance
 
 IN_CHAN = 3

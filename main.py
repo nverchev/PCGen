@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument('--c_reg', type=float, default=1, help='coefficient for regularization')
     parser.add_argument('--no_cuda', action='store_true', default=False, help='runs on CPU')
     parser.add_argument('--epochs', type=int, default=250)
-    parser.add_argument('--m_training', type=int, default=2048,
+    parser.add_argument('--m', type=int, default=2048,
                         help='Points  generated when training, 0 for  increasing sequence 128 -> 4096 ')
     parser.add_argument('--load', type=int, default=-1,
                         help='load a saved model with the same settings. -1 for starting from scratch,'
@@ -55,7 +55,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(return_model=False):
+def main(task='train/eval'):
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
@@ -80,7 +80,7 @@ def main(return_model=False):
     c_reg = args.c_reg
     device = torch.device('cuda:0' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
     training_epochs = args.epochs
-    m_training = args.m_training
+    m = args.m
     load = args.load
     model_eval = args.eval
     minio_credential = args.minio_credential
@@ -113,19 +113,17 @@ def main(return_model=False):
                           gf=graph_filtering,
                           cw_dim=cw_dim,
                           k=k,
-                          m=m_training,
+                          m=m,
                           vae=vae,
                           dict_size=dict_size,
                           dim_embedding=dim_embedding
                           )
     model = get_model(**model_settings)
-    if return_model:
-        if model_eval:
-            model.decode.m = m_training
-            model.eval()
-        else:
-            model.decode.m_training = m_training
+    if model_eval:
+        model.decode.m = m
+        model.eval()
 
+    if task == 'return model for profiling':
         dummy_input = [torch.ones(batch_size, num_points, 3, device=device),
                        torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
         return model.to(device), dummy_input
@@ -156,6 +154,13 @@ def main(return_model=False):
         trainer.load()
     elif load > 0:
         trainer.load(load)
+    if task == 'return loaded model for random generation':
+        if vae == "NoVAE":
+            print("Autoencoder does not support realistic cloud generation")
+            raise
+        z_dim = cw_dim if vae == "VAE" else cw_dim // 64
+        z = torch.randn(batch_size, z_dim).to(device)
+        return trainer.model, z
 
     if not model_eval:
         if load == -1 and decoder_name == 'TearingNet':
@@ -167,14 +172,14 @@ def main(return_model=False):
             trainer.model.load_state_dict(state_dict, strict=False)
 
         while training_epochs > trainer.epoch:
-            if m_training == 0:
+            if m == 0:
                 m = max(512, (4096 * trainer.epoch) // training_epochs)
                 trainer.update_m_training(m)
             trainer.train(10)
             trainer.save()
             trainer.test(partition='test' if final else 'val')
-
-    trainer.test(partition='test' if final else 'val')
+    else:
+        trainer.test(partition='test' if final else 'val')
 
 
 if __name__ == '__main__':

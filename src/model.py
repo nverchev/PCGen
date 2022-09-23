@@ -6,8 +6,8 @@ import torch.nn as nn
 from torch.autograd import Function
 from src.encoder import get_encoder
 from src.decoder import get_decoder
-from src.layers import LinearLayer
-from src.losses import square_distance
+from src.layer import LinearLayer
+from src.loss import square_distance
 
 
 class TransferGrad(Function):

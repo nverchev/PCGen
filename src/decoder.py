@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from src.layers import PointsConvLayer, LinearLayer
+from src.layer import PointsConvLayer, LinearLayer
 from src.neighbour_op import graph_filtering
 
 OUT_CHAN = 3

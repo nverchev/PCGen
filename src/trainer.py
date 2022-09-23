@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from collections import UserDict
 
-from src.losses import get_vae_loss
+from src.loss import get_vae_loss
 from src.plot_PC import pc_show
 
 

@@ -3,7 +3,7 @@ from main import main
 
 
 def profile_model():
-    model, dummy_input = main(return_model=True)
+    model, dummy_input = main(get='profiler')
     flops, macs, params = get_model_profile(model=model,
                                             args=[dummy_input],
                                             print_profile=True,
