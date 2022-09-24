@@ -103,8 +103,6 @@ class VAELoss(nn.Module):
 
 
 class NoVAELoss:
-    c_kld = 0.001
-
     def __call__(self, inputs, outputs):
         return {'reg': torch.tensor(0)}
 
