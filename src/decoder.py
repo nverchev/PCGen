@@ -255,6 +255,8 @@ class PCGen(nn.Module):
         batch = z.size()[0]
         device = z.device
         x = s if s is not None else torch.randn(batch, self.sample_dim, self.m, device=device)
+        x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
+        #x = x * (torch.rand(batch, 1, self.m, device=device) ** (1 / self.sample_dim))
         x = self.map_samples1(x)
         x = self.map_samples2(x)
         x = z.unsqueeze(2) * x
