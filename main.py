@@ -127,6 +127,9 @@ def main(task='train/eval'):
         dummy_input = [torch.ones(batch_size, num_points, 3, device=device),
                        torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
         return model.to(device), dummy_input
+    elif task == 'return loaded model for random generation':
+        # for random generation dataset is not used and only there for initializing the trainer
+        data_loader_settings['dataset_name'] = 'coins'
 
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)

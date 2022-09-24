@@ -38,14 +38,8 @@ class AE(nn.Module):
         data = self.encoder(x)
         return self.decoder(data)
 
-    def sampling(self, mu, log_var):
-        std = torch.exp(0.5 * log_var)
-        eps = torch.randn_like(std)
-        return eps.mul(std).add_(mu) if self.training else mu
-
     def encoder(self, x):
-        data = {}
-        data['cw'] = self.encode(x)
+        data = {'cw': self.encode(x)}
         return data
 
     def decoder(self, data):
@@ -87,14 +81,16 @@ class VQVAE(VAE):
         self.dim_codes = cw_dim // dim_embedding
         self.dict_size = dict_size
         self.dim_embedding = dim_embedding
-        self.dictionary = torch.nn.Parameter(torch.randn(self.dim_codes, self.dict_size, self.dim_embedding))
+        self.decay_rate = 0.999
+        self.dictionary = torch.nn.Parameter(
+            torch.randn(self.dim_codes, self.dict_size, self.dim_embedding, requires_grad=False))
+        self.ema_counts = torch.nn.Parameter(torch.ones(self.dim_codes, self.dict_size, dtype=torch.float))
         self.encode_cw = nn.Sequential(LinearLayer(cw_dim, cw_dim // 4, act=None),
                                        LinearLayer(cw_dim // 4, cw_dim // 16),
                                        LinearLayer(cw_dim // 16, cw_dim // 32))
         self.decode_cw = nn.Sequential(LinearLayer(cw_dim // 64, cw_dim // 16),
                                        LinearLayer(cw_dim // 16, cw_dim // 4),
                                        LinearLayer(cw_dim // 4, cw_dim, act=None))
-
 
         self.settings['dict_size'] = self.dict_size
         self.settings['dim_embedding'] = self.dim_embedding
@@ -109,6 +105,15 @@ class VQVAE(VAE):
         cw_embed = cw_embed.view(batch, self.dim_codes * self.dim_embedding)
         one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=mu.device)
         one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)
+        # EMA update
+        if self.training:
+            self.ema_counts.data = self.decay_rate * self.ema_counts + (1 - self.decay_rate) * one_hot_idx.sum(0)
+            mu2 = mu2 / self.ema_counts.repeat(batch, 1).unsqueeze(2).gather(1, idx).expand(-1, -1, self.dim_embedding)
+            mu = mu2.view(batch, self.dim_codes, self.dim_embedding).transpose(0, 1) * (1 - self.decay_rate)
+            idx = idx.view(batch, self.dim_codes, 1).transpose(0, 1).repeat(1, 1, self.dim_embedding)
+            self.dictionary.data *= self.decay_rate
+            self.dictionary.data.scatter_(index=idx, src=mu, dim=1, reduce='add')
+
         return cw_embed, one_hot_idx
 
     def encoder(self, x):
