@@ -8,6 +8,15 @@ from src.neighbour_op import graph_filtering
 OUT_CHAN = 3
 
 
+class CWDecoder(nn.Module):
+
+    def __init__(self, cw_dim, z_dim):
+        self.decode = nn.Sequential(LinearLayer(z_dim, cw_dim, act=None))
+
+    def forward(self, x):
+        return self.decode(x)
+
+
 class FullyConnected(nn.Module):
 
     def __init__(self, cw_dim, m, gf):
@@ -53,7 +62,7 @@ class FoldingNet(nn.Module):
         xx = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         self.grid = nn.Parameter(torch.stack(torch.meshgrid(xx, yy, indexing='ij')).view(2, -1), requires_grad=False)
-        self.fold1 = FoldingBlock(cw_dim + 2, self.h_dim[0:2],  OUT_CHAN)
+        self.fold1 = FoldingBlock(cw_dim + 2, self.h_dim[0:2], OUT_CHAN)
         self.fold2 = FoldingBlock(cw_dim + 3, self.h_dim[2:4], OUT_CHAN)
         self.graph_r = 1e-12
         self.graph_eps = 0.02

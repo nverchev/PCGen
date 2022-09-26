@@ -4,9 +4,8 @@ from abc import ABC
 import torch
 import torch.nn as nn
 from torch.autograd import Function
-from src.encoder import get_encoder
-from src.decoder import get_decoder
-from src.layer import LinearLayer
+from src.encoder import get_encoder, CWEncoder
+from src.decoder import get_decoder, CWDecoder
 from src.loss import square_distance
 
 
@@ -24,13 +23,12 @@ class TransferGrad(Function):
 
 class AE(nn.Module):
     settings = {}
-    log_var = False
 
     def __init__(self, encoder_name, decoder_name, cw_dim, gf, k=20, m=2048, **settings):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
-        self.encode = get_encoder(encoder_name)(cw_dim, k, log_var=self.log_var)
+        self.encode = get_encoder(encoder_name)(cw_dim, k)
         self.decode = get_decoder(decoder_name)(cw_dim, m, gf=gf)
         self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, 'k': k}
 
@@ -48,32 +46,7 @@ class AE(nn.Module):
         data['recon'] = x
         return data
 
-    def print_total_parameters(self):
-        num_params = 0
-        for param in self.parameters():
-            num_params += param.numel()
-        print('Total Parameters: {}'.format(num_params))
-        return
-
-
-class VAE(AE):
-    log_var = True
-
-    def sample(self, mu, log_var):
-        std = torch.exp(0.5 * log_var)
-        eps = torch.randn_like(std)
-        return eps.mul(std).add_(mu) if self.training else mu
-
-    def encoder(self, x):
-        data = {}
-        x = self.encode(x)
-        data['mu'], data['log_var'] = x.chunk(2, 1)
-        data['cw'] = self.sample(data['mu'], data['log_var'])
-        return data
-
-
-class VQVAE(VAE):
-    log_var = False
+class VQVAE(AE):
 
     def __init__(self, encoder_name, decoder_name, cw_dim, gf, dict_size, dim_embedding, k, m):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
@@ -85,13 +58,6 @@ class VQVAE(VAE):
         self.dictionary = torch.nn.Parameter(
             torch.randn(self.dim_codes, self.dict_size, self.dim_embedding, requires_grad=False))
         self.ema_counts = torch.nn.Parameter(torch.ones(self.dim_codes, self.dict_size, dtype=torch.float))
-        self.encode_cw = nn.Sequential(LinearLayer(cw_dim, cw_dim // 4, act=None),
-                                       LinearLayer(cw_dim // 4, cw_dim // 16),
-                                       LinearLayer(cw_dim // 16, cw_dim // 32))
-        self.decode_cw = nn.Sequential(LinearLayer(cw_dim // 64, cw_dim // 16),
-                                       LinearLayer(cw_dim // 16, cw_dim // 4),
-                                       LinearLayer(cw_dim // 4, cw_dim, act=None))
-
         self.settings['dict_size'] = self.dict_size
         self.settings['dim_embedding'] = self.dim_embedding
 
@@ -120,49 +86,42 @@ class VQVAE(VAE):
         data = {}
         x = self.encode(x)
         data['cw_approx'] = x
-        data['mu'], data['log_var'] = self.encode_cw(x).chunk(2, 1)
+        return data
+
+
+class VAECW(nn.Module):
+    settings = {}
+
+    def __init__(self, cw_dim, z_dim=20):
+        super().__init__()
+        self.encode = CWEncoder(cw_dim, z_dim)
+        self.decode = CWDecoder(cw_dim, z_dim)
+        self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim}
+
+    def forward(self, x):
+        data = self.encoder(x)
+        return self.decoder(data)
+
+    def sample(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return eps.mul(std).add_(mu) if self.training else mu
+
+    def encoder(self, x):
+        data = {}
+        x = self.encode(x)
+        data['mu'], data['log_var'] = x.chunk(2, 1)
         data['z'] = self.sample(data['mu'], data['log_var'])
         return data
 
     def decoder(self, data):
-        data['cw_recon'] = self.decode_cw(data['z'])
-        if self.training and 'cw_approx' in data:
-            data['cw_embed'], data['idx'] = self.quantise(data['cw_approx'])
-            data['cw'] = TransferGrad().apply(data['cw_approx'], data['cw_embed'])
-        else:
-            data['cw_embed'], data['idx'] = self.quantise(data['cw_recon'])
-            data['cw'] = data['cw_embed']
-        x = self.decode(data['cw']).transpose(2, 1)
-        data['recon'] = x
+        data['recon'] = self.decode(data['z'])
         return data
 
 
-class Classifier(nn.Module):
-    settings = {}
-
-    def __init__(self, encoder_name, num_classes=40, k=20):
-        super().__init__()
-        self.num_classes = num_classes
-        self.encode = get_encoder(encoder_name)(k, task='classify')
-        num_features = 2048
-        self.dense = nn.Sequential(
-            LinearLayer(num_features, 512),
-            nn.Dropout(0.5),
-            LinearLayer(512, 256),
-            nn.Dropout(0.5),
-            nn.Linear(256, num_classes))
-        self.settings = {'encode_h_dim': self.encode.h_dim, 'dense_h_dim': [512, 256], 'k': k}
-
-    def forward(self, x):
-        features = self.encode(x)
-        return {'y': self.dense(features)}
-
-
 def get_model(vae, **model_settings):
-    if vae == 'NoVAE':
+    if vae == 'VAE':
         Model = AE
     elif vae == 'VQVAE':
         Model = VQVAE
-    else:
-        Model = VAE
     return Model(**model_settings)

@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='reconstruction loss')
     parser.add_argument('--vae', type=str, default='NoVAE',
-                        choices=['NoVAE', 'VAE', 'VQVAE'], help='type of regularization')
+                        choices=['AE', 'VQVAE'], help='type of regularization')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet', 'coins'])
     parser.add_argument('--num_points', type=int, default=2048,
@@ -123,19 +123,19 @@ def main(task='train/eval'):
                           dim_embedding=dim_embedding
 
                           )
-    model = get_model(**model_settings)
+    model = get_model(**model_settings).to(device).eval()  # set to train by the trainer class later
     if task == 'return model for profiling':
         dummy_input = [torch.ones(batch_size, num_points, 3, device=device),
                        torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
-        return model.to(device), dummy_input
-    elif task == 'return loaded model':
+        return model, dummy_input
+    elif task == 'return loaded model for random generation':
         assert vae == "VQVAE", "Autoencoder does not support realistic cloud generation"
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), "No pretrained experiment in " + load_path
         model.load_state_dict(torch.load(load_path, map_location=device))
         z_dim = cw_dim // 64
         z = torch.randn(batch_size, z_dim).to(device)
-        return model.to(device), z
+        return model, z
 
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
