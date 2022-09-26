@@ -42,9 +42,11 @@ def parse_args():
     parser.add_argument('--dim_embedding', type=int, default=4, help='dim of the vector for vector quantisation')
     parser.add_argument('--c_reg', type=float, default=1, help='coefficient for regularization')
     parser.add_argument('--no_cuda', action='store_true', default=False, help='runs on CPU')
-    parser.add_argument('--epochs', type=int, default=250)
-    parser.add_argument('--m', type=int, default=2048,
-                        help='Points  generated when training, 0 for  increasing sequence 128 -> 4096 ')
+    parser.add_argument('--epochs', type=int, default=250, help='number of total training epochs')
+    parser.add_argument('--checkpoints', type=int, default=10, help='number of epochs between checkpoints')
+    parser.add_argument('--m_training', type=int, default=2048,
+                        help='Points generated when training, 0 for  increasing sequence 128 -> 4096 ')
+    parser.add_argument('--m_test', type=int, default=2048, help='Points generated when testing')
     parser.add_argument('--load', type=int, default=-1,
                         help='load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
@@ -80,7 +82,9 @@ def main(task='train/eval'):
     c_reg = args.c_reg
     device = torch.device('cuda:0' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
     training_epochs = args.epochs
-    m = args.m
+    checkpoint_every = args.checkpoint
+    m = args.m_test
+    m_training = args.m_training
     load = args.load
     model_eval = args.eval
     minio_credential = args.minio_credential
@@ -117,19 +121,21 @@ def main(task='train/eval'):
                           vae=vae,
                           dict_size=dict_size,
                           dim_embedding=dim_embedding
+
                           )
     model = get_model(**model_settings)
-    if model_eval:
-        model.decode.m = m
-        model.eval()
-
     if task == 'return model for profiling':
         dummy_input = [torch.ones(batch_size, num_points, 3, device=device),
                        torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
         return model.to(device), dummy_input
-    elif task == 'return loaded model for random generation':
-        # for random generation dataset is not used and only there for initializing the trainer
-        data_loader_settings['dataset_name'] = 'coins'
+    elif task == 'return loaded model':
+        assert vae == "VQVAE", "Autoencoder does not support realistic cloud generation"
+        load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
+        assert os.path.exists(load_path), "No pretrained experiment in " + load_path
+        model.load_state_dict(torch.load(load_path, map_location=device))
+        z_dim = cw_dim // 64
+        z = torch.randn(batch_size, z_dim).to(device)
+        return model.to(device), z
 
     train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
@@ -157,33 +163,25 @@ def main(task='train/eval'):
         trainer.load()
     elif load > 0:
         trainer.load(load)
-    if task == 'return loaded model for random generation':
-        if vae == "NoVAE":
-            print("Autoencoder does not support realistic cloud generation")
-            raise
-        z_dim = cw_dim if vae == "VAE" else cw_dim // 64
-        z = torch.randn(batch_size, z_dim).to(device)
-        return trainer.model, z
 
     if not model_eval:
         if load == -1 and decoder_name == 'TearingNet':
             exp_name_split = exp_name.split('_')
             exp_name_split[1] = 'FoldingNet'
-            exp_name_FoldingNet = os.path.join(dir_path, 'models', '_'.join(exp_name_split), 'model_epoch250.pt')
-            assert os.path.exists(exp_name_FoldingNet), "No pretrained experiment in " + exp_name_FoldingNet
-            state_dict = torch.load(exp_name_FoldingNet, map_location=device)
+            load_path = os.path.join(dir_path, 'models', '_'.join(exp_name_split), f'model_epoch{training_epochs}.pt')
+            assert os.path.exists(load_path), "No pretrained experiment in " + load_path
+            state_dict = torch.load(load_path, map_location=device)
             trainer.model.load_state_dict(state_dict, strict=False)
 
         while training_epochs > trainer.epoch:
-            if m == 0:
-                m = max(512, (4096 * trainer.epoch) // training_epochs)
-                trainer.update_m_training(m)
-            trainer.train(10)
+            if m_training == 0:
+                m_training = max(512, (4096 * trainer.epoch) // training_epochs)
+                trainer.update_m_training(m_training)
+            trainer.train(checkpoint_every)
             trainer.save()
             trainer.test(partition='test' if final else 'val')
     else:
         trainer.test(partition='test' if final else 'val')
-
 
 if __name__ == '__main__':
     main()
