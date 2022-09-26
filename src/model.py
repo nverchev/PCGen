@@ -120,7 +120,7 @@ class VAECW(nn.Module):
 
 
 def get_model(vae, **model_settings):
-    if vae == 'VAE':
+    if vae == 'AE':
         Model = AE
     elif vae == 'VQVAE':
         Model = VQVAE
