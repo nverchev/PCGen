@@ -3,7 +3,7 @@ from main import main
 
 def generate_random_samples():
     model, z = main(task='return loaded model for random generation')
-    samples = model.decoder({'z': z})['recon']
+    samples = model.decode_z({'z': z})['recon']
     for sample in samples:
         pc_show(sample)
 
