@@ -3,9 +3,9 @@ import torch
 import numpy as np
 import argparse
 import pykeops
-from src.dataset import get_dataset
+from src.dataset import get_loaders, get_cw_loaders
 from src.optim import get_opt, CosineSchedule
-from src.trainer import get_vae_trainer
+from src.trainer import get_ae_trainer, CWTrainer
 from src.model import get_model
 
 pykeops.set_verbose(False)
@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument('--gf', action='store_true', default=False, help='graph filtering after decoder')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='reconstruction loss')
-    parser.add_argument('--vae', type=str, default='NoVAE',
+    parser.add_argument('--ae', type=str, default='AE',
                         choices=['AE', 'VQVAE'], help='type of regularization')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet', 'coins'])
@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument('--c_reg', type=float, default=1, help='coefficient for regularization')
     parser.add_argument('--no_cuda', action='store_true', default=False, help='runs on CPU')
     parser.add_argument('--epochs', type=int, default=250, help='number of total training epochs')
-    parser.add_argument('--checkpoints', type=int, default=10, help='number of epochs between checkpoints')
+    parser.add_argument('--checkpoint', type=int, default=10, help='number of epochs between checkpoints')
     parser.add_argument('--m_training', type=int, default=2048,
                         help='Points generated when training, 0 for  increasing sequence 128 -> 4096 ')
     parser.add_argument('--m_test', type=int, default=2048, help='Points generated when testing')
@@ -64,9 +64,9 @@ def main(task='train/eval'):
     graph_filtering = args.gf
     experiment = args.experiment
     recon_loss = args.recon_loss
-    vae = args.vae
+    ae = args.ae
     gf = 'GF' if graph_filtering else ''
-    exp_name = args.model_path or '_'.join([encoder_name, decoder_name + gf, recon_loss, vae, experiment])
+    exp_name = args.model_path or '_'.join([encoder_name, decoder_name + gf, recon_loss, ae, experiment])
     final = experiment[:5] == 'final'
     dir_path = args.dir_path
     dataset_name = args.dataset
@@ -118,7 +118,7 @@ def main(task='train/eval'):
                           cw_dim=cw_dim,
                           k=k,
                           m=m,
-                          vae=vae,
+                          ae=ae,
                           dict_size=dict_size,
                           dim_embedding=dim_embedding
 
@@ -129,7 +129,7 @@ def main(task='train/eval'):
                        torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
         return model, dummy_input
     elif task == 'return loaded model for random generation':
-        assert vae == "VQVAE", "Autoencoder does not support realistic cloud generation"
+        assert ae == "VQVAE", "Autoencoder does not support realistic cloud generation"
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), "No pretrained experiment in " + load_path
         model.load_state_dict(torch.load(load_path, map_location=device))
@@ -137,7 +137,7 @@ def main(task='train/eval'):
         z = torch.randn(batch_size, z_dim).to(device)
         return model, z
 
-    train_loader, val_loader, test_loader = get_dataset(**data_loader_settings)
+    train_loader, val_loader, test_loader = get_loaders(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
     trainer_settings = dict(
         opt_name=opt_name,
@@ -152,12 +152,33 @@ def main(task='train/eval'):
         minio_client=minio_client,
         model_path=os.path.join(dir_path, 'model'),
         recon_loss=recon_loss,
-        vae=vae,
+        ae=ae,
         c_reg=c_reg,
     )
 
     block_args = {**data_loader_settings, **model_settings, **trainer_settings}
-    trainer = get_vae_trainer(model, exp_name, block_args)
+    trainer = get_ae_trainer(model, exp_name, block_args)
+    if task == 'train cw encoder':
+        assert ae == "VQVAE", "Only VQVAE supported"
+        trainer.load()  # cw encoder is embedded to the last epoch of the VQVAE model
+        assert load < 1, "Only loading the last saved version is supported"
+        if load == -1:
+            trainer.model.cw_encoder.reset_parameters()
+
+        cw_train_loader, cw_test_loader = get_cw_loaders(trainer, final)
+        block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader))
+        cw_trainer = CWTrainer(model, exp_name, block_args)
+        if not model_eval:
+            while training_epochs > trainer.epoch:
+                cw_trainer.train(checkpoint_every)
+                cw_trainer.save()
+                cw_trainer.test(partition='test')  # tests on val when not final because val has been saved as test
+                trainer.test_cw_recon()
+        else:
+            cw_trainer.test(partition='test')
+            trainer.test_cw_recon(partition='test' if final else 'val')
+        return
+
     # loads last model
     if load == 0:
         trainer.load()
@@ -182,6 +203,7 @@ def main(task='train/eval'):
             trainer.test(partition='test' if final else 'val')
     else:
         trainer.test(partition='test' if final else 'val')
+
 
 if __name__ == '__main__':
     main()

@@ -21,31 +21,6 @@ class TransferGrad(Function):
         return grad_output, None
 
 
-class AE(nn.Module):
-    settings = {}
-
-    def __init__(self, encoder_name, decoder_name, cw_dim, gf, k=20, m=2048, **settings):
-        super().__init__()
-        self.encoder_name = encoder_name
-        self.decoder_name = decoder_name
-        self.encoder = get_encoder(encoder_name)(cw_dim, k)
-        self.decoder = get_decoder(decoder_name)(cw_dim, m, gf=gf)
-        self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim, 'k': k}
-
-    def forward(self, x):
-        data = self.encode(x)
-        return self.decode(data)
-
-    def encode(self, x):
-        data = {'cw': self.encoder(x)}
-        return data
-
-    def decode(self, data):
-        x = self.decoder(data['cw']).transpose(2, 1)
-        data['recon'] = x
-        return data
-
-
 class VAECW(nn.Module):
     settings = {}
 
@@ -53,7 +28,7 @@ class VAECW(nn.Module):
         super().__init__()
         self.encoder = CWEncoder(cw_dim, z_dim)
         self.decoder = CWDecoder(cw_dim, z_dim)
-        # self.settings = {'encode_h_dim': self.encode.h_dim, 'decode_h_dim': self.decode.h_dim}
+        self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
 
     def forward(self, x):
         data = self.encode(x)
@@ -72,16 +47,44 @@ class VAECW(nn.Module):
         return data
 
     def decode(self, data):
-        data['recon_cw'] = self.decoder(data['z'])
+        data['cw_recon'] = self.decoder(data['z'])
+        return data
+
+    def reset_parameters(self):
+        self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
+
+
+class AE(nn.Module):
+    settings = {}
+
+    def __init__(self, encoder_name, decoder_name, cw_dim, gf, k=20, m=2048, **settings):
+        super().__init__()
+        self.encoder_name = encoder_name
+        self.decoder_name = decoder_name
+        self.encoder = get_encoder(encoder_name)(cw_dim, k)
+        self.decoder = get_decoder(decoder_name)(cw_dim, m, gf=gf)
+        self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim, 'k': k}
+
+    def forward(self, x, indices):
+        data = self.encode(x, indices)
+        return self.decode(data)
+
+    def encode(self, x, indices):
+        data = {'cw': self.encoder(x, indices)}
+        return data
+
+    def decode(self, data):
+        x = self.decoder(data['cw']).transpose(2, 1)
+        data['recon'] = x
         return data
 
 
 class VQVAE(AE):
+    recon_z = False
 
     def __init__(self, encoder_name, decoder_name, cw_dim, gf, dict_size, dim_embedding, k, m):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
         super().__init__(encoder_name, decoder_name, cw_dim, gf, k, m)
-        self.recon_z = False
         self.dim_codes = cw_dim // dim_embedding
         self.dict_size = dict_size
         self.dim_embedding = dim_embedding
@@ -115,35 +118,35 @@ class VQVAE(AE):
 
         return cw_embed, one_hot_idx
 
-    def encode(self, x):
+    def encode(self, x, indices):
         data = {}
-        x = self.encoder(x)
-        data['cw_approx'] = x
-        data['cw_embed'], data['idx'] = self.quantise(x)
-        data['cw'] = TransferGrad().apply(x, data['cw_embed'])
+        x = self.encoder(x, indices)
+        data['cw_q'] = x
+        data['cw_e'], data['idx'] = self.quantise(x)
+        data['cw'] = TransferGrad().apply(x, data['cw_e'])
         return data
 
-    def forward(self, x):
+    def forward(self, x, indices):
         if self.recon_z:
-            data = self.encode_z(x)
+            data = self.encode_z(x, indices)
             return self.decode_z(data)
-        return super().forward(x)
+        return super().forward(x, indices)
 
-    def encode_z(self, x):
-        data = self.encode(x)
-        data.update(self.cw_encoder.encode(data['cw_approx']))
+    def encode_z(self, x, indices):
+        data = self.encode(x, indices)
+        data.update(self.cw_encoder.encode(data['cw_q']))
         return data
 
     def decode_z(self, data):
-        data.update(self.cw_encoder.encode(data['z']))
-        x = self.decoder(data['recon_cw']).transpose(2, 1)
+        data['cw_recon'] = self.cw_encoder.decoder(data['z'])
+        x = self.decoder(data['cw_recon']).transpose(2, 1)
         data['recon'] = x
         return data
 
 
-def get_model(vae, **model_settings):
-    if vae == 'AE':
-        Model = AE
-    elif vae == 'VQVAE':
-        Model = VQVAE
-    return Model(**model_settings)
+def get_model(ae, **model_settings):
+    if ae == 'AE':
+        model = AE(**model_settings)
+    else:
+        model = VQVAE(**model_settings)
+    return model

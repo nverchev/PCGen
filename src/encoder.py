@@ -9,6 +9,8 @@ IN_CHAN = 3
 class CWEncoder(nn.Module):
 
     def __init__(self, cw_dim, z_dim):
+        super().__init__()
+        self.h_dim = []
         self.encode = nn.Sequential(LinearLayer(cw_dim, 2 * z_dim, act=None))
 
     def forward(self, x):
@@ -27,8 +29,7 @@ class LDGCNN(nn.Module):
         self.points_convs = nn.Sequential(*modules)
         self.final_conv = PointsConvLayer(sum(self.h_dim), cw_dim, act=None, batch_norm=False)
 
-    def forward(self, x):
-        x, indices = x
+    def forward(self, x, indices):
         x = x.transpose(2, 1)
         x = get_graph_features(x, k=self.k, indices=indices)
         x = self.edge_conv(x)
@@ -55,9 +56,8 @@ class DGCNN(nn.Module):
         self.edge_convs = nn.Sequential(*edge_conv_list)
         self.final_conv = nn.Conv1d(sum(self.h_dim), cw_dim, kernel_size=1)
 
-    def forward(self, x):
+    def forward(self, x, indices):
         xs = []
-        x, indices = x
         x = x.transpose(2, 1)
         for conv in self.edge_convs:
             x = get_graph_features(x, k=self.k, indices=indices)  # [batch, features, num_points, k]
@@ -86,8 +86,7 @@ class FoldingNet(nn.Module):
         self.features_mlp = nn.Sequential(LinearLayer(self.h_dim[4], self.h_dim[5], act=nn.ReLU(), batch_norm=False),
                                           nn.Linear(self.h_dim[5], cw_dim))
 
-    def forward(self, x):
-        x, indices = x
+    def forward(self, x, indices):
         x = x.transpose(2, 1)
         x = get_local_covariance(x, self.k, indices)
         x = self.point_mlp(x)

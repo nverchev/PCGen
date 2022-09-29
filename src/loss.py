@@ -92,9 +92,6 @@ class VAELoss(nn.Module):
         recon_loss_dict = self.get_recon_loss(inputs, recons)
         recon_loss = recon_loss_dict.pop('recon')
         criterion = recon_loss + self.c_reg * reg_loss
-        if torch.isnan(criterion):
-            print(outputs)
-            raise
         return {
             'Criterion': criterion,
             **reg_loss_dict,
@@ -121,14 +118,10 @@ class VQVAELoss:
     c_vq = 0.1
 
     def __call__(self, inputs, outputs):
-        encoder_loss = ((outputs['cw_approx'] - outputs['cw'].detach()) ** 2).sum(-1).mean()
-        embed_loss = ((outputs['cw_approx'].detach() - outputs['cw_embed']) ** 2).sum(-1).mean()
-        embed_recon_loss = ((outputs['cw_recon'] - outputs['cw_embed'].detach()) ** 2).sum(-1).mean()
-        KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
-        return {'reg': self.c_vq * (embed_loss + embed_recon_loss + encoder_loss / 4 + KLD_free),
+        encoder_loss = ((outputs['cw_q'] - outputs['cw_e'].detach()) ** 2).sum(-1).mean()
+        embed_loss = ((outputs['cw_q'].detach() - outputs['cw_e']) ** 2).sum(-1).mean()
+        return {'reg': self.c_vq * (embed_loss + encoder_loss / 4),
                 'Embed Loss': embed_loss,
-                'Embed_recon_loss': embed_recon_loss,
-                'KLD': KLD
                 }
 
 
@@ -162,11 +155,28 @@ class ReconLoss:
         return dict_recon
 
 
-def get_vae_loss(block_args):
+class CWEncoderLoss(nn.Module):
+    def __init__(self, c_reg):
+        super().__init__()
+        self.c_reg = c_reg
+
+    def forward(self, outputs, inputs, targets):
+        cw_e = inputs[1]
+        recon_loss = F.mse_loss(cw_e, outputs['cw_recon'])
+        KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
+        criterion = recon_loss + self.c_reg * KLD_free
+        return {
+            'Criterion': criterion,
+            'KLD': KLD,
+            'MSE': recon_loss
+        }
+
+
+def get_ae_loss(block_args):
     get_recon_loss = ReconLoss(block_args['recon_loss'])
-    if block_args['vae'] == 'NoVAE':
+    if block_args['ae'] == 'AE':
         get_reg_loss = NoVAELoss()
-    elif block_args['vae'] == 'VQVAE':
+    elif block_args['ae'] == 'VQVAE':
         get_reg_loss = VQVAELoss()
     else:
         get_reg_loss = KLDVAELoss()

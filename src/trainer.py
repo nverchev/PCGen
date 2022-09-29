@@ -9,8 +9,7 @@ from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from collections import UserDict
-
-from src.loss import get_vae_loss
+from src.loss import get_ae_loss, CWEncoderLoss
 from src.plot_PC import pc_show
 
 
@@ -87,6 +86,7 @@ minioClient = Minio(*Your storage name*,
 
 
 class Trainer(metaclass=ABCMeta):
+    bin = ''
     quiet_mode = False  # less output
     max_output = np.inf  # maximum amount of stored evaluated test samples
 
@@ -95,7 +95,7 @@ class Trainer(metaclass=ABCMeta):
 
         self.epoch = 0
         self.device = device  # to cuda or not to cuda?
-        self.model = model.to(device)  # model is not copied
+        self.model = model.to(device)
         self.exp_name = exp_name  # name used for saving and loading
         self.schedule = block_args['schedule']
         self.settings = {**model.settings, **block_args}
@@ -132,13 +132,11 @@ class Trainer(metaclass=ABCMeta):
     @optimizer_settings.setter
     def optimizer_settings(self, optim_args):
         lr = optim_args.pop('lr')
-        if isinstance(lr, dict):
-            self._optimizer_settings = [
-                                           {'params': getattr(self.model, k).parameters(),
-                                            'lr': v} for k, v in lr.items()], optim_args
-        else:
+        if isinstance(lr, dict):  # support individual lr for each parameter (for finetuning for example)
             self._optimizer_settings = \
-                [{'params': self.model.parameters(), 'lr': lr}], optim_args
+                [{'params': getattr(self.model, k).parameters(), 'lr': v} for k, v in lr.items()], optim_args
+        else:
+            self._optimizer_settings = [{'params': self.model.parameters(), 'lr': lr}], optim_args
         return
 
     def update_learning_rate(self, new_lr):
@@ -201,6 +199,7 @@ class Trainer(metaclass=ABCMeta):
             outputs = self.model(**inputs_aux)
             batch_loss = self.loss(outputs, inputs, targets)
             criterion = batch_loss['Criterion']
+            assert not torch.isnan(criterion), print('NANs found:', outputs)
             for loss, value in batch_loss.items():
                 epoch_loss[loss] = epoch_loss.get(loss, 0) + value.item()
             if not inference:
@@ -328,7 +327,7 @@ class Trainer(metaclass=ABCMeta):
         return paths
 
 
-class VAETrainer(Trainer):
+class AETrainer(Trainer):
     clf = svm.SVC(kernel='linear')
     bin = 'pcdvae'  # minio bin
     saved_accuracies = {}
@@ -337,18 +336,28 @@ class VAETrainer(Trainer):
         super().__init__(model, exp_name, **block_args)
         self.acc = None
         self.cf = None
-        self._loss = get_vae_loss(block_args)
+        self._loss = get_ae_loss(block_args)
         return
 
     def test(self, partition='val', m=2048):
-        m_old = self.model.decode.m
-        self.model.decode.m = m
+        m_old = self.model.decoder.m
+        self.model.decoder.m = m
         super().test(partition=partition)
-        self.model.decode.m = m_old
+        self.model.decoder.m = m_old
+        return
+
+    def test_cw_recon(self, partition='val', m=2048):
+        try:
+            self.model.recon_z = True
+        except AttributeError:
+            print('Codeword reconstruction is only supported for the VQVAE model')
+        else:
+            self.test(partition=partition, m=m)
+            self.model.recon_z = False
         return
 
     def update_m_training(self, m):
-        self.model.decode.m_training = m
+        self.model.decoder.m_training = m
 
     def clas_metric(self, final=False):
         # No rotation here
@@ -389,6 +398,35 @@ class VAETrainer(Trainer):
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)
 
+    def helper_inputs(self, inputs, labels):
+        return {'x': inputs[0], 'indices': inputs[1]}
 
-def get_vae_trainer(model, exp_name, block_args):
-    return VAETrainer(model, exp_name, block_args)
+
+class CWTrainer(Trainer):
+
+    def __init__(self, model, exp_name, block_args):
+        self.ae_model = model
+        super().__init__(model.cw_encoder, exp_name, **block_args)
+        self._loss = CWEncoderLoss(block_args['c_reg'])
+        return
+
+    def loss(self, output, inputs, targets):
+        return self._loss(output, inputs, targets)
+
+    def save(self, new_exp_name=None):
+        self.model.eval()
+        paths = self.paths(new_exp_name)
+        if new_exp_name:
+            json.dump(self.settings, open(paths['settings'], 'w'))
+        torch.save(self.ae_model.state_dict(), paths['model'])
+        if self.minio is not None:
+            self.minio.fput_object(self.bin, self.minio_path(paths['model']), paths['model'])
+        print('Model saved at: ', paths['model'])
+        return
+
+    def helper_inputs(self, inputs, labels):
+        return {'x': inputs[0]}
+
+
+def get_ae_trainer(model, exp_name, block_args):
+    return AETrainer(model, exp_name, block_args)

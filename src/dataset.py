@@ -38,6 +38,23 @@ def jitter(cloud, sigma=0.01, clip=0.02):
     return new_cloud
 
 
+class CWDataset(Dataset):
+    def __init__(self, cw_q, cw_e, labels, filter_class=None):
+        self.cw_q = torch.stack(cw_q)
+        self.cw_e = torch.stack(cw_e)
+        self.labels = torch.stack(labels)
+        if filter_class is not None:
+            idx = (self.labels == filter_class).squeeze()
+            self.cw_q = self.cw_q[idx]
+            self.cw_e = self.cw_e[idx]
+
+    def __len__(self):
+        return self.cw_q.shape[0]
+
+    def __getitem__(self, index):
+        return [self.cw_q[index], self.cw_e[index]], self.labels[index]
+
+
 class PiercedCoinsDataset(Dataset):
     def __init__(self, half_thickness=0.1, n_points=2048, k=20, **other_settings):
         self.half_thickness = half_thickness
@@ -101,7 +118,7 @@ class PiercedCoinsDataset(Dataset):
         return np.hstack([x, y, z])
 
     def __len__(self):
-        return 8192
+        return 16
 
     def __getitem__(self, index):
         n_holes = np.random.randint(low=1, high=4)
@@ -200,7 +217,7 @@ class ShapeNetDataset:
         return download_zip(dir_path=self.dir_path, zip_name=self.data_name + '.zip', url=url)
 
 
-def get_dataset(dataset_name, batch_size, final, **dataset_settings):
+def get_loaders(dataset_name, batch_size, final, **dataset_settings):
     pin_memory = torch.cuda.is_available()
     if dataset_name == 'coins':
         dataset = PiercedCoinsDataset(**dataset_settings)
@@ -232,7 +249,20 @@ def get_dataset(dataset_name, batch_size, final, **dataset_settings):
 
     test_dataset = dataset.split('test')
     test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=batch_size, drop_last=False,
-        shuffle=False, pin_memory=pin_memory)
+        test_dataset, batch_size=batch_size, drop_last=False, shuffle=False, pin_memory=pin_memory)
     del dataset
     return train_loader, val_loader, test_loader
+
+
+def get_cw_loaders(t, final, filter_class=None):
+    pin_memory = torch.cuda.is_available()
+    batch_size = t.train_loader.batch_size
+    t.test(partition="train")
+    cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_e'], t.test_targets, filter_class)
+    t.test(partition='test' if final else 'val')
+    cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_e'], t.test_targets, filter_class)
+    cw_train_loader = torch.utils.data.DataLoader(
+        cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+    cw_test_loader = torch.utils.data.DataLoader(
+        cw_test_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
+    return cw_train_loader, cw_test_loader

@@ -11,6 +11,8 @@ OUT_CHAN = 3
 class CWDecoder(nn.Module):
 
     def __init__(self, cw_dim, z_dim):
+        super().__init__()
+        self.h_dim = []
         self.decode = nn.Sequential(LinearLayer(z_dim, cw_dim, act=None))
 
     def forward(self, x):
@@ -263,7 +265,8 @@ class PCGen(nn.Module):
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
-        x = s if s is not None else torch.randn(batch, self.sample_dim, self.m, device=device)
+        m = self.m_training if self.training else self.m
+        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
         x = self.map_samples1(x)
         x = self.map_samples2(x)
@@ -273,16 +276,6 @@ class PCGen(nn.Module):
             x = graph_filtering(x)
         return x
 
-    @property
-    def m(self):
-        if self.training:
-            return self.m_training
-        else:
-            return self._m
-
-    @m.setter
-    def m(self, m):
-        self._m = m
 
 
 def get_decoder(decoder_name):
