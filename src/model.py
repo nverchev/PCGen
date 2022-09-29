@@ -88,10 +88,12 @@ class VQVAE(AE):
         self.dim_codes = cw_dim // dim_embedding
         self.dict_size = dict_size
         self.dim_embedding = dim_embedding
-        self.decay_rate = 0.999
+        self.decay = 0.9
+        self.gain = 1 - self.decay
         self.dictionary = torch.nn.Parameter(
             torch.randn(self.dim_codes, self.dict_size, self.dim_embedding, requires_grad=False))
-        self.ema_counts = torch.nn.Parameter(torch.ones(self.dim_codes, self.dict_size, dtype=torch.float))
+        self.ema_counts = torch.nn.Parameter(
+            torch.ones(self.dim_codes, self.dict_size, dtype=torch.float, requires_grad=False))
         self.cw_encoder = VAECW(cw_dim, cw_dim // 64)
         self.settings['dict_size'] = self.dict_size
         self.settings['dim_embedding'] = self.dim_embedding
@@ -107,14 +109,14 @@ class VQVAE(AE):
         cw_embed = cw_embed.view(batch, self.dim_codes * self.dim_embedding)
         one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=x.device)
         one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)
-        # EMA update
+        #EMA update
         if self.training:
-            self.ema_counts.data = self.decay_rate * self.ema_counts + (1 - self.decay_rate) * one_hot_idx.sum(0)
-            x2 = x2 / self.ema_counts.repeat(batch, 1).unsqueeze(2).gather(1, idx).expand(-1, -1, self.dim_embedding)
-            x = x2.view(batch, self.dim_codes, self.dim_embedding).transpose(0, 1) * (1 - self.decay_rate)
-            idx = idx.view(batch, self.dim_codes, 1).transpose(0, 1).repeat(1, 1, self.dim_embedding)
-            self.dictionary.data *= self.decay_rate
-            self.dictionary.data.scatter_(index=idx, src=x, dim=1, reduce='add')
+            self.ema_counts.data = self.decay * self.ema_counts + self.gain * one_hot_idx.sum(0)
+            x = x2.view(batch, self.dim_codes, self.dim_embedding).transpose(0, 1)
+            idx = idx.view(batch, self.dim_codes, 1).transpose(0, 1).expand(-1, -1, self.dim_embedding)
+            update_dict = torch.zeros_like(self.dictionary).scatter_(index=idx, src=x, dim=1, reduce='add')
+            normalize = self.ema_counts.unsqueeze(2).expand(-1, -1, self.dim_embedding)
+            self.dictionary.data = self.dictionary * self.decay + self.gain * update_dict / normalize
 
         return cw_embed, one_hot_idx
 

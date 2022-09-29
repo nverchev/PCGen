@@ -105,22 +105,20 @@ class NoVAELoss:
 
 
 class KLDVAELoss:
-    c_kld = 0.001
 
     def __call__(self, inputs, outputs):
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
         return {'reg': self.c_kld * KLD_free,
-                'KLD': KLD
+                'KLD': KLD,
                 }
 
 
 class VQVAELoss:
-    c_vq = 0.1
+    c_vq = 10
 
     def __call__(self, inputs, outputs):
-        encoder_loss = ((outputs['cw_q'] - outputs['cw_e'].detach()) ** 2).sum(-1).mean()
-        embed_loss = ((outputs['cw_q'].detach() - outputs['cw_e']) ** 2).sum(-1).mean()
-        return {'reg': self.c_vq * (embed_loss + encoder_loss / 4),
+        embed_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
+        return {'reg': self.c_vq * embed_loss,
                 'Embed Loss': embed_loss,
                 }
 
