@@ -88,7 +88,7 @@ class VQVAE(AE):
         self.dim_codes = cw_dim // dim_embedding
         self.dict_size = dict_size
         self.dim_embedding = dim_embedding
-        self.decay = 0.9
+        self.decay = 0.95
         self.gain = 1 - self.decay
         self.dictionary = torch.nn.Parameter(
             torch.randn(self.dim_codes, self.dict_size, self.dim_embedding, requires_grad=False))
