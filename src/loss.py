@@ -98,10 +98,9 @@ class VAELoss(nn.Module):
             **recon_loss_dict
         }
 
-
-class NoVAELoss:
-    def __call__(self, inputs, outputs):
-        return {'reg': torch.tensor(0)}
+\0978t5e0ELoss:
+    def _  all__(self, inputs, outputs):
+        reqan {'reg': torch.tensor(0)}
 
 
 class KLDVAELoss:
@@ -115,7 +114,6 @@ class KLDVAELoss:
 
 class VQVAELoss:
     c_vq = 10
-
     def __call__(self, inputs, outputs):
         embed_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
         return {'reg': self.c_vq * embed_loss,

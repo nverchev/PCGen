@@ -17,43 +17,42 @@ def parse_args():
     parser.add_argument('--encoder', type=str, default='LDGCNN', choices=['LDGCNN', 'DGCNN', 'FoldingNet'])
     parser.add_argument('--decoder', type=str, default='PCGen', choices=['PCGen', 'Full', 'FoldingNet',
                                                                          'TearingNet', 'AtlasNet'])
-    parser.add_argument('--experiment', type=str, default='',
+    parser.add_argument('--exp', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
-                        help='Default is given by model_recon_loss_exp_name')
-    parser.add_argument('--gf', action='store_true', default=False, help='graph filtering after decoder')
+                        help='Default is given by "_".join(model(GF), recon_loss, exp)')
+    parser.add_argument('--gf', action='store_true', default=False, help='Graph filtering after decoder')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
-                        choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='reconstruction loss')
-    parser.add_argument('--ae', type=str, default='AE',
-                        choices=['AE', 'VQVAE'], help='type of regularization')
+                        choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='PC reconstruction loss')
+    parser.add_argument('--ae', type=str, default='AE', choices=['AE', 'VQVAE'], help='VQVAE adds quantisation')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet', 'coins'])
     parser.add_argument('--num_points', type=int, default=2048,
-                        help='num of points of the training dataset')
+                        help='Number of points of the training dataset')
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--optim', type=str, default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
-                        help='SGD_momentum, has momentum = 0.9')
-    parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
-    parser.add_argument('--wd', type=float, default=0.000001, help='weight decay')
+                        help='SGD_momentum has momentum = 0.9')
+    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate')
+    parser.add_argument('--wd', type=float, default=0.000001, help='Wweight decay')
     parser.add_argument('--k', type=int, default=20,
-                        help='number of neighbours of a point (counting the point itself) in DGCNN]')
-    parser.add_argument('--cw_dim', type=int, default=512, help='dimension of the latent space')
-    parser.add_argument('--dict_size', type=int, default=16, help='dictionary size for vector quantisation')
-    parser.add_argument('--dim_embedding', type=int, default=4, help='dim of the vector for vector quantisation')
-    parser.add_argument('--c_reg', type=float, default=1, help='coefficient for regularization')
-    parser.add_argument('--no_cuda', action='store_true', default=False, help='runs on CPU')
-    parser.add_argument('--epochs', type=int, default=250, help='number of total training epochs')
-    parser.add_argument('--checkpoint', type=int, default=10, help='number of epochs between checkpoints')
+                        help='Number of neighbours of a point (counting the point itself) in DGCNN]')
+    parser.add_argument('--cw_dim', type=int, default=512, help='Dimension of the codeword space')
+    parser.add_argument('--dict_size', type=int, default=16, help='Dictionary size for vector quantisation')
+    parser.add_argument('--dim_embedding', type=int, default=4, help='Dimension of the vector for vector quantisation')
+    parser.add_argument('--c_reg', type=float, default=1, help='Coefficient for regularization')
+    parser.add_argument('--no_cuda', action='store_true', default=False, help='Runs on CPU')
+    parser.add_argument('--epochs', type=int, default=250, help='Number of total training epochs')
+    parser.add_argument('--checkpoint', type=int, default=10, help='Number of epochs between checkpoints')
     parser.add_argument('--m_training', type=int, default=2048,
                         help='Points generated when training, 0 for  increasing sequence 128 -> 4096 ')
     parser.add_argument('--m_test', type=int, default=2048, help='Points generated when testing')
     parser.add_argument('--load', type=int, default=-1,
-                        help='load a saved model with the same settings. -1 for starting from scratch,'
+                        help='Load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
     parser.add_argument('--eval', action='store_true', default=False,
-                        help='evaluate the model (exp_name needs to start with "final")')
+                        help='Evaluate the model (exp_name needs to start with "final")')
     parser.add_argument('--minio_credential', type=str, default='',
-                        help='path of file with written server;access_key;secret_key')
+                        help='Path of txt file with written server;access_key;secret_key')
     return parser.parse_args()
 
 
@@ -105,7 +104,7 @@ def main(task='train/eval'):
         dataset_name=dataset_name,
         dir_path=dir_path,
         num_points=num_points,
-        # preprocess k index to speed up training (invariant to affine transformations)
+        # preprocess k index to speed up training (invariant to rotations and scale)
         k=k,
         translation=False,
         rotation=True,

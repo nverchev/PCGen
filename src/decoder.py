@@ -252,8 +252,8 @@ class PCGen(nn.Module):
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
-        self.map_samples1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_samples2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
+        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                             act=nn.Hardtanh(inplace=True))
         modules = []
         for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
@@ -268,8 +268,8 @@ class PCGen(nn.Module):
         m = self.m_training if self.training else self.m
         x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        x = self.map_samples1(x)
-        x = self.map_samples2(x)
+        x = self.map_sample1(x)
+        x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
         if self.gf:
