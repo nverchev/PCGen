@@ -163,7 +163,12 @@ def main(task='train/eval'):
     trainer = get_ae_trainer(model, exp_name, block_args)
     if task == 'train cw encoder':
         assert ae == "VQVAE", "Only VQVAE supported"
-        trainer.load()  # cw encoder is embedded to the last epoch of the VQVAE model
+        #trainer.load()  # cw encoder is embedded to the last epoch of the VQVAE model
+        load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
+        assert os.path.exists(load_path), "No pretrained experiment in " + load_path
+        model_state = torch.load(load_path, map_location=device)
+        model_state.popitem("*cw_encoder*")  # temporary feature to experiment with different cw_encoders
+        model.load_state_dict(model_state, strict=False)
         assert load < 1, "Only loading the last saved version is supported"
         if load == -1:
             trainer.model.cw_encoder.reset_parameters()
