@@ -308,20 +308,19 @@ class Trainer(metaclass=ABCMeta):
         print('Loaded: ', paths['model'])
         return
 
-    def paths(self, new_exp_name=None):
+    def paths(self, new_exp_name=None, epoch=None):
+        epoch = self.epoch if epoch is None else epoch
         if not os.path.exists(self.models_path):
             os.mkdir(self.models_path)
         if new_exp_name:  # save a parallel version to work with
             directory = os.path.join(self.models_path, new_exp_name)
-            ep = self.epoch
         else:
             directory = os.path.join(self.models_path, self.exp_name)
-            ep = self.epoch
         if not os.path.exists(directory):
             os.mkdir(directory)
         paths = {'settings': os.path.join(directory, 'settings.json'),
-                 'model': os.path.join(directory, f'model_epoch{ep}.pt'),
-                 'optim': os.path.join(directory, f'optimizer_epoch{ep}.pt'),
+                 'model': os.path.join(directory, f'model_epoch{epoch}.pt'),
+                 'optim': os.path.join(directory, f'optimizer_epoch{epoch}.pt'),
                  'train_hist': os.path.join(directory, 'train_losses.json'),
                  'val_hist': os.path.join(directory, 'val_losses.json')}
         return paths
@@ -406,6 +405,7 @@ class CWTrainer(Trainer):
 
     def __init__(self, model, exp_name, block_args):
         self.ae_model = model
+        self.ar_epoch = block_args['training_epochs']
         super().__init__(model.cw_encoder, exp_name, **block_args)
         self._loss = CWEncoderLoss(block_args['c_reg'])
         return
@@ -415,7 +415,7 @@ class CWTrainer(Trainer):
 
     def save(self, new_exp_name=None):
         self.model.eval()
-        paths = self.paths(new_exp_name)
+        paths = self.paths(new_exp_name, epoch=self.ar_epoch)
         if new_exp_name:
             json.dump(self.settings, open(paths['settings'], 'w'))
         torch.save(self.ae_model.state_dict(), paths['model'])

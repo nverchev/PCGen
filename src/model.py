@@ -24,11 +24,15 @@ class TransferGrad(Function):
 class VAECW(nn.Module):
     settings = {}
 
-    def __init__(self, cw_dim, z_dim=20):
+    def __init__(self, cw_dim, z_dim=20, book_size=16):
         super().__init__()
+        self.z_dim = z_dim
+        self.book_size = book_size
         self.encoder = CWEncoder(cw_dim, z_dim)
         self.decoder = CWDecoder(cw_dim, z_dim)
-        self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
+        self.codebook = torch.nn.Parameter(torch.randn(1, book_size, z_dim))
+        self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim,
+                         'book_size': self.book_size}
 
     def forward(self, x):
         data = self.encode(x)
@@ -39,15 +43,29 @@ class VAECW(nn.Module):
         eps = torch.randn_like(std)
         return eps.mul(std).add_(mu) if self.training else mu
 
+    def quantise(self, x):
+        batch, embed = x.size()
+        x = x.unsqueeze(1)
+        book = self.codebook.repeat(batch, 1, 1)
+        dist = square_distance(x, book)
+        idx = dist.argmin(axis=2)
+        cw_embed = book.gather(1, idx.expand(-1, -1, self.z_dim)).squeeze(1)
+        one_hot_idx = torch.zeros(batch, self.book_size, device=x.device)
+        one_hot_idx = one_hot_idx.scatter_(1, idx.squeeze(-1), 1)
+        return cw_embed, one_hot_idx
+
     def encode(self, x):
         data = {}
         x = self.encoder(x)
-        data['mu'], data['log_var'] = x.chunk(2, 1)
+        data['t'], data['log_var'] = x.chunk(2, 1)
+        data['t_quantised'], data['idx_t'] = self.quantise(data['t'])
+        data['mu'] = data['t'] - data['t_quantised']
         data['z'] = self.sample(data['mu'], data['log_var'])
         return data
 
     def decode(self, data):
-        data['cw_recon'] = self.decoder(data['z'])
+        data['t_recon'] = data['z'] + data['t_quantised']
+        data['cw_recon'] = self.decoder(data['t_recon'])
         return data
 
     def reset_parameters(self):
@@ -82,41 +100,41 @@ class AE(nn.Module):
 class VQVAE(AE):
     recon_z = False
 
-    def __init__(self, encoder_name, decoder_name, cw_dim, gf, dict_size, dim_embedding, k, m):
+    def __init__(self, encoder_name, decoder_name, cw_dim, gf, book_size, dim_embedding, k, m):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
         super().__init__(encoder_name, decoder_name, cw_dim, gf, k, m)
         self.dim_codes = cw_dim // dim_embedding
-        self.dict_size = dict_size
+        self.book_size = book_size
         self.dim_embedding = dim_embedding
-        self.decay = 0.95
-        self.gain = 1 - self.decay
-        self.dictionary = torch.nn.Parameter(
-            torch.randn(self.dim_codes, self.dict_size, self.dim_embedding, requires_grad=False))
-        self.ema_counts = torch.nn.Parameter(
-            torch.ones(self.dim_codes, self.dict_size, dtype=torch.float, requires_grad=False))
+        # self.decay = 0.95
+        # self.gain = 1 - self.decay
+        self.codebook = torch.nn.Parameter(
+            torch.randn(self.dim_codes, self.book_size, self.dim_embedding)) #, requires_grad=False))
+        # self.ema_counts = torch.nn.Parameter(
+        #     torch.ones(self.dim_codes, self.book_size, dtype=torch.float, requires_grad=False))
         self.cw_encoder = VAECW(cw_dim, cw_dim // 64)
-        self.settings['dict_size'] = self.dict_size
+        self.settings['book_size'] = self.book_size
         self.settings['dim_embedding'] = self.dim_embedding
         self.settings['cw_encoder'] = self.cw_encoder.settings
 
     def quantise(self, x):
         batch, embed = x.size()
         x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
-        dictionary = self.dictionary.repeat(batch, 1, 1)
-        dist = square_distance(x2, dictionary)
+        book = self.codebook.repeat(batch, 1, 1)
+        dist = square_distance(x2, book)
         idx = dist.argmin(axis=2)
-        cw_embed = dictionary.gather(1, idx.expand(-1, -1, self.dim_embedding))
+        cw_embed = book.gather(1, idx.expand(-1, -1, self.dim_embedding))
         cw_embed = cw_embed.view(batch, self.dim_codes * self.dim_embedding)
-        one_hot_idx = torch.zeros(batch, self.dim_codes, self.dict_size, device=x.device)
+        one_hot_idx = torch.zeros(batch, self.dim_codes, self.book_size, device=x.device)
         one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)
         #EMA update
-        if self.training:
-            self.ema_counts.data = self.decay * self.ema_counts + self.gain * one_hot_idx.sum(0)
-            x = x2.view(batch, self.dim_codes, self.dim_embedding).transpose(0, 1)
-            idx = idx.view(batch, self.dim_codes, 1).transpose(0, 1).expand(-1, -1, self.dim_embedding)
-            update_dict = torch.zeros_like(self.dictionary).scatter_(index=idx, src=x, dim=1, reduce='add')
-            normalize = self.ema_counts.unsqueeze(2).expand(-1, -1, self.dim_embedding)
-            self.dictionary.data = self.dictionary * self.decay + self.gain * update_dict / normalize
+        # if self.training:
+        #     self.ema_counts.data = self.decay * self.ema_counts + self.gain * one_hot_idx.sum(0)
+        #     x = x2.view(batch, self.dim_codes, self.dim_embedding).transpose(0, 1)
+        #     idx = idx.view(batch, self.dim_codes, 1).transpose(0, 1).expand(-1, -1, self.dim_embedding)
+        #     update_dict = torch.zeros_like(self.dictionary).scatter_(index=idx, src=x, dim=1, reduce='add')
+        #     normalize = self.ema_counts.unsqueeze(2).expand(-1, -1, self.dim_embedding)
+        #     self.dictionary.data = self.dictionary * self.decay + self.gain * update_dict / normalize
 
         return cw_embed, one_hot_idx
 
@@ -124,7 +142,7 @@ class VQVAE(AE):
         data = {}
         x = self.encoder(x, indices)
         data['cw_q'] = x
-        data['cw_e'], data['idx'] = self.quantise(x)
+        data['cw_e'], data['idx_cw'] = self.quantise(x)
         data['cw'] = TransferGrad().apply(x, data['cw_e'])
         return data
 

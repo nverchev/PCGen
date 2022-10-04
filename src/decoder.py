@@ -12,8 +12,12 @@ class CWDecoder(nn.Module):
 
     def __init__(self, cw_dim, z_dim):
         super().__init__()
-        self.h_dim = []
-        self.decode = nn.Sequential(LinearLayer(z_dim, cw_dim, act=None))
+        self.h_dim = [z_dim * 4, z_dim * 16]
+        modules = [LinearLayer(z_dim, self.h_dim[0])]
+        for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
+            modules.append(LinearLayer(in_dim, out_dim))
+        modules.append(LinearLayer(self.h_dim[-1], cw_dim, act=None))
+        self.decode = nn.Sequential(*modules)
 
     def forward(self, x):
         return self.decode(x)
@@ -254,7 +258,7 @@ class PCGen(nn.Module):
         self.sample_dim = 16
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
-                                            act=nn.Hardtanh(inplace=True))
+                                           act=nn.Hardtanh(inplace=True))
         modules = []
         for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
@@ -275,7 +279,6 @@ class PCGen(nn.Module):
         if self.gf:
             x = graph_filtering(x)
         return x
-
 
 
 def get_decoder(decoder_name):

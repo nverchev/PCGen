@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument('--k', type=int, default=20,
                         help='Number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--cw_dim', type=int, default=512, help='Dimension of the codeword space')
-    parser.add_argument('--dict_size', type=int, default=16, help='Dictionary size for vector quantisation')
+    parser.add_argument('--book_size', type=int, default=16, help='Dictionary size for vector quantisation')
     parser.add_argument('--dim_embedding', type=int, default=4, help='Dimension of the vector for vector quantisation')
     parser.add_argument('--c_reg', type=float, default=1, help='Coefficient for regularization')
     parser.add_argument('--no_cuda', action='store_true', default=False, help='Runs on CPU')
@@ -57,6 +57,8 @@ def parse_args():
 
 
 def main(task='train/eval'):
+    assert task in ['train/eval', 'return model for profiling', 'return loaded model for random generation',
+                    'train cw encoder']
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
@@ -76,7 +78,7 @@ def main(task='train/eval'):
     initial_learning_rate = args.lr
     weight_decay = args.wd
     cw_dim = args.cw_dim
-    dict_size = args.dict_size
+    book_size = args.book_size
     dim_embedding = args.dim_embedding
     c_reg = args.c_reg
     device = torch.device('cuda:0' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
@@ -118,7 +120,7 @@ def main(task='train/eval'):
                           k=k,
                           m=m,
                           ae=ae,
-                          dict_size=dict_size,
+                          book_size=book_size,
                           dim_embedding=dim_embedding
 
                           )
@@ -134,7 +136,8 @@ def main(task='train/eval'):
         model.load_state_dict(torch.load(load_path, map_location=device))
         z_dim = cw_dim // 64
         z = torch.randn(batch_size, z_dim).to(device)
-        return model, z
+        t = model.cw_encoder.codebook[torch.randint(model.cw_encoder.book_size, [batch_size])]
+        return model, z, t
 
     train_loader, val_loader, test_loader = get_loaders(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
@@ -147,6 +150,7 @@ def main(task='train/eval'):
         test_loader=test_loader,
         device=device,
         batch_size=batch_size,
+        training_epochs=training_epochs,
         schedule=CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
         minio_client=minio_client,
         model_path=os.path.join(dir_path, 'model'),
@@ -168,11 +172,11 @@ def main(task='train/eval'):
         block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader))
         cw_trainer = CWTrainer(model, exp_name, block_args)
         if not model_eval:
-            while training_epochs > trainer.epoch:
+            while training_epochs > cw_trainer.epoch:
                 cw_trainer.train(checkpoint_every)
                 cw_trainer.save()
                 cw_trainer.test(partition='test')  # tests on val when not final because val has been saved as test
-                trainer.test_cw_recon()
+                trainer.test_cw_recon(partition='test' if final else 'val')
         else:
             cw_trainer.test(partition='test')
             trainer.test_cw_recon(partition='test' if final else 'val')
