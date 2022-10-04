@@ -167,7 +167,11 @@ def main(task='train/eval'):
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), "No pretrained experiment in " + load_path
         model_state = torch.load(load_path, map_location=device)
-        model_state.popitem("*cw_encoder*")  # temporary feature to experiment with different cw_encoders
+        while True:
+            try:
+                model_state.popitem("cw_encoder*")  # temporary feature to experiment with different cw_encoders
+            except KeyError:
+                break
         model.load_state_dict(model_state, strict=False)
         assert load < 1, "Only loading the last saved version is supported"
         if load == -1:
