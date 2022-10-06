@@ -91,7 +91,7 @@ class VAELoss(nn.Module):
         reg_loss = reg_loss_dict.pop('reg')
         recon_loss_dict = self.get_recon_loss(inputs, recons)
         recon_loss = recon_loss_dict.pop('recon')
-        criterion = 1000 * recon_loss + self.c_reg * reg_loss
+        criterion = recon_loss + self.c_reg * reg_loss
         return {
             'Criterion': criterion,
             **reg_loss_dict,
@@ -161,7 +161,7 @@ class CWEncoderLoss(nn.Module):
         cw_e = inputs[1]
         recon_loss = F.mse_loss(cw_e, outputs['cw_recon'])
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
-        criterion = recon_loss + self.c_reg * KLD_free
+        criterion = 1000 * recon_loss + self.c_reg * KLD_free
         return {
             'Criterion': criterion,
             'KLD': KLD,
