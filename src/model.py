@@ -43,16 +43,16 @@ class VAECW(nn.Module):
         eps = torch.randn_like(std)
         return eps.mul(std).add_(mu) if self.training else mu
 
-    # def quantise(self, x):
-    #     batch, embed = x.size()
-    #     x = x.unsqueeze(1)
-    #     book = self.codebook.repeat(batch, 1, 1)
-    #     dist = square_distance(x, book)
-    #     idx = dist.argmin(axis=2)
-    #     cw_embed = book.gather(1, idx.expand(-1, -1, self.z_dim)).squeeze(1)
-    #     one_hot_idx = torch.zeros(batch, self.book_size, device=x.device)
-    #     one_hot_idx = one_hot_idx.scatter_(1, idx.squeeze(-1), 1)
-    #     return cw_embed, one_hot_idx
+    def quantise(self, x):
+        batch, embed = x.size()
+        x = x.unsqueeze(1)
+        book = self.codebook.repeat(batch, 1, 1)
+        dist = square_distance(x, book)
+        idx = dist.argmin(axis=2)
+        cw_embed = book.gather(1, idx.expand(-1, -1, self.z_dim)).squeeze(1)
+        one_hot_idx = torch.zeros(batch, self.book_size, device=x.device)
+        one_hot_idx = one_hot_idx.scatter_(1, idx.squeeze(-1), 1)
+        return cw_embed, one_hot_idx
 
     def encode(self, x):
         data = {}
