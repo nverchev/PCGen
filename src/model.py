@@ -27,7 +27,7 @@ class VAECW(nn.Module):
     def __init__(self, cw_dim, z_dim=20, book_size=16):
         super().__init__()
         self.z_dim = z_dim
-        self.book_size = 128
+        self.book_size = book_size
         self.encoder = CWEncoder(cw_dim, z_dim)
         self.decoder = CWDecoder(cw_dim, z_dim)
         self.codebook = torch.nn.Parameter(torch.randn(1, book_size, z_dim))
@@ -152,13 +152,13 @@ class VQVAE(AE):
             return self.decode_z(data)
         return super().forward(x, indices)
 
-    def encode_z(self, x, indices):
+    def cw_encode(self, x, indices):
         data = self.encode(x, indices)
         data.update(self.cw_encoder.encode(data['cw_q']))
         return data
 
-    def decode_z(self, data):
-        data['cw_recon'] = self.cw_encoder.decoder(data['z'])
+    def cw_decode(self, data):
+        data.update(self.cw_encoder.decode(data))
         x = self.decoder(data['cw_recon']).transpose(2, 1)
         data['recon'] = x
         return data
