@@ -173,6 +173,7 @@ def main(task='train/eval'):
             except KeyError:
                 break
         trainer.model.load_state_dict(model_state, strict=False)
+        trainer.test()
         assert load < 1, "Only loading the last saved version is supported"
         if load == -1:
             trainer.model.cw_encoder.reset_parameters()
