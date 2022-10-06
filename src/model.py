@@ -72,6 +72,42 @@ class VAECW(nn.Module):
         self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
 
 
+
+class VAECW(nn.Module):
+    settings = {}
+
+    def __init__(self, cw_dim, z_dim=20, book_size=16):
+        super().__init__()
+        self.z_dim = z_dim
+        self.book_size = book_size
+        self.encoder = CWEncoder(cw_dim, z_dim)
+        self.decoder = CWDecoder(cw_dim, z_dim)
+        self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim,
+                         'book_size': self.book_size}
+
+    def forward(self, x):
+        data = self.encode(x)
+        return self.decode(data)
+
+    def sample(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return eps.mul(std).add_(mu) if self.training else mu
+
+    def encode(self, x):
+        data = {}
+        x = self.encoder(x)
+        data['mu'], data['log_var'] = x.chunk(2, 1)
+        data['z'] = self.sample(data['mu'], data['log_var'])
+        return data
+
+    def decode(self, data):
+        data['cw_recon'] = self.decoder(data['z'])
+        return data
+
+    def reset_parameters(self):
+        self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
+
 class AE(nn.Module):
     settings = {}
 
