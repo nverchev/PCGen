@@ -27,7 +27,7 @@ class VAECW(nn.Module):
     def __init__(self, cw_dim, z_dim=20, book_size=16):
         super().__init__()
         self.z_dim = z_dim
-        self.book_size = book_size
+        self.book_size = 128
         self.encoder = CWEncoder(cw_dim, z_dim)
         self.decoder = CWDecoder(cw_dim, z_dim)
         self.codebook = torch.nn.Parameter(torch.randn(1, book_size, z_dim))
