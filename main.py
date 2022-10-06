@@ -186,6 +186,7 @@ def main(task='train/eval'):
                 cw_trainer.train(checkpoint_every)
                 cw_trainer.save()
                 cw_trainer.test(partition='test')  # tests on val when not final because val has been saved as test
+                trainer.load()
                 trainer.test_cw_recon(partition='test' if final else 'val')
         else:
             cw_trainer.test(partition='test')

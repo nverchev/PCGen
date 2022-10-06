@@ -416,6 +416,7 @@ class CWTrainer(Trainer):
     def save(self, new_exp_name=None):
         self.model.eval()
         paths = self.paths(new_exp_name, epoch=self.ar_epoch)
+        self.ae_model.cw_encoder.load_state_dict(self.model.state_dict())
         if new_exp_name:
             json.dump(self.settings, open(paths['settings'], 'w'))
         torch.save(self.ae_model.state_dict(), paths['model'])
