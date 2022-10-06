@@ -163,7 +163,7 @@ def main(task='train/eval'):
     trainer = get_ae_trainer(model, exp_name, block_args)
     if task == 'train cw encoder':
         assert ae == "VQVAE", "Only VQVAE supported"
-        trainer.load()  # cw encoder is embedded to the last epoch of the VQVAE model
+        trainer.load(0)  # cw encoder is embedded to the last epoch of the VQVAE model
         trainer.test()
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), "No pretrained experiment in " + load_path
