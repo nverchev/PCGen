@@ -148,8 +148,8 @@ class VQVAE(AE):
 
     def forward(self, x, indices):
         if self.recon_z:
-            data = self.encode_z(x, indices)
-            return self.decode_z(data)
+            data = self.cw_encode(x, indices)
+            return self.cw_decode(data)
         return super().forward(x, indices)
 
     def cw_encode(self, x, indices):
