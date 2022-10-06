@@ -172,7 +172,7 @@ def main(task='train/eval'):
                 model_state.popitem("cw_encoder*")  # temporary feature to experiment with different cw_encoders
             except KeyError:
                 break
-        model.load_state_dict(model_state, strict=False)
+        trainer.model.load_state_dict(model_state, strict=False)
         assert load < 1, "Only loading the last saved version is supported"
         if load == -1:
             trainer.model.cw_encoder.reset_parameters()
