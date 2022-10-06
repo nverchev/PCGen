@@ -91,7 +91,7 @@ class VAELoss(nn.Module):
         reg_loss = reg_loss_dict.pop('reg')
         recon_loss_dict = self.get_recon_loss(inputs, recons)
         recon_loss = recon_loss_dict.pop('recon')
-        criterion = recon_loss + self.c_reg * reg_loss
+        criterion = 1000 * recon_loss + self.c_reg * reg_loss
         return {
             'Criterion': criterion,
             **reg_loss_dict,
