@@ -24,7 +24,7 @@ class TransferGrad(Function):
 class VAECW(nn.Module):
     settings = {}
 
-    def __init__(self, cw_dim, z_dim=20, book_size=16):
+    def __init__(self, cw_dim, z_dim=64, book_size=16):
         super().__init__()
         self.z_dim = z_dim
         self.book_size = 128
@@ -43,21 +43,21 @@ class VAECW(nn.Module):
         eps = torch.randn_like(std)
         return eps.mul(std).add_(mu) if self.training else mu
 
-    def quantise(self, x):
-        batch, embed = x.size()
-        x = x.unsqueeze(1)
-        book = self.codebook.repeat(batch, 1, 1)
-        dist = square_distance(x, book)
-        idx = dist.argmin(axis=2)
-        cw_embed = book.gather(1, idx.expand(-1, -1, self.z_dim)).squeeze(1)
-        one_hot_idx = torch.zeros(batch, self.book_size, device=x.device)
-        one_hot_idx = one_hot_idx.scatter_(1, idx.squeeze(-1), 1)
-        return cw_embed, one_hot_idx
+    # def quantise(self, x):
+    #     batch, embed = x.size()
+    #     x = x.unsqueeze(1)
+    #     book = self.codebook.repeat(batch, 1, 1)
+    #     dist = square_distance(x, book)
+    #     idx = dist.argmin(axis=2)
+    #     cw_embed = book.gather(1, idx.expand(-1, -1, self.z_dim)).squeeze(1)
+    #     one_hot_idx = torch.zeros(batch, self.book_size, device=x.device)
+    #     one_hot_idx = one_hot_idx.scatter_(1, idx.squeeze(-1), 1)
+    #     return cw_embed, one_hot_idx
 
     def encode(self, x):
         data = {}
         x = self.encoder(x)
-        data['t'], data['log_var'] = x.chunk(2, 1)
+        data['mu'], data['log_var'] = x.chunk(2, 1)
         data['t_quantised'], data['idx_t'] = self.quantise(data['t'])
         data['mu'] = data['t'] - data['t_quantised']
         data['z'] = self.sample(data['mu'], data['log_var'])
@@ -65,7 +65,7 @@ class VAECW(nn.Module):
 
     def decode(self, data):
         data['t_recon'] = data['z'] + data['t_quantised']
-        data['cw_recon'] = self.decoder(data['t_recon'])
+        data['cw_recon'] = self.decoder(data['z'])
         return data
 
     def reset_parameters(self):
