@@ -5,7 +5,7 @@ from main import main
 def profile_model():
     model, dummy_input = main(task='return model for profiling')
     flops, macs, params = get_model_profile(model=model,
-                                            args=[dummy_input],
+                                            args=dummy_input,
                                             print_profile=True,
                                             detailed=False,
                                             module_depth=2,
