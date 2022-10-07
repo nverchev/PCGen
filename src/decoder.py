@@ -340,9 +340,9 @@ class PCGenH(nn.Module):
         batch = z.size()[0]
         device = z.device
         m = self.m_training if self.training else self.m
-        m_top = m // 4
+        m_top = m // 16
         assert m_top, "Hierarchical version needs at least 16 points"
-        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 5, device=device)
+        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 17, device=device)
         s = s / torch.linalg.vector_norm(s, dim=1, keepdim=True)
         x = s[..., :m_top]
         x = self.map_sample1(x)
