@@ -23,6 +23,20 @@ class CWDecoder(nn.Module):
         return self.decode(x)
 
 
+class CWDecoder(nn.Module):
+
+    def __init__(self, cw_dim, z_dim):
+        super().__init__()
+        self.h_dim = [z_dim, z_dim * 4]
+        modules = [LinearLayer(z_dim // 4, self.h_dim[0])]
+        for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
+            modules.append(LinearLayer(in_dim, out_dim))
+        modules.append(LinearLayer(self.h_dim[-1], cw_dim, act=None))
+        self.decode = nn.Sequential(*modules)
+
+    def forward(self, x):
+        return self.decode(x)
+
 class FullyConnected(nn.Module):
 
     def __init__(self, cw_dim, m, gf):
@@ -326,9 +340,9 @@ class PCGenH(nn.Module):
         batch = z.size()[0]
         device = z.device
         m = self.m_training if self.training else self.m
-        m_top = m // 16
-        assert m_top, "Hirarchical version needs at least 16 points"
-        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 21, device=device)
+        m_top = m // 4
+        assert m_top, "Hierarchical version needs at least 16 points"
+        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 5, device=device)
         s = s / torch.linalg.vector_norm(s, dim=1, keepdim=True)
         x = s[..., :m_top]
         x = self.map_sample1(x)
@@ -347,7 +361,7 @@ class PCGenH(nn.Module):
         x = self.map_sample5(x)
         x = self.map_sample6(x)
         x = z.unsqueeze(2) * x
-        x = torch.cat([x2, x1.repeat(1, 1, 4), x], dim=1).contiguous()
+        x = torch.cat([x2, x], dim=1).contiguous()
         x = self.points_convs3(x)
         if self.gf:
             x = graph_filtering(x)
