@@ -281,6 +281,78 @@ class PCGen(nn.Module):
         return x
 
 
+class PCGenH(nn.Module):
+
+    def __init__(self, cw_dim, m, gf=True):
+        super().__init__()
+        self.h_dim = [256, cw_dim, 512, 256, 128, 64]
+        self.m = m
+        self.m_training = m
+        self.gf = gf
+        self.sample_dim = 16
+        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
+                                           act=nn.Hardtanh(inplace=True))
+        modules = []
+        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+
+        modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+        self.points_convs1 = nn.Sequential(*modules)
+
+        self.map_sample3 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_sample4 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
+                                           act=nn.Hardtanh(inplace=True))
+        modules = []
+        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+            modules.append(PointsConvLayer(in_dim + 3, out_dim + 3, act=nn.ReLU(inplace=True)))
+
+        modules.append(PointsConvLayer(self.h_dim[-1] + 3, OUT_CHAN, batch_norm=False, act=None))
+        self.points_convs2 = nn.Sequential(*modules)
+
+        self.map_sample5 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_sample6 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
+                                           act=nn.Hardtanh(inplace=True))
+
+        modules = []
+        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+            modules.append(PointsConvLayer(in_dim + 6, out_dim + 6, act=nn.ReLU(inplace=True)))
+
+        modules.append(PointsConvLayer(self.h_dim[-1] + 6, OUT_CHAN, batch_norm=False, act=None))
+        self.points_convs3 = nn.Sequential(*modules)
+
+
+    def forward(self, z, s=None):
+        batch = z.size()[0]
+        device = z.device
+        m = self.m_training if self.training else self.m
+        m_top = m // 16
+        assert m_top, "Hirarchical version needs at least 16 points"
+        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 21, device=device)
+        s = s / torch.linalg.vector_norm(s, dim=1, keepdim=True)
+        x = s[..., :m_top]
+        x = self.map_sample1(x)
+        x = self.map_sample2(x)
+        x = z.unsqueeze(2) * x
+        x1 = self.points_convs1(x).repeat(1, 1, 4)
+        if self.gf:
+            x1 = graph_filtering(x)
+        x = s[..., m_top:5 * m_top]
+        x = self.map_sample3(x)
+        x = self.map_sample4(x)
+        x = z.unsqueeze(2) * x
+        x = torch.cat([x1, x], dim=1).contiguous()
+        x2 = self.points_convs2(x).repeat(1, 1, 4)
+        x = s[..., 5 * m_top:]
+        x = self.map_sample5(x)
+        x = self.map_sample6(x)
+        x = z.unsqueeze(2) * x
+        x = torch.cat([x2, x1.repeat(1, 1, 4), x], dim=1).contiguous()
+        x = self.points_convs3(x)
+        if self.gf:
+            x = graph_filtering(x)
+        return x
+
 def get_decoder(decoder_name):
     decoder_dict = {
         'Full': FullyConnected,
@@ -288,5 +360,7 @@ def get_decoder(decoder_name):
         'TearingNet': TearingNet,
         'AtlasNet': AtlasNetv2,
         'PCGen': PCGen,
+        'PCGenH': PCGenH,
+
     }
     return decoder_dict[decoder_name]
