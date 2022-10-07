@@ -113,7 +113,7 @@ class VAECW(nn.Module):
         x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
         book = self.codebook.repeat(batch, 1, 1)
         dist = - self.square_distance(x2, book).view(batch, self.dim_codes, self.book_size)
-        return torch.softmax(dist, dim=-1)
+        return dist
 
 
     def square_distance(self, t1, t2):
