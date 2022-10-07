@@ -115,7 +115,6 @@ class VAECW(nn.Module):
         dist = - self.square_distance(x2, book).view(batch, self.dim_codes, self.book_size)
         return dist
 
-
     def square_distance(self, t1, t2):
         t2 = t2.transpose(-1, -2)
         dist = -2 * torch.matmul(t1, t2)
