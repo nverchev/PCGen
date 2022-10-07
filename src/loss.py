@@ -159,7 +159,7 @@ class CWEncoderLoss(nn.Module):
 
     def forward(self, outputs, inputs, targets):
         cw_e = inputs[1]
-        recon_loss = F.mse_loss(cw_e, outputs['cw_recon'])
+        recon_loss = F.cross_entropy(cw_e, outputs['cw_dist'])
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
         criterion = 10000 * recon_loss + self.c_reg * KLD_free
         return {
