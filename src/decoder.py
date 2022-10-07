@@ -12,23 +12,8 @@ class CWDecoder(nn.Module):
 
     def __init__(self, cw_dim, z_dim):
         super().__init__()
-        self.h_dim = [z_dim * 4, z_dim * 16]
+        self.h_dim = [z_dim * 2, z_dim * 4]
         modules = [LinearLayer(z_dim, self.h_dim[0])]
-        for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
-            modules.append(LinearLayer(in_dim, out_dim))
-        modules.append(LinearLayer(self.h_dim[-1], cw_dim, act=None))
-        self.decode = nn.Sequential(*modules)
-
-    def forward(self, x):
-        return self.decode(x)
-
-
-class CWDecoder(nn.Module):
-
-    def __init__(self, cw_dim, z_dim):
-        super().__init__()
-        self.h_dim = [z_dim, z_dim * 4]
-        modules = [LinearLayer(z_dim // 4, self.h_dim[0])]
         for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
             modules.append(LinearLayer(in_dim, out_dim))
         modules.append(LinearLayer(self.h_dim[-1], cw_dim, act=None))
@@ -330,37 +315,38 @@ class PCGenH(nn.Module):
 
         modules = []
         for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim + 6, out_dim + 6, act=nn.ReLU(inplace=True)))
+            modules.append(PointsConvLayer(in_dim + 3, out_dim + 3, act=nn.ReLU(inplace=True)))
 
-        modules.append(PointsConvLayer(self.h_dim[-1] + 6, OUT_CHAN, batch_norm=False, act=None))
+        modules.append(PointsConvLayer(self.h_dim[-1] + 3, OUT_CHAN, batch_norm=False, act=None))
         self.points_convs3 = nn.Sequential(*modules)
 
 
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
+        z = z.unsqueeze(2)
         m = self.m_training if self.training else self.m
         m_top = m // 16
         assert m_top, "Hierarchical version needs at least 16 points"
-        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 17, device=device)
+        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 21, device=device)
         s = s / torch.linalg.vector_norm(s, dim=1, keepdim=True)
         x = s[..., :m_top]
         x = self.map_sample1(x)
         x = self.map_sample2(x)
-        x = z.unsqueeze(2) * x
+        x = z * x
         x1 = self.points_convs1(x).repeat(1, 1, 4)
         if self.gf:
             x1 = graph_filtering(x)
         x = s[..., m_top:5 * m_top]
         x = self.map_sample3(x)
         x = self.map_sample4(x)
-        x = z.unsqueeze(2) * x
+        x = z * x
         x = torch.cat([x1, x], dim=1).contiguous()
-        x2 = self.points_convs2(x).repeat(1, 1, 4)
+        x2 = (x1 + self.points_convs2(x)).repeat(1, 1, 4)
         x = s[..., 5 * m_top:]
         x = self.map_sample5(x)
         x = self.map_sample6(x)
-        x = z.unsqueeze(2) * x
+        x = z * x
         x = torch.cat([x2, x], dim=1).contiguous()
         x = self.points_convs3(x)
         if self.gf:

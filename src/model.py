@@ -75,7 +75,7 @@ class VAECW(nn.Module):
 class VAECW(nn.Module):
     settings = {}
 
-    def __init__(self, cw_dim, z_dim=64):
+    def __init__(self, cw_dim, z_dim=64, book_size=16):
         super().__init__()
         self.z_dim = z_dim
         self.encoder = CWEncoder(cw_dim, z_dim)
@@ -93,13 +93,13 @@ class VAECW(nn.Module):
 
     def encode(self, x):
         data = {}
-        x = self.encoder(x.view(1, -1, 4)).view(1, -1)
+        x = self.encoder(x)
         data['mu'], data['log_var'] = x.chunk(2, 1)
         data['z'] = self.sample(data['mu'], data['log_var'])
         return data
 
     def decode(self, data):
-        data['cw_recon'] = self.decoder(data['z'].view(1, -1, 4))
+        data['cw_recon'] = self.decoder(data['z'])
         return data
 
     def reset_parameters(self):
@@ -146,7 +146,7 @@ class VQVAE(AE):
             torch.randn(self.dim_codes, self.book_size, self.dim_embedding)) #, requires_grad=False))
         # self.ema_counts = torch.nn.Parameter(
         #     torch.ones(self.dim_codes, self.book_size, dtype=torch.float, requires_grad=False))
-        self.cw_encoder = VAECW(cw_dim, cw_dim // 64)
+        self.cw_encoder = VAECW(cw_dim, cw_dim // 16)
         self.settings['book_size'] = self.book_size
         self.settings['dim_embedding'] = self.dim_embedding
         self.settings['cw_encoder'] = self.cw_encoder.settings
