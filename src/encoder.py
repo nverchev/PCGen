@@ -10,7 +10,7 @@ class CWEncoder(nn.Module):
 
     def __init__(self, cw_dim, z_dim):
         super().__init__()
-        self.h_dim = [z_dim * 4, z_dim * 2]
+        self.h_dim = [z_dim * 16, z_dim * 4]
         modules = [LinearLayer(cw_dim, self.h_dim[0])]
         for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
             modules.append(LinearLayer(in_dim, out_dim))

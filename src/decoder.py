@@ -12,7 +12,7 @@ class CWDecoder(nn.Module):
 
     def __init__(self, cw_dim, z_dim):
         super().__init__()
-        self.h_dim = [z_dim * 2, z_dim * 4]
+        self.h_dim = [z_dim * 4, z_dim * 16]
         modules = [LinearLayer(z_dim, self.h_dim[0])]
         for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
             modules.append(LinearLayer(in_dim, out_dim))
