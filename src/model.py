@@ -80,7 +80,7 @@ class VAECW(nn.Module):
         self.z_dim = z_dim
         self.encoder = CWEncoder(cw_dim, z_dim)
         self.decoder = CWDecoder(cw_dim, z_dim)
-        self.codebook = codebook
+        self.codebook = torch.nn.Parameter(codebook, requires_grad=False)
         self.dim_codes, self.book_size, self.dim_embedding = codebook.size()
         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
 
@@ -112,8 +112,8 @@ class VAECW(nn.Module):
         batch, embed = x.size()
         x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
         book = self.codebook.repeat(batch, 1, 1)
-        dist = - self.square_distance(x2, book).view(batch, self.dim_codes, self.book_size)
-        return torch.softmax(dist, dim=-1)
+        minus_dist = -self.square_distance(x2, book).view(batch, self.dim_codes, self.book_size)
+        return minus_dist
 
     def square_distance(self, t1, t2):
         t2 = t2.transpose(-1, -2)
@@ -219,7 +219,7 @@ class VQVAE(AE):
             torch.randn(self.dim_codes, self.book_size, self.dim_embedding))  # , requires_grad=False))
         # self.ema_counts = torch.nn.Parameter(
         #     torch.ones(self.dim_codes, self.book_size, dtype=torch.float, requires_grad=False))
-        self.cw_encoder = VAECW(cw_dim, cw_dim // 64, self.codebook)
+        self.cw_encoder = VAECW(cw_dim, cw_dim // 2, self.codebook)
         self.settings['book_size'] = self.book_size
         self.settings['dim_embedding'] = self.dim_embedding
         self.settings['cw_encoder'] = self.cw_encoder.settings
