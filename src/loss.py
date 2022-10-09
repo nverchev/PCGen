@@ -158,20 +158,15 @@ class CWEncoderLoss(nn.Module):
         self.c_reg = c_reg
 
     def forward(self, outputs, inputs, targets):
-        cw_e = torch.argmax(inputs[1], dim=2)
-        batch, codes, book = outputs['cw_dist'].size()
-        # cw_e = cw_e.view(-1, book)
-        cw_dist = outputs['cw_dist']
-        recon_loss = F.cross_entropy(cw_dist, cw_e, reduction='sum') / batch
-        print(cw_e)
-        print(cw_dist)
-        print(recon_loss)
+        cw_idx = inputs[1]
+        cw_dist = torch.log_softmax(outputs['cw_dist'], dim=-1)
+        nll = -(cw_dist * cw_idx).sum(1).mean()
         KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
-        criterion = recon_loss + self.c_reg * KLD_free
+        criterion = nll + self.c_reg * KLD_free
         return {
             'Criterion': criterion,
             'KLD': KLD,
-            'MSE': recon_loss
+            'CE': nll
         }
 
 

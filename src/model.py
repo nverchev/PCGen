@@ -80,7 +80,7 @@ class VAECW(nn.Module):
         self.z_dim = z_dim
         self.encoder = CWEncoder(cw_dim, z_dim)
         self.decoder = CWDecoder(cw_dim, z_dim)
-        self.codebook = torch.nn.Parameter(codebook, requires_grad=False)
+        self.codebook = codebook.detach()
         self.dim_codes, self.book_size, self.dim_embedding = codebook.size()
         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
 
@@ -101,8 +101,8 @@ class VAECW(nn.Module):
         return data
 
     def decode(self, data):
-        data['cw_recon'] = self.decoder(data['z'])
-        data['cw_dist'] = self.dist(data['cw_recon'])
+        x = self.decoder(data['z'])
+        data['cw_dist'], data['cw_recon'] = self.dist(x)
         return data
 
     def reset_parameters(self):
@@ -112,8 +112,10 @@ class VAECW(nn.Module):
         batch, embed = x.size()
         x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
         book = self.codebook.repeat(batch, 1, 1)
-        minus_dist = -self.square_distance(x2, book).view(batch, self.dim_codes, self.book_size)
-        return minus_dist
+        dist = self.square_distance(x2, book)
+        idx = dist.argmin(dim=2)
+        closest = book.gather(1, idx.expand(-1, -1, self.dim_embedding)).view(batch, self.dim_codes * self.dim_embedding)
+        return -dist.view(batch, self.dim_codes, self.book_size), closest
 
     def square_distance(self, t1, t2):
         t2 = t2.transpose(-1, -2)

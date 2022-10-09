@@ -176,9 +176,10 @@ def main(task='train/eval'):
 
         cw_train_loader, cw_test_loader = get_cw_loaders(trainer, final)
         block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader))
+        block_args['optim_args']['lr'] *= 10000  #CW encoder needs larger learning rate
         cw_trainer = CWTrainer(model, exp_name, block_args)
         if not model_eval:
-            while training_epochs > cw_trainer.epoch - 1:
+            while training_epochs > cw_trainer.epoch:
                 cw_trainer.train(checkpoint_every)
                 cw_trainer.save()
                 cw_trainer.test(partition='test')  # tests on val when not final because val has been saved as test
