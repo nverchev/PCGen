@@ -166,7 +166,7 @@ class CWEncoderLoss(nn.Module):
         return {
             'Criterion': criterion,
             'KLD': KLD,
-            'CE': nll
+            'NLL': nll
         }
 
 
