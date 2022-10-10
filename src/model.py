@@ -264,9 +264,9 @@ class VQVAE(AE):
 
     def cw_decode(self, data):
         self.cw_encoder.decode(data)
-        data['cw_e'], data['idx_cw'] = self.quantise(data['cw_recon'])
+        # data['cw_e'], data['idx_cw'] = self.quantise(data['cw_recon'])
         # data['cw'] = TransferGrad().apply(data['cw_recon'], data['cw_e'])
-        data['cw'] = data['cw_e']
+        data['cw'] = data['cw_e'] = data['cw_recon']
         return super().decode(data)
 
 

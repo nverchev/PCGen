@@ -118,7 +118,7 @@ class PiercedCoinsDataset(Dataset):
         return np.hstack([x, y, z])
 
     def __len__(self):
-        return  8192
+        return 32
 
     def __getitem__(self, index):
         n_holes = np.random.randint(low=1, high=4)

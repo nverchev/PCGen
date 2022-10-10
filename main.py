@@ -58,7 +58,7 @@ def parse_args():
 
 def main(task='train/eval'):
     assert task in ['train/eval', 'return model for profiling', 'return loaded model for random generation',
-                    'train cw encoder']
+                    'train cw encoder', 'train cw encoder and VQVAE']
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
@@ -195,6 +195,11 @@ def main(task='train/eval'):
         trainer.load()
     elif load > 0:
         trainer.load(load)
+    if task == 'train cw encoder and VQVAE':
+        trainer.load(training_epochs)
+        trainer.model.recon_cw = True
+        training_epochs += 100
+
 
     if not model_eval:
         if load == -1 and decoder_name == 'TearingNet':
