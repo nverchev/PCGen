@@ -404,8 +404,8 @@ class AETrainer(Trainer):
 class CWTrainer(Trainer):
 
     def __init__(self, model, exp_name, block_args):
-        self.ae_model = model
-        self.ar_epoch = block_args['training_epochs']
+        self.vqvae_model = model
+        self.vqvae_epoch = block_args['training_epochs']
         # model.cw_encoder.codebook = model.codebook.detach()
         super().__init__(model.cw_encoder, exp_name, **block_args)
         self._loss = CWEncoderLoss(block_args['c_reg'])
@@ -416,11 +416,11 @@ class CWTrainer(Trainer):
 
     def save(self, new_exp_name=None):
         self.model.eval()
-        paths = self.paths(new_exp_name, epoch=self.ar_epoch)
-        self.ae_model.cw_encoder.load_state_dict(self.model.state_dict())
+        paths = self.paths(new_exp_name, epoch=self.vqvae_epoch)
+        self.vqvae_model.cw_encoder.load_state_dict(self.model.state_dict())
         if new_exp_name:
             json.dump(self.settings, open(paths['settings'], 'w'))
-        torch.save(self.ae_model.state_dict(), paths['model'])
+        torch.save(self.vqvae_model.state_dict(), paths['model'])
         if self.minio is not None:
             self.minio.fput_object(self.bin, self.minio_path(paths['model']), paths['model'])
         print('Model saved at: ', paths['model'])
