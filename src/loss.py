@@ -115,6 +115,7 @@ class KLDVAELoss:
 
 class VQVAELoss:
     c_vq = 10
+
     def __call__(self, inputs, outputs):
         embed_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
         return {'reg': self.c_vq * embed_loss,
@@ -159,13 +160,13 @@ class CWEncoderLoss(nn.Module):
 
     def forward(self, outputs, inputs, targets):
         cw_idx = inputs[1]
-        cw_dist = torch.log_softmax(outputs['cw_dist'], dim=-1)
-        nll = -(cw_dist * cw_idx).sum(1).mean()
-        KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
-        criterion = nll + self.c_reg * KLD_free
+        cw_neg_dist = -outputs['cw_dist']
+        nll = -(cw_neg_dist.log_softmax(dim=1) * cw_idx).sum(1).mean()
+        kld, kld_free = kld_loss(outputs['mu'], outputs['log_var'])
+        criterion = nll + self.c_reg * kld_free
         return {
             'Criterion': criterion,
-            'KLD': KLD,
+            'KLD': kld,
             'NLL': nll
         }
 

@@ -280,7 +280,7 @@ class PCGen(nn.Module):
             x = graph_filtering(x)
         return x
 
-#
+
 # class PCGen(nn.Module):
 #
 #     def __init__(self, cw_dim, m, gf=True):
