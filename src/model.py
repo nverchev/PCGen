@@ -100,8 +100,8 @@ class VAECW(nn.Module):
         return data
 
     def decode(self, data):
-        x = self.decoder(data['z'])
-        data['cw_dist'], data['cw_recon'] = self.dist(x)
+        data['cw_recon'] = self.decoder(data['z'])
+        #data['cw_dist'], data['cw_recon'] = self.dist(x)
         return data
 
     def reset_parameters(self):
@@ -242,9 +242,14 @@ class VQVAE(AE):
         data = {}
         x = self.encoder(x, indices)
         data['cw_q'] = x
-        data['cw_e'], data['idx_cw'] = self.quantise(x)
-        data['cw'] = TransferGrad().apply(x, data['cw_e'])
+        # data['cw_e'], data['idx_cw'] = self.quantise(x)
+        # data['cw'] = TransferGrad().apply(x, data['cw_e'])
         return data
+
+    def decode(self, data):
+        data['cw_e'], data['idx_cw'] = self.quantise(data['cw_q'])
+        data['cw'] = TransferGrad().apply(data['cw_q'], data['cw_e'])
+        return super().decode(data)
 
     def forward(self, x, indices):
         if self.recon_cw:
@@ -259,9 +264,10 @@ class VQVAE(AE):
 
     def cw_decode(self, data):
         self.cw_encoder.decode(data)
-        x = self.decoder(data['cw_recon']).transpose(2, 1)
-        data['recon'] = x
-        return data
+        data['cw_e'], data['idx_cw'] = self.quantise(data['cw_recon'])
+        # data['cw'] = TransferGrad().apply(data['cw_recon'], data['cw_e'])
+        data['cw'] = data['cw_e']
+        return super().decode(data)
 
 
 def get_model(ae, **model_settings):
