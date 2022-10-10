@@ -79,8 +79,8 @@ class VAECW(nn.Module):
         self.z_dim = z_dim
         self.encoder = CWEncoder(cw_dim, z_dim)
         self.decoder = CWDecoder(cw_dim, z_dim)
-        self.codebook = codebook.detach()
-        self.dim_codes, self.book_size, self.dim_embedding = codebook.size()
+        # self.codebook = codebook.detach()
+        # self.dim_codes, self.book_size, self.dim_embedding = codebook.size()
         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
 
     def forward(self, x):
@@ -107,14 +107,14 @@ class VAECW(nn.Module):
     def reset_parameters(self):
         self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
 
-    def dist(self, x):
-        batch, embed = x.size()
-        x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
-        book = self.codebook.repeat(batch, 1, 1)
-        dist = square_distance(x2, book)
-        idx = dist.argmin(axis=2)
-        closest = book.gather(1, idx.expand(-1, -1, self.dim_embedding)).view(batch, self.dim_codes * self.dim_embedding)
-        return dist.sum(1).view(batch, self.dim_codes, self.book_size), closest
+    # def dist(self, x):
+    #     batch, embed = x.size()
+    #     x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
+    #     book = self.codebook.repeat(batch, 1, 1)
+    #     dist = square_distance(x2, book)
+    #     idx = dist.argmin(axis=2)
+    #     closest = book.gather(1, idx.expand(-1, -1, self.dim_embedding)).view(batch, self.dim_codes * self.dim_embedding)
+    #     return dist.sum(1).view(batch, self.dim_codes, self.book_size), closest
 
 # class VAECW(nn.Module):
 #     settings = {}

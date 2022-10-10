@@ -166,7 +166,7 @@ class CWEncoderLoss(nn.Module):
         mse = F.mse_loss(outputs['cw_recon'], cw_e, reduction='none').sum(1).mean(0)
         kld, kld_free = kld_loss(outputs['mu'], outputs['log_var'])
         #criterion = nll + self.c_reg * kld_free
-        criterion = 100 * mse + self.c_reg * kld_free
+        criterion = mse + self.c_reg * kld_free
         return {
             'Criterion': criterion,
             'KLD': kld,
