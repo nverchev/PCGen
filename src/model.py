@@ -69,52 +69,52 @@ class VAECW(nn.Module):
 
     def reset_parameters(self):
         self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
-#
-#
-# class VAECW(nn.Module):
-#     settings = {}
-#
-#     def __init__(self, cw_dim, z_dim, codebook):
-#         super().__init__()
-#         self.z_dim = z_dim
-#         self.encoder = CWEncoder(cw_dim, z_dim)
-#         self.decoder = CWDecoder(cw_dim, z_dim)
-#         # self.codebook = codebook.detach()
-#         # self.dim_codes, self.book_size, self.dim_embedding = codebook.size()
-#         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
-#
-#     def forward(self, x):
-#         data = self.encode(x)
-#         return self.decode(data)
-#
-#     def sample(self, mu, log_var):
-#         std = torch.exp(0.5 * log_var)
-#         eps = torch.randn_like(std)
-#         return eps.mul(std).add_(mu) if self.training else mu
-#
-#     def encode(self, x):
-#         data = {}
-#         x = self.encoder(x)
-#         data['mu'], data['log_var'] = x.chunk(2, 1)
-#         data['z'] = self.sample(data['mu'], data['log_var'])
-#         return data
-#
-#     def decode(self, data):
-#         data['cw_recon'] = self.decoder(data['z'])
-#         #data['cw_dist'], data['cw_recon'] = self.dist(x)
-#         return data
-#
-#     def reset_parameters(self):
-#         self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
-#
-#     def dist(self, x):
-#         batch, embed = x.size()
-#         x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
-#         book = self.codebook.repeat(batch, 1, 1)
-#         dist = square_distance(x2, book)
-#         idx = dist.argmin(axis=2)
-#         closest = book.gather(1, idx.expand(-1, -1, self.dim_embedding)).view(batch, self.dim_codes * self.dim_embedding)
-#         return dist.sum(1).view(batch, self.dim_codes, self.book_size), closest
+
+
+class VAECW(nn.Module):
+    settings = {}
+
+    def __init__(self, cw_dim, z_dim, codebook):
+        super().__init__()
+        self.z_dim = z_dim
+        self.encoder = CWEncoder(cw_dim, z_dim)
+        self.decoder = CWDecoder(cw_dim, z_dim)
+        self.codebook = codebook
+        self.dim_codes, self.book_size, self.dim_embedding = codebook.size()
+        self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
+
+    def forward(self, x):
+        data = self.encode(x)
+        return self.decode(data)
+
+    def sample(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return eps.mul(std).add_(mu) if self.training else mu
+
+    def encode(self, x):
+        data = {}
+        x = self.encoder(x)
+        data['mu'], data['log_var'] = x.chunk(2, 1)
+        data['z'] = self.sample(data['mu'], data['log_var'])
+        return data
+
+    def decode(self, data):
+        data['cw_recon'] = self.decoder(data['z'])
+        data['cw_dist'], data['cw_recon'] = self.dist(data['cw_recon'])
+        return data
+
+    def reset_parameters(self):
+        self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
+
+    def dist(self, x):
+        batch, embed = x.size()
+        x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
+        book = self.codebook.repeat(batch, 1, 1)
+        dist = square_distance(x2, book)
+        idx = dist.argmin(axis=2)
+        closest = book.gather(1, idx.expand(-1, -1, self.dim_embedding)).view(batch, self.dim_codes * self.dim_embedding)
+        return dist.sum(1).view(batch, self.dim_codes, self.book_size), closest
 
 # class VAECW(nn.Module):
 #     settings = {}
@@ -247,7 +247,7 @@ class VQVAE(AE):
         return data
 
     def decode(self, data):
-        data['cw_e'], data['idx_cw'] = self.quantise(data['cw_q'])
+        data['cw_e'], data['cw_idx'] = self.quantise(data['cw_q'])
         data['cw'] = TransferGrad().apply(data['cw_q'], data['cw_e'])
         return super().decode(data)
 

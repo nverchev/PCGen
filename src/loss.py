@@ -159,19 +159,21 @@ class CWEncoderLoss(nn.Module):
         self.c_reg = c_reg
 
     def forward(self, outputs, inputs, targets):
-        #cw_idx = inputs[1]
-        #cw_neg_dist = -outputs['cw_dist']
-        # nll = -(cw_neg_dist.log_softmax(dim=1) * cw_idx).sum(1).mean()
-        cw_e = inputs[1]
-        mse = F.mse_loss(outputs['cw_recon'], cw_e, reduction='none').sum(1).mean(0)
+        cw_idx = inputs[1]
+        cw_neg_dist = -outputs['cw_dist']
+        # print(cw_idx)
+        # print(cw_neg_dist.softmax(dim=1))
+        nll = -(cw_neg_dist.log_softmax(dim=2) * cw_idx).sum(1).mean()
+        # cw_e = inputs[1]
+        # mse = F.mse_loss(outputs['cw_recon'], cw_e, reduction='none').sum(1).mean(0)
         kld, kld_free = kld_loss(outputs['mu'], outputs['log_var'])
-        #criterion = nll + self.c_reg * kld_free
-        criterion = mse + self.c_reg * kld_free
+        criterion = 100 * nll + self.c_reg * kld_free
+        # criterion = mse + self.c_reg * kld_free
         return {
             'Criterion': criterion,
             'KLD': kld,
-            #'NLL': nll,
-            'MSE': mse
+            'NLL': nll,
+            # 'MSE': mse
         }
 
 
