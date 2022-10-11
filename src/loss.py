@@ -66,7 +66,7 @@ def chamfer_smooth(inputs, recons, pairwise_dist):
     return loss1 + loss2
 
 
-def kld_loss(q_mu, q_logvar, freebits=2):
+def kld_loss(q_mu, q_logvar, freebits=1):
     KLD_matrix = -1 - q_logvar + q_mu ** 2 + q_logvar.exp()
     KLD_free_bits = F.softplus(KLD_matrix - 2 * freebits) + 2 * freebits
     KLD = 0.5 * KLD_matrix.mean(0).sum()
@@ -167,7 +167,7 @@ class CWEncoderLoss(nn.Module):
         # cw_e = inputs[1]
         # mse = F.mse_loss(outputs['cw_recon'], cw_e, reduction='none').sum(1).mean(0)
         kld, kld_free = kld_loss(outputs['mu'], outputs['log_var'])
-        criterion = 100 * nll + self.c_reg * kld_free
+        criterion = nll + self.c_reg * kld_free
         # criterion = mse + self.c_reg * kld_free
         return {
             'Criterion': criterion,

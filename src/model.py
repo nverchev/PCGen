@@ -79,7 +79,7 @@ class VAECW(nn.Module):
         self.z_dim = z_dim
         self.encoder = CWEncoder(cw_dim, z_dim)
         self.decoder = CWDecoder(cw_dim, z_dim)
-        self.codebook = codebook
+        self.codebook = nn.Parameter(codebook, requires_grad=False)
         self.dim_codes, self.book_size, self.dim_embedding = codebook.size()
         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
 

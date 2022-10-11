@@ -134,10 +134,10 @@ def main(task='train/eval'):
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), "No pretrained experiment in " + load_path
         model.load_state_dict(torch.load(load_path, map_location=device))
-        z_dim = cw_dim // 64
+        z_dim = cw_dim // 16
         z = torch.randn(batch_size, z_dim).to(device)
-        t = model.cw_encoder.codebook[torch.randint(model.cw_encoder.book_size, [batch_size])]
-        return model, z, t
+        #t = model.cw_encoder.codebook[torch.randint(model.cw_encoder.book_size, [batch_size])]
+        return model, z
 
     train_loader, val_loader, test_loader = get_loaders(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
@@ -166,13 +166,15 @@ def main(task='train/eval'):
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), "No pretrained experiment in " + load_path
         model_state = torch.load(load_path, map_location=device)
-        for name in list(model_state):
-            if name[:10] == "cw_encoder":
-                model_state.popitem(name)  # temporary feature to experiment with different cw_encoders
-        trainer.model.load_state_dict(model_state, strict=False)
         assert load < 1, "Only loading the last saved version is supported"
-        if load == -1:
-            trainer.model.cw_encoder.reset_parameters()
+
+        for name in list(model_state):
+            if load == -1:
+                #trainer.model.cw_encoder.reset_parameters()
+                if name[:10] == "cw_encoder":
+                    model_state.popitem(name)  # temporary feature to experiment with different cw_encoders
+        trainer.model.load_state_dict(model_state, strict=False)
+
 
         cw_train_loader, cw_test_loader = get_cw_loaders(trainer, final)
         block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader))
@@ -182,6 +184,7 @@ def main(task='train/eval'):
             while training_epochs > cw_trainer.epoch:
                 cw_trainer.train(checkpoint_every)
                 cw_trainer.save()
+                assert torch.all(torch.isclose(cw_trainer.model.codebook, trainer.model.cw_encoder.codebook))
                 cw_trainer.test(partition='test')  # tests on val when not final because val has been saved as test
                 trainer.model.load_state_dict(torch.load(load_path, map_location=device))
                 trainer.test_cw_recon(partition='test' if final else 'val')

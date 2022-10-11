@@ -406,7 +406,7 @@ class CWTrainer(Trainer):
     def __init__(self, model, exp_name, block_args):
         self.vqvae_model = model
         self.vqvae_epoch = block_args['training_epochs']
-        # model.cw_encoder.codebook = model.codebook.detach()
+        model.cw_encoder.codebook.data = model.codebook.detach()
         super().__init__(model.cw_encoder, exp_name, **block_args)
         self._loss = CWEncoderLoss(block_args['c_reg'])
         return

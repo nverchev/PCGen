@@ -163,7 +163,7 @@ class AtlasNetv2(nn.Module):
         self.cw_dim = cw_dim
         self.m = m
         self.gf = gf
-        self.num_patches = 8
+        self.num_patches = 16
         self.deformed_patch_dim = 10
         self.h_dim = [128]
         self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
