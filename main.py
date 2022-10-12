@@ -134,7 +134,7 @@ def main(task='train/eval'):
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), "No pretrained experiment in " + load_path
         model.load_state_dict(torch.load(load_path, map_location=device))
-        z_dim = cw_dim // 16
+        z_dim = cw_dim // 64
         z = torch.randn(batch_size, z_dim).to(device)
         #t = model.cw_encoder.codebook[torch.randint(model.cw_encoder.book_size, [batch_size])]
         return model, z
