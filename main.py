@@ -200,7 +200,10 @@ def main(task='train/eval'):
     elif load > 0:
         trainer.load(load)
     if task == 'train cw encoder and VQVAE':
-        trainer.load(training_epochs)
+        assert ae == "VQVAE", "Only VQVAE supported"
+        load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
+        assert os.path.exists(load_path), "No pretrained experiment in " + load_path
+        trainer.model.load_state_dict(torch.load(load_path, map_location=device))
         trainer.model.recon_cw = True
         training_epochs += 100
 
