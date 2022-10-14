@@ -260,9 +260,9 @@ def get_cw_loaders(t, final, filter_class=None):
     t.train_loader.dataset.rotation = False
     t.test(partition="train")
     t.train_loader.dataset.rotation = True
-    cw_train_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets, filter_class)
+    cw_train_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_e'], t.test_targets, filter_class)
     t.test(partition='test' if final else 'val')
-    cw_test_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets, filter_class)
+    cw_test_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_e'], t.test_targets, filter_class)
     cw_train_loader = torch.utils.data.DataLoader(
         cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
     cw_test_loader = torch.utils.data.DataLoader(
