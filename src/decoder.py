@@ -489,7 +489,7 @@ class PCGenH(nn.Module):
         x = self.map_sample4(x)
         x = z * x
         y = torch.bmm(x1.transpose(1, 2), x)
-        x = x + torch.bmm(x1, y)
+        x = x * torch.sigmoid(torch.bmm(x1, y))
         x = self.points_convs2(x)
         if self.gf:
             x = graph_filtering(x)
