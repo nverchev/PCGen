@@ -469,6 +469,9 @@ class PCGenH(nn.Module):
 
         modules.append(PointsConvLayer(h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
         self.points_convs2 = nn.Sequential(*modules)
+        self.att0 = PointsConvLayer(self.h_dim[2], self.h_dim[2], batch_norm=False, act=None)
+        self.att1 = PointsConvLayer(self.h_dim[2], self.h_dim[2], batch_norm=False, act=nn.Sigmoid())
+        self.att2 = PointsConvLayer(self.h_dim[2], self.h_dim[2], batch_norm=False, act=None)
 
     def forward(self, z, s=None):
         batch, cw_dim = z.size()
@@ -489,7 +492,7 @@ class PCGenH(nn.Module):
         x = self.map_sample4(x)
         x = z * x
         y = torch.bmm(x1.transpose(1, 2), x)
-        x = x * torch.sigmoid(torch.bmm(x1, y))
+        x = self.att2(x) * self.att1(torch.bmm(self.att0(x1), y))
         x = self.points_convs2(x)
         if self.gf:
             x = graph_filtering(x)
