@@ -257,7 +257,9 @@ def get_loaders(dataset_name, batch_size, final, **dataset_settings):
 def get_cw_loaders(t, final, filter_class=None):
     pin_memory = torch.cuda.is_available()
     batch_size = t.train_loader.batch_size
+    t.train_loader.dataset.rotation = False
     t.test(partition="train")
+    t.train_loader.dataset.rotation = True
     cw_train_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets, filter_class)
     t.test(partition='test' if final else 'val')
     cw_test_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets, filter_class)
