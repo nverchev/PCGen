@@ -164,20 +164,13 @@ class AtlasNetv2(nn.Module):
         self.m = m
         self.gf = gf
         self.num_patches = 16
-        self.deformed_patch_dim = 10
+        self.m_patch = self.m // self.num_patches
+        self.dim_embedding = self.cw_dim + 2
         self.h_dim = [128]
-        self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
         self.decoder = nn.ModuleList([self.get_mlp_adj() for _ in range(self.num_patches)])
 
-    def get_patch_deformation(self):
-        dim = self.h_dim[0]
-        modules = [PointsConvLayer(2, dim, act=nn.ReLU(inplace=True)),
-                   PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True)),
-                   PointsConvLayer(dim, self.deformed_patch_dim, batch_norm=False, act=nn.Tanh())]
-        return nn.Sequential(*modules)
-
     def get_mlp_adj(self):
-        dim = self.deformed_patch_dim + self.cw_dim
+        dim = self.dim_embedding
         dims = [dim, dim // 2, dim // 4]
         modules = [PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True))]
         for in_dim, out_dim in zip(dims[0:-1], dims[1:]):
@@ -190,10 +183,62 @@ class AtlasNetv2(nn.Module):
         device = x.device
         outs = []
         for i in range(0, self.num_patches):
-            m_patch = self.m // self.num_patches
-            rand_grid = torch.rand(batch, 2, m_patch, device=device)
+            rand_grid = torch.rand(batch, 2, self.m_patch, device=device)
             rand_grid = self.patchDeformation[i](rand_grid)
-            y = x.unsqueeze(2).expand(-1, -1, m_patch).contiguous()
+            y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
+            y = torch.cat((rand_grid, y), 1).contiguous()
+            outs.append(self.decoder[i](y))
+        x = torch.cat(outs, 2).contiguous()
+        if self.gf:
+            x = graph_filtering(x)
+        return x
+
+
+class AtlasNetv2Deformation(AtlasNetv2):
+    """Atlas net PatchDeformMLPAdj"""
+
+    def __init__(self, cw_dim, m, gf):
+        super().__init__(cw_dim, m, gf)
+        self.deformed_patch_dim = 10
+        self.dim_embedding = self.cw_dim + self.deformed_patch_dim
+        self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
+
+    def get_patch_deformation(self):
+        dim = self.h_dim[0]
+        modules = [PointsConvLayer(2, dim, act=nn.ReLU(inplace=True)),
+                   PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True)),
+                   PointsConvLayer(dim, self.deformed_patch_dim, batch_norm=False, act=nn.Tanh())]
+        return nn.Sequential(*modules)
+
+    def forward(self, x):
+        batch = x.size(0)
+        device = x.device
+        outs = []
+        for i in range(0, self.num_patches):
+            rand_grid = torch.rand(batch, 2, self.m_patch, device=device)
+            rand_grid = self.patchDeformation[i](rand_grid)
+            y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
+            y = torch.cat((rand_grid, y), 1).contiguous()
+            outs.append(self.decoder[i](y))
+        x = torch.cat(outs, 2).contiguous()
+        if self.gf:
+            x = graph_filtering(x)
+        return x
+
+
+class AtlasNetv2Structures(AtlasNetv2):
+    """Atlas net PatchDeformMLPAdj"""
+
+    def __init__(self, cw_dim, m, gf):
+        super().__init__(cw_dim, m, gf)
+        self.grid = nn.Parameter(torch.rand(self.num_patches, 2, self.m_patch))
+
+    def forward(self, x):
+        batch = x.size(0)
+        outs = []
+        for i in range(0, self.num_patches):
+            rand_grid = self.grid[i].expand(batch, -1, -1)
+            y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
         x = torch.cat(outs, 2).contiguous()
@@ -398,7 +443,8 @@ def get_decoder(decoder_name):
         'Full': FullyConnected,
         'FoldingNet': FoldingNet,
         'TearingNet': TearingNet,
-        'AtlasNet': AtlasNetv2,
+        'AtlasNet': AtlasNetv2Deformation,
+        'AtlasNetStructures': AtlasNetv2Structures,
         'PCGen': PCGen,
         'PCGenH': PCGenH,
 

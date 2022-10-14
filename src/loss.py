@@ -161,8 +161,6 @@ class CWEncoderLoss(nn.Module):
     def forward(self, outputs, inputs, targets):
         cw_idx = inputs[1]
         cw_neg_dist = -outputs['cw_dist']
-        # print(cw_idx)
-        # print(cw_neg_dist.softmax(dim=1))
         nll = -(cw_neg_dist.log_softmax(dim=2) * cw_idx).sum(1).mean()
         # cw_e = inputs[1]
         # mse = F.mse_loss(outputs['cw_recon'], cw_e, reduction='none').sum(1).mean(0)
