@@ -138,15 +138,15 @@ class ReconLoss:
         if self.backprop == "Chamfer":
             recon = squared
         elif self.backprop == "ChamferA":
-            recon = 1000 * augmented
+            recon = augmented
         elif self.backprop == "ChamferS":
             smooth = chamfer_smooth(inputs, recons, pairwise_dist)
-            recon = 0.1 * smooth
+            recon = smooth
             dict_recon['Chamfer_Smooth'] = smooth
         else:
             assert self.backprop == "Sinkhorn", f"Loss {self.backprop} not known"
             sk_loss = self.sinkhorn(inputs, recons).mean()
-            recon = 1000 * sk_loss
+            recon = sk_loss
             dict_recon['Sinkhorn'] = sk_loss
 
         dict_recon['recon'] = recon
