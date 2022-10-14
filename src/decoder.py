@@ -165,7 +165,8 @@ class AtlasNetv2(nn.Module):
         self.gf = gf
         self.num_patches = 16
         self.m_patch = self.m // self.num_patches
-        self.dim_embedding = self.cw_dim + 2
+        self.deformed_patch_dim = 2
+        self.dim_embedding = self.cw_dim + self.deformed_patch_dim
         self.h_dim = [128]
         self.decoder = nn.ModuleList([self.get_mlp_adj() for _ in range(self.num_patches)])
 
@@ -198,10 +199,10 @@ class AtlasNetv2Deformation(AtlasNetv2):
     """Atlas net PatchDeformMLPAdj"""
 
     def __init__(self, cw_dim, m, gf):
-        super().__init__(cw_dim, m, gf)
         self.deformed_patch_dim = 10
-        self.dim_embedding = self.cw_dim + self.deformed_patch_dim
+        super().__init__(cw_dim, m, gf)
         self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
+
 
     def get_patch_deformation(self):
         dim = self.h_dim[0]
@@ -443,7 +444,7 @@ def get_decoder(decoder_name):
         'Full': FullyConnected,
         'FoldingNet': FoldingNet,
         'TearingNet': TearingNet,
-        'AtlasNet': AtlasNetv2Deformation,
+        'AtlasNetDeformation': AtlasNetv2Deformation,
         'AtlasNetStructures': AtlasNetv2Structures,
         'PCGen': PCGen,
         'PCGenH': PCGenH,

@@ -8,6 +8,7 @@ from src.encoder import get_encoder, CWEncoder
 from src.decoder import get_decoder, CWDecoder
 from src.loss import square_distance
 
+
 class TransferGrad(Function):
 
     @staticmethod
@@ -113,8 +114,10 @@ class VAECW(nn.Module):
         book = self.codebook.repeat(batch, 1, 1)
         dist = square_distance(x2, book)
         idx = dist.argmin(axis=2)
-        closest = book.gather(1, idx.expand(-1, -1, self.dim_embedding)).view(batch, self.dim_codes * self.dim_embedding)
+        closest = book.gather(1, idx.expand(-1, -1, self.dim_embedding)).view(batch,
+                                                                              self.dim_codes * self.dim_embedding)
         return dist.sum(1).view(batch, self.dim_codes, self.book_size), closest
+
 
 # class VAECW(nn.Module):
 #     settings = {}
