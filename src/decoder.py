@@ -457,7 +457,7 @@ class PCGenH(nn.Module):
         for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
         self.points_convs1 = nn.Sequential(*modules)
-        h_dim = [128, cw_dim, 512, 512, 512, 64]
+        h_dim = [128, cw_dim, 512]
         self.h_dim.extend(h_dim)
 
         self.map_sample3 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
@@ -466,12 +466,13 @@ class PCGenH(nn.Module):
         modules = []
         for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-
-        modules.append(PointsConvLayer(h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
         self.points_convs2 = nn.Sequential(*modules)
-        self.att0 = PointsConvLayer(self.h_dim[2], self.h_dim[2], batch_norm=False, act=None)
-        self.att1 = PointsConvLayer(self.h_dim[2], self.h_dim[2], batch_norm=False, act=nn.Sigmoid())
-        self.att2 = PointsConvLayer(self.h_dim[2], self.h_dim[2], batch_norm=False, act=None)
+        self.att0 = PointsConvLayer(512, 128, act=None)
+        self.att1 = PointsConvLayer(512, 128, act=None)
+        self.att2 = PointsConvLayer(512, 512, act=None)
+
+        self.final = nn.Sequential(PointsConvLayer(512, 128, act=nn.ReLU(inplace=True)),
+                                   PointsConvLayer(128, OUT_CHAN, batch_norm=False, act=None))
 
     def forward(self, z, s=None):
         batch, cw_dim = z.size()
@@ -480,20 +481,23 @@ class PCGenH(nn.Module):
         m = self.m_training if self.training else self.m
         m_top = m // 16
         assert m_top, "Hierarchical version needs at least 16 points"
-        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 21, device=device)
+        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 17, device=device)
         s = s / torch.linalg.vector_norm(s, dim=1, keepdim=True)
         x = s[..., :m_top]
         x = self.map_sample1(x)
         x = self.map_sample2(x)
         x = z * x
         x1 = self.points_convs1(x)
+        queries = self.att0(x)
         x = s[..., m_top:]
         x = self.map_sample3(x)
         x = self.map_sample4(x)
         x = z * x
-        y = torch.bmm(x1.transpose(1, 2), x)
-        x = self.att2(x) * self.att1(torch.bmm(self.att0(x1), y))
         x = self.points_convs2(x)
+        keys = self.att1(x)
+        A = torch.softmax(torch.bmm(queries.transpose(1, 2), keys) / np.sqrt(128), dim=1)
+        x = torch.bmm(self.att2(x1), A)
+        x = self.final(x)
         if self.gf:
             x = graph_filtering(x)
         return x
