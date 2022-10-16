@@ -233,7 +233,8 @@ class AtlasNetv2Structures(AtlasNetv2):
 
     def __init__(self, cw_dim, m, gf):
         super().__init__(cw_dim, m, gf)
-        self.grid = nn.Parameter(torch.rand(self.num_patches, 2, self.m_patch))
+        self.deformed_patch_dim = 10
+        self.grid = nn.Parameter(torch.rand(self.num_patches, self.deformed_patch_dim, self.m_patch))
 
     def forward(self, x):
         batch = x.size(0)
