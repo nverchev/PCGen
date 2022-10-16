@@ -467,11 +467,11 @@ class PCGenH(nn.Module):
         for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
         self.points_convs2 = nn.Sequential(*modules)
-        self.att0 = PointsConvLayer(512, 128, act=None)
+        self.att0 = PointsConvLayer(512, 512, act=None)
         self.att1 = PointsConvLayer(512, 512, act=None)
         self.att2 = PointsConvLayer(512, 512, act=None)
 
-        self.final = nn.Sequential(PointsConvLayer(128, 128, act=nn.ReLU(inplace=True)),
+        self.final = nn.Sequential(PointsConvLayer(512, 128, act=nn.ReLU(inplace=True)),
                                    PointsConvLayer(128, OUT_CHAN, batch_norm=False, act=None))
 
     def forward(self, z, s=None):
@@ -496,7 +496,7 @@ class PCGenH(nn.Module):
         x = self.points_convs2(x)
         keys = self.att1(x1)
         A = torch.softmax(torch.bmm(queries, keys.transpose(1, 2)) / np.sqrt(m_top), dim=2)
-        x = torch.bmm(A, self.att2(x))
+        x = x + torch.bmm(A, self.att2(x))
         x = self.final(x)
         if self.gf:
             x = graph_filtering(x)
