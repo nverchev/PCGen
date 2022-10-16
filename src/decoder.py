@@ -468,11 +468,12 @@ class PCGenH(nn.Module):
         for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
         self.points_convs2 = nn.Sequential(*modules)
-        self.att0 = PointsConvLayer(512, 128, act=None)
-        self.att1 = PointsConvLayer(512, 128, act=None)
-        self.att2 = PointsConvLayer(512, 128, act=None)
+        self.att0 = PointsConvLayer(512, 128, batch_norm=False, act=None)
+        self.att1 = PointsConvLayer(512, 128, batch_norm=False, act=None)
+        self.att2 = PointsConvLayer(512, 128, batch_norm=False, act=None)
+        self.att3 = PointsConvLayer(512, 128, batch_norm=False, act=None)
 
-        self.final = nn.Sequential(PointsConvLayer(512, 128, act=nn.ReLU(inplace=True)),
+        self.final = nn.Sequential(PointsConvLayer(128, 128, act=nn.ReLU(inplace=True)),
                                    PointsConvLayer(128, OUT_CHAN, batch_norm=False, act=None))
 
     def forward(self, z, s=None):
@@ -489,15 +490,15 @@ class PCGenH(nn.Module):
         x = self.map_sample2(x)
         x = z * x
         x1 = self.points_convs1(x)
-        queries = self.att0(x)
+        queries = self.att0(x1)
         x = s[..., m_top:]
         x = self.map_sample3(x)
         x = self.map_sample4(x)
         x = z * x
         x = self.points_convs2(x)
-        keys = self.att1(x1)
-        A = torch.softmax(torch.bmm(queries, keys.transpose(1, 2)) / np.sqrt(m_top), dim=2)
-        x = x + torch.bmm(A, self.att2(x))
+        keys = self.att1(x)
+        A = torch.softmax(torch.bmm(queries, keys) / np.sqrt(m_top), dim=2)
+        x = self.att3(x) + torch.bmm(self.att2(x1), A)
         x = self.final(x)
         if self.gf:
             x = graph_filtering(x)
