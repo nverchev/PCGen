@@ -158,6 +158,7 @@ class TearingNet(FoldingNet):
 # AtlasNet
 class AtlasNetv2(nn.Module):
     """Atlas net PatchDeformMLPAdj"""
+    deformed_patch_dim = 2
 
     def __init__(self, cw_dim, m, gf):
         super().__init__()
@@ -166,7 +167,6 @@ class AtlasNetv2(nn.Module):
         self.gf = gf
         self.num_patches = 16
         self.m_patch = self.m // self.num_patches
-        self.deformed_patch_dim = 2
         self.dim_embedding = self.cw_dim + self.deformed_patch_dim
         self.h_dim = [128]
         self.decoder = nn.ModuleList([self.get_mlp_adj() for _ in range(self.num_patches)])
@@ -198,12 +198,11 @@ class AtlasNetv2(nn.Module):
 
 class AtlasNetv2Deformation(AtlasNetv2):
     """Atlas net PatchDeformMLPAdj"""
+    deformed_patch_dim = 10
 
     def __init__(self, cw_dim, m, gf):
-        self.deformed_patch_dim = 10
         super().__init__(cw_dim, m, gf)
         self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
-
 
     def get_patch_deformation(self):
         dim = self.h_dim[0]
@@ -230,10 +229,10 @@ class AtlasNetv2Deformation(AtlasNetv2):
 
 class AtlasNetv2Structures(AtlasNetv2):
     """Atlas net PatchDeformMLPAdj"""
+    deformed_patch_dim = 10
 
     def __init__(self, cw_dim, m, gf):
         super().__init__(cw_dim, m, gf)
-        self.deformed_patch_dim = 10
         self.grid = nn.Parameter(torch.rand(self.num_patches, self.deformed_patch_dim, self.m_patch))
 
     def forward(self, x):
@@ -440,6 +439,7 @@ class PCGenH(nn.Module):
             x = graph_filtering(x)
         return x
 
+
 class PCGenH(nn.Module):
 
     def __init__(self, cw_dim, m, gf=True):
@@ -468,9 +468,9 @@ class PCGenH(nn.Module):
         for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
         self.points_convs2 = nn.Sequential(*modules)
-        self.att0 = PointsConvLayer(512, 512, act=None)
-        self.att1 = PointsConvLayer(512, 512, act=None)
-        self.att2 = PointsConvLayer(512, 512, act=None)
+        self.att0 = PointsConvLayer(512, 128, act=None)
+        self.att1 = PointsConvLayer(512, 128, act=None)
+        self.att2 = PointsConvLayer(512, 128, act=None)
 
         self.final = nn.Sequential(PointsConvLayer(512, 128, act=nn.ReLU(inplace=True)),
                                    PointsConvLayer(128, OUT_CHAN, batch_norm=False, act=None))
