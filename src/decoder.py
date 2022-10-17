@@ -497,8 +497,8 @@ class PCGenH(nn.Module):
         queries = self.att0(x1)
         keys = self.att1(x1)
         values = self.att2(x)
-        A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)) / np.sqrt(64), dim=1)
-        x = self.att3(x) #+ torch.bmm(A, values)
+        A = torch.sigmoid(torch.bmm(queries, keys.transpose(2, 1)) / np.sqrt(64))
+        x = self.att3(x) + torch.bmm(A, values)
         x = self.final(x)
         if self.gf:
             x = graph_filtering(x)
