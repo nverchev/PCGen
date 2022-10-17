@@ -497,10 +497,7 @@ class PCGenH(nn.Module):
         queries = self.att0(x1)
         keys = self.att1(x1)
         values = self.att2(x)
-#        A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)) / np.sqrt(64), dim=1)
-        A = torch.bmm(queries, keys.transpose(2, 1))
-        A = A - A.mean(1, keepdim=True)
-        A = A /A.std(1, keepdim=True)
+        A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)) / np.sqrt(64), dim=1)
         x = self.att3(x) + torch.bmm(A, values)
         x = self.final(x)
         if self.gf:
@@ -508,6 +505,66 @@ class PCGenH(nn.Module):
         return x
 
 
+from src.neighbour_op import get_graph_features
+class PCGenH(nn.Module):
+
+    def __init__(self, cw_dim, m, gf=True):
+        super().__init__()
+
+        self.m = m
+        self.m_training = m
+        self.gf = gf
+        self.sample_dim = 16
+        h_dim = [128, cw_dim, 512, 64]
+        self.h_dim = h_dim
+        self.map_sample1 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_sample2 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
+                                           act=nn.Hardtanh(inplace=True))
+        modules = []
+        for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
+            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+
+        modules.append(PointsConvLayer(h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+        self.points_convs1 = nn.Sequential(*modules)
+        h_dim = [128, cw_dim + 6, 512, 512, 512, 64]
+        self.h_dim.extend(h_dim)
+
+        self.map_sample3 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_sample4 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
+                                           act=nn.Hardtanh(inplace=True))
+        for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
+            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+
+        modules.append(PointsConvLayer(h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+        print(modules)
+        self.points_convs2 = nn.Sequential(*modules)
+        self.h_dim.extend(h_dim)
+
+
+    def forward(self, z, s=None):
+        batch, cw_dim = z.size()
+        device = z.device
+        z = z.unsqueeze(2)
+        m = self.m_training if self.training else self.m
+        m_top = m // 16
+        assert m_top, "Hierarchical version needs at least 16 points"
+        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 17, device=device)
+        s = s / torch.linalg.vector_norm(s, dim=1, keepdim=True)
+        x = s[..., :m_top]
+        x = self.map_sample1(x)
+        x = self.map_sample2(x)
+        x = z * x
+        x = self.points_convs1(x)
+        x1 = get_graph_features(x, 16).flatten(2)
+        x = s[..., m_top:]
+        x = self.map_sample3(x)
+        x = self.map_sample4(x)
+        x = z * x
+        x = torch.cat([x1, x], dim=1).contiguous()
+        x = self.points_convs2(x)
+        if self.gf:
+            x = graph_filtering(x)
+        return x
 def get_decoder(decoder_name):
     decoder_dict = {
         'Full': FullyConnected,
