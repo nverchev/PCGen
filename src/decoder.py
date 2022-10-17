@@ -490,15 +490,16 @@ class PCGenH(nn.Module):
         x = self.map_sample2(x)
         x = z * x
         x1 = self.points_convs1(x)
-        queries = self.att0(x1)
         x = s[..., m_top:]
         x = self.map_sample3(x)
         x = self.map_sample4(x)
         x = z * x
         x = self.points_convs2(x)
+        queries = self.att0(x1)
         keys = self.att1(x)
-        A = torch.softmax(torch.bmm(queries, keys) / np.sqrt(m_top), dim=2)
-        x = self.att3(x) + torch.bmm(self.att2(x1), A)
+        values = self.att2(x1)
+        A = torch.softmax(torch.bmm(queries.transpose(2, 1), keys) / np.sqrt(m_top), dim=2)
+        x = self.att3(x) + torch.bmm(values, A)
         x = self.final(x)
         if self.gf:
             x = graph_filtering(x)
