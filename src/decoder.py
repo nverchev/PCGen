@@ -497,7 +497,10 @@ class PCGenH(nn.Module):
         queries = self.att0(x1)
         keys = self.att1(x1)
         values = self.att2(x)
-        A = torch.sigmoid(torch.bmm(queries, keys.transpose(2, 1)) / np.sqrt(64))
+#        A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)) / np.sqrt(64), dim=1)
+        A = torch.bmm(queries, keys.transpose(2, 1))
+        A = A - A.mean(1, keepdim=True)
+        A = A /A.std(1, keepdim=True)
         x = self.att3(x) + torch.bmm(A, values)
         x = self.final(x)
         if self.gf:
