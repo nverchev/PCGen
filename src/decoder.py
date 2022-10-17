@@ -298,7 +298,7 @@ class PCGen(nn.Module):
 
     def __init__(self, cw_dim, m, gf=True):
         super().__init__()
-        self.h_dim = [128, cw_dim, 512, 512, 512, 64]
+        self.h_dim = [256, cw_dim, 512, 512, 512, 64]
         self.m = m
         self.m_training = m
         self.gf = gf
@@ -449,7 +449,7 @@ class PCGenH(nn.Module):
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
-        h_dim = [128, cw_dim, 512]
+        h_dim = [256, cw_dim, 512]
         self.h_dim = h_dim
         self.map_sample1 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
@@ -458,7 +458,7 @@ class PCGenH(nn.Module):
         for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
         self.points_convs1 = nn.Sequential(*modules)
-        h_dim = [128, cw_dim, 512, 512]
+        h_dim = [256, cw_dim, 512, 512]
         self.h_dim.extend(h_dim)
 
         self.map_sample3 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
@@ -498,7 +498,7 @@ class PCGenH(nn.Module):
         keys = self.att1(x1)
         values = self.att2(x)
         A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)) / np.sqrt(64), dim=1)
-        x = self.att3(x) + torch.bmm(A, values)
+        x = self.att3(x) #+ torch.bmm(A, values)
         x = self.final(x)
         if self.gf:
             x = graph_filtering(x)
