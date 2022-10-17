@@ -468,13 +468,13 @@ class PCGenH(nn.Module):
         for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
         self.points_convs2 = nn.Sequential(*modules)
-        self.att0 = PointsConvLayer(512, 128, batch_norm=False, act=None)
-        self.att1 = PointsConvLayer(512, 128, batch_norm=False, act=None)
-        self.att2 = PointsConvLayer(512, 128, batch_norm=False, act=None)
-        self.att3 = PointsConvLayer(512, 128, batch_norm=False, act=None)
+        self.att0 = PointsConvLayer(512, 512, batch_norm=False, act=None)
+        self.att1 = PointsConvLayer(512, 512, batch_norm=False, act=None)
+        self.att2 = PointsConvLayer(512, 512, batch_norm=False, act=None)
+        self.att3 = PointsConvLayer(512, 512, batch_norm=False, act=None)
 
-        self.final = nn.Sequential(PointsConvLayer(128, 128, act=nn.ReLU(inplace=True)),
-                                   PointsConvLayer(128, OUT_CHAN, batch_norm=False, act=None))
+        self.final = nn.Sequential(PointsConvLayer(512, 64, act=nn.ReLU(inplace=True)),
+                                   PointsConvLayer(64, OUT_CHAN, batch_norm=False, act=None))
 
     def forward(self, z, s=None):
         batch, cw_dim = z.size()
