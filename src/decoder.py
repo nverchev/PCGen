@@ -534,11 +534,11 @@ class PCGenH(nn.Module):
         self.map_sample3 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
         self.map_sample4 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
+        modules = []
         for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
 
         modules.append(PointsConvLayer(h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        print(modules)
         self.points_convs2 = nn.Sequential(*modules)
         self.h_dim.extend(h_dim)
 
