@@ -556,7 +556,7 @@ class PCGenH(nn.Module):
         x = self.map_sample2(x)
         x = z * x
         x = self.points_convs1(x)
-        x1 = get_graph_features(x, 16).flatten(2)
+        x1 = get_graph_features(x, 4).flatten(2)
         x = s[..., m_top:]
         x = self.map_sample3(x)
         x = self.map_sample4(x)
