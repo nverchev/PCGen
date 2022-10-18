@@ -559,7 +559,7 @@ class PCGenH(nn.Module):
         x = s[..., m_top:]
         x = self.map_sample3(x)
         x = self.map_sample4(x)
-        x = z * x
+        #x = z * x
         x = torch.cat([x1, x], dim=1).contiguous()
         x = self.points_convs2(x)
         if self.gf:
