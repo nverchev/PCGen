@@ -473,7 +473,7 @@ class PCGenH(nn.Module):
         self.att2 = PointsConvLayer(512, 64, batch_norm=False, act=None)
         self.att3 = PointsConvLayer(512, 64, batch_norm=False, act=None)
 
-        self.final = nn.Sequential( PointsConvLayer(64, OUT_CHAN, batch_norm=False, act=None))
+        self.final = nn.Sequential(PointsConvLayer(64, OUT_CHAN, batch_norm=False, act=None))
 
     def forward(self, z, s=None):
         batch, cw_dim = z.size()
@@ -506,6 +506,8 @@ class PCGenH(nn.Module):
 
 
 from src.neighbour_op import get_graph_features
+
+
 class PCGenH(nn.Module):
 
     def __init__(self, cw_dim, m, gf=True):
@@ -540,7 +542,6 @@ class PCGenH(nn.Module):
         self.points_convs2 = nn.Sequential(*modules)
         self.h_dim.extend(h_dim)
 
-
     def forward(self, z, s=None):
         batch, cw_dim = z.size()
         device = z.device
@@ -565,6 +566,8 @@ class PCGenH(nn.Module):
         if self.gf:
             x = graph_filtering(x)
         return x
+
+
 def get_decoder(decoder_name):
     decoder_dict = {
         'Full': FullyConnected,
