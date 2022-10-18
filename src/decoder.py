@@ -184,7 +184,7 @@ class AtlasNetv2(nn.Module):
         batch = x.size(0)
         device = x.device
         outs = []
-        for i in range(0, self.num_patches):
+        for i in range(self.num_patches):
             rand_grid = torch.rand(batch, 2, self.m_patch, device=device)
             rand_grid = self.patchDeformation[i](rand_grid)
             y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
@@ -215,7 +215,7 @@ class AtlasNetv2Deformation(AtlasNetv2):
         batch = x.size(0)
         device = x.device
         outs = []
-        for i in range(0, self.num_patches):
+        for i in range(self.num_patches):
             rand_grid = torch.rand(batch, 2, self.m_patch, device=device)
             rand_grid = self.patchDeformation[i](rand_grid)
             y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
@@ -238,7 +238,7 @@ class AtlasNetv2Structures(AtlasNetv2):
     def forward(self, x):
         batch = x.size(0)
         outs = []
-        for i in range(0, self.num_patches):
+        for i in range(self.num_patches):
             rand_grid = self.grid[i].expand(batch, -1, -1)
             y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
             y = torch.cat((rand_grid, y), 1).contiguous()
@@ -599,10 +599,11 @@ class PCGenH(nn.Module):
         x = z.unsqueeze(2) * x
         group_size = m // self.num_groups
         xs = []
+        old_x_group = 0
         for group in range(self.num_groups):
-            x_group = x[..., group * group_size: (group + 1) * group_size]
+            x_group = x[..., group * group_size: (group + 1) * group_size] - old_x_group
             x_group = self.group_conv[group](x_group)
-            xs.append(x_group)
+            xs.append(x_group + old_x_group)
         x = torch.cat(xs, dim=2)
         if self.gf:
             x = graph_filtering(x)
