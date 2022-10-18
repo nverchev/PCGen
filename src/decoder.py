@@ -559,13 +559,54 @@ class PCGenH(nn.Module):
         x = s[..., m_top:]
         x = self.map_sample3(x)
         x = self.map_sample4(x)
-        #x = z * x
+        x = z * x
         x = torch.cat([x1, x], dim=1).contiguous()
         x = self.points_convs2(x)
         if self.gf:
             x = graph_filtering(x)
         return x
 
+
+class PCGenH(nn.Module):
+
+    def __init__(self, cw_dim, m, gf=True):
+        super().__init__()
+        self.h_dim = [256, cw_dim, 512, 512, 512, 64]
+        self.m = m
+        self.m_training = m
+        self.gf = gf
+        self.sample_dim = 16
+        self.num_groups = 16
+        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
+                                           act=nn.Hardtanh(inplace=True))
+        self.group_conv = nn.ModuleList()
+        for _ in range(self.num_groups):
+            modules = []
+            for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+                modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+            modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+            self.group_conv.append(nn.Sequential(*modules))
+
+    def forward(self, z, s=None):
+        batch = z.size()[0]
+        device = z.device
+        m = self.m_training if self.training else self.m
+        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
+        x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
+        x = self.map_sample1(x)
+        x = self.map_sample2(x)
+        x = z.unsqueeze(2) * x
+        group_size = m // self.num_groups
+        xs = []
+        for group in range(self.num_groups):
+            x_group = x[..., group * group_size: (group + 1) * group_size]
+            x_group = self.group_conv[group](x_group)
+            xs.append(x_group)
+        x = torch.cat(xs, dim=2)
+        if self.gf:
+            x = graph_filtering(x)
+        return x
 
 def get_decoder(decoder_name):
     decoder_dict = {
