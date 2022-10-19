@@ -581,6 +581,7 @@ class PCGenH(nn.Module):
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
         self.group_conv = nn.ModuleList()
+        self.group_final = nn.ModuleList()
         self.group_att1 = nn.ModuleList()
         self.group_att2 = nn.ModuleList()
         self.group_att3 = nn.ModuleList()
@@ -590,12 +591,12 @@ class PCGenH(nn.Module):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-            modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
-            self.group_att1.append(PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None))
-            self.group_att2.append(PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None))
-            self.group_att3.append(PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None))
-            self.group_att4.append(PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None))
+            self.group_final.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
+            self.group_att1.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
+            self.group_att2.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
+            self.group_att3.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
+            self.group_att4.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
 
     def forward(self, z, s=None):
         batch = z.size()[0]
@@ -620,8 +621,8 @@ class PCGenH(nn.Module):
                 A = torch.softmax(torch.bmm(queries.transpose(2, 1), keys), dim=1)
                 x_group = x_group + self.group_att4[group](torch.bmm(values, A))
 
-
             x_old = x_group
+            x_group = self.group_final[group](x_group)
             xs.append(x_group)
         x = torch.cat(xs, dim=2)
         if self.gf:
