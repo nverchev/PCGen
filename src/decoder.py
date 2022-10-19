@@ -580,13 +580,22 @@ class PCGenH(nn.Module):
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-        self.convs = nn.Sequential(*modules)
         self.group_conv = nn.ModuleList()
+        self.group_att1 = nn.ModuleList()
+        self.group_att2 = nn.ModuleList()
+        self.group_att3 = nn.ModuleList()
+        self.group_att4 = nn.ModuleList()
+
         for _ in range(self.num_groups):
-            self.group_conv.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+            modules = []
+            for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+                modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+            modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+            self.group_conv.append(nn.Sequential(*modules))
+            self.group_att1.append(PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None))
+            self.group_att2.append(PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None))
+            self.group_att3.append(PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None))
+            self.group_att4.append(PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None))
 
     def forward(self, z, s=None):
         batch = z.size()[0]
@@ -599,11 +608,20 @@ class PCGenH(nn.Module):
         group_size = m // self.num_groups
         assert group_size, f"Number of generared point should be larger than {self.num_groups}"
         x = z.unsqueeze(2) * x
-        x = self.convs(x)
         xs = []
+        x_old = None
         for group in range(self.num_groups):
             x_group = x[..., group * group_size: (group + 1) * group_size]
             x_group = self.group_conv[group](x_group)
+            if x_old is not None:
+                keys = self.group_att1[group](x_group)
+                queries = self.group_att1[group](x_old)
+                values = self.group_att1[group](x_old)
+                A = torch.softmax(torch.bmm(queries.transpose(2, 1), keys), dim=1)
+                x_group = x_group + self.group_att1[group](torch.bmm(values, A))
+
+
+            x_old = x_group
             xs.append(x_group)
         x = torch.cat(xs, dim=2)
         if self.gf:
