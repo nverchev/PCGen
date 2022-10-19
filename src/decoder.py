@@ -592,11 +592,12 @@ class PCGenH(nn.Module):
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
             self.group_conv.append(nn.Sequential(*modules))
-            self.group_final.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
             self.group_att1.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
             self.group_att2.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
             self.group_att3.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
             self.group_att4.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
+            self.group_final.append(PointsConvLayer(self.h_dim[-1], 3, batch_norm=False, act=None))
+
 
     def forward(self, z, s=None):
         batch = z.size()[0]
