@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
-from src.layer import EdgeConvLayer, PointsConvLayer, LinearLayer
+from src.layer import PointsConvLayer, LinearLayer
 from src.neighbour_op import graph_filtering
 from pykeops.torch import LazyTensor
 
@@ -645,15 +645,13 @@ class PCGenH(nn.Module):
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
         self.group_conv = nn.ModuleList()
-        self.group_final = nn.ModuleList()
 
         for _ in range(self.num_groups):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-                modules.append(EdgeConvLayer(2 * in_dim, out_dim, act=nn.ReLU(inplace=True)))
+                modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+            modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
-            self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
@@ -666,18 +664,15 @@ class PCGenH(nn.Module):
         assert group_size, f"Number of generared point should be larger than {self.num_groups}"
         x = z.unsqueeze(2) * x
         xs = []
-        x_old = None
         for group in range(self.num_groups):
             x_group = x[..., group * group_size: (group + 1) * group_size]
-            x_group = get_graph_features(x_group, k=8)
             x_group = self.group_conv[group](x_group)
-            x_group = x_group.max(dim=3, keepdim=False)[0]
-            x_group = self.group_final[group](x_group)
             xs.append(x_group)
         x = torch.cat(xs, dim=2)
         if self.gf:
             x = graph_filtering(x)
         return x
+
 def get_decoder(decoder_name):
     decoder_dict = {
         'Full': FullyConnected,
