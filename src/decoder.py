@@ -653,21 +653,20 @@ class PCGenH(nn.Module):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
             modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
+
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
         m = self.m_training if self.training else self.m
-        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
+        group_size = m // self.num_groups
+        assert group_size, f"Number of generated points should be larger than {self.num_groups}"
+        x = s if s is not None else torch.randn(batch, self.sample_dim, group_size, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
         x = self.map_sample1(x)
         x = self.map_sample2(x)
-        group_size = m // self.num_groups
-        assert group_size, f"Number of generared point should be larger than {self.num_groups}"
         x = z.unsqueeze(2) * x
-        x = self.bn(x)
         xs = []
         for group in range(self.num_groups):
-            x_group = x[..., group * group_size: (group + 1) * group_size]
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
         x = torch.cat(xs, dim=2)
