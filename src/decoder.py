@@ -634,12 +634,13 @@ class PCGenH(nn.Module):
 
     def __init__(self, cw_dim, m, gf=True):
         super().__init__()
-        self.h_dim = [256, cw_dim, 512, 256, 128, 64]
+        self.h_dim = [256, cw_dim, 512, 512, 512, 64]
         self.m = m
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
         self.num_groups = 8
+        self.bn = nn.BatchNorm1d(cw_dim)
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False,
                                            act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
@@ -663,6 +664,7 @@ class PCGenH(nn.Module):
         group_size = m // self.num_groups
         assert group_size, f"Number of generared point should be larger than {self.num_groups}"
         x = z.unsqueeze(2) * x
+        x = self.bn(x)
         xs = []
         for group in range(self.num_groups):
             x_group = x[..., group * group_size: (group + 1) * group_size]
