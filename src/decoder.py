@@ -596,11 +596,15 @@ class PCGenH(nn.Module):
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
         x = self.map_sample1(x)
         x = self.map_sample2(x)
-        x = z.unsqueeze(2) * x
         group_size = m // self.num_groups
         xs = []
+        z_group = z.unsqueeze(2)
         for group in range(self.num_groups):
             x_group = x[..., group * group_size: (group + 1) * group_size]
+            x_group = z_group * x_group
+            x_group_norm = x_group / torch.linalg.vector_norm(x_group, dim=2, keepdim=True)
+            autocor = torch.softmax(torch.bmm(x_group_norm, x_group_norm.transpose(2, 1)), dim=2)
+            z_group = torch.bmm(autocor, z_group)
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
         x = torch.cat(xs, dim=2)
