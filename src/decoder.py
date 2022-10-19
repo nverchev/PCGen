@@ -616,8 +616,8 @@ class PCGenH(nn.Module):
             x_group = x[..., group * group_size: (group + 1) * group_size]
             x_group = self.group_conv[group](x_group)
             if x_old is not None:
-                keys = self.group_att1[group](x_group)
-                queries = self.group_att2[group](x_old)
+                keys = x_group
+                queries = x_old
                 values = self.group_att3[group](x_old)
                 A = torch.softmax(torch.bmm(queries.transpose(2, 1), keys), dim=1)
                 x_group = x_group + self.group_att4[group](torch.bmm(values, A))
