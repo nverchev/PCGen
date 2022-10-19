@@ -602,7 +602,7 @@ class PCGenH(nn.Module):
         correction = 1.
         for group in range(self.num_groups):
             x_group = x[..., group * group_size: (group + 1) * group_size]
-            x_group = (z.unsqueeze(2) / correction) * x_group
+            x_group = (z.unsqueeze(2) * correction) * x_group
             correction = torch.softmax(1 / x_group.detach().var(2) + 0.00001, dim=1).unsqueeze(2)
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
