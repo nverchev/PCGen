@@ -599,7 +599,7 @@ class PCGenH(nn.Module):
         group_size = m // self.num_groups
         assert group_size, f"Number of generared point should be larger than {self.num_groups}"
         xs = []
-        correction = 1
+        correction = 1.
         for group in range(self.num_groups):
             x_group = x[..., group * group_size: (group + 1) * group_size]
             x_group = (z.unsqueeze(2) / correction) * x_group
