@@ -580,13 +580,13 @@ class PCGenH(nn.Module):
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
+        modules = []
+        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+        self.convs = nn.Sequential(*modules)
         self.group_conv = nn.ModuleList()
         for _ in range(self.num_groups):
-            modules = []
-            for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-                modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-            self.group_conv.append(nn.Sequential(*modules))
-        self.final = PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None)
+            self.group_conv.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
 
     def forward(self, z, s=None):
         batch = z.size()[0]
@@ -599,13 +599,13 @@ class PCGenH(nn.Module):
         group_size = m // self.num_groups
         assert group_size, f"Number of generared point should be larger than {self.num_groups}"
         x = z.unsqueeze(2) * x
+        x = self.convs(x)
         xs = []
         for group in range(self.num_groups):
             x_group = x[..., group * group_size: (group + 1) * group_size]
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
         x = torch.cat(xs, dim=2)
-        x + self.final(x)
         if self.gf:
             x = graph_filtering(x)
         return x
