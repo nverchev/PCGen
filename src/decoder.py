@@ -576,7 +576,7 @@ class PCGenH(nn.Module):
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
-        self.num_groups = 8
+        self.num_groups = 4
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
@@ -598,16 +598,9 @@ class PCGenH(nn.Module):
         x = self.map_sample2(x)
         group_size = m // self.num_groups
         xs = []
-        z_group = z.unsqueeze(2)
-        autocor = None
         for group in range(self.num_groups):
+            x = z.unsqueeze(2) * x
             x_group = x[..., group * group_size: (group + 1) * group_size]
-            x_group = z_group * x_group
-            if group:
-                x_group = torch.bmm(autocor, x_group)
-            x_group_norm = x_group / torch.linalg.vector_norm(x_group, dim=2, keepdim=True)
-            autocor = torch.bmm(x_group, x_group_norm.transpose(2, 1))
-            autocor = torch.softmax(autocor / torch.linalg.vector_norm(autocor, dim=2, keepdim=True), dim=2)
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
         x = torch.cat(xs, dim=2)
