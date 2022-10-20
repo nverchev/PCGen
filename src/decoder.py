@@ -660,13 +660,14 @@ class PCGenH(nn.Module):
         m = self.m_training if self.training else self.m
         group_size = m // self.num_groups
         assert group_size, f"Number of generated points should be larger than {self.num_groups}"
-        x = s if s is not None else torch.randn(batch, self.sample_dim, group_size, device=device)
+        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
         x = self.map_sample1(x)
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
         xs = []
         for group in range(self.num_groups):
+            x_group = x[..., group * group_size: (group + 1) * group_size]
             x_group = self.group_conv[group](x)
             xs.append(x_group)
         x = torch.cat(xs, dim=2)
