@@ -653,8 +653,8 @@ class PCGenH(nn.Module):
             modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
 
-        self.att1 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
-        self.att2 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
+        self.att1 = PointsConvLayer(self.num_groups * OUT_CHAN, 16, batch_norm=False, act=None)
+        self.att2 = LinearLayer(OUT_CHAN, 16, batch_norm=False, act=None)
         self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
         self.att4 = PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
 
@@ -674,12 +674,19 @@ class PCGenH(nn.Module):
             x_group = x
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
+        x = torch.stack(xs, dim=3)
+
+
         #x = torch.cat(xs, dim=1)
         #keys = self.att1(x)
-        #queries = self.att2(x)
         #values = self.att3(x)
         #A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
-        x = torch.stack(xs, dim=3).mean(3) #+ self.att4(torch.bmm(A, values))
+         #+ self.att4(torch.bmm(A, values))
+        x1 = torch.cat(xs, dim=1)
+        keys = self.att1(x1)
+        queries = self.att2(x.mean(2).transpose(2, 1))
+        A = torch.softmax(torch.bmm(queries, keys).transpose(2, 1), dim=2)
+        x = (x * A.unsqueeze(1)).sum(3)
 
         if self.gf:
             x = graph_filtering(x)
