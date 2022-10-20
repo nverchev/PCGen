@@ -670,7 +670,7 @@ class PCGenH(nn.Module):
             x_group = x
             x_group = self.group_conv[group](x_group)
             xs.append(x_group + x_old)
-            x_old = x_old - x_group
+            x_old = (x_old * group + x_group)/(group + 1)
         x = torch.cat(xs, dim=2)
         if self.gf:
             x = graph_filtering(x)
