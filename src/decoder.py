@@ -674,12 +674,12 @@ class PCGenH(nn.Module):
             x_group = x
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
-        x = torch.cat(xs, dim=1)
-        keys = self.att1(x)
-        queries = self.att2(x)
-        values = self.att3(x)
-        A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
-        x = torch.stack(xs, dim=3).mean(3) + self.att4(torch.bmm(A, values))
+        #x = torch.cat(xs, dim=1)
+        #keys = self.att1(x)
+        #queries = self.att2(x)
+        #values = self.att3(x)
+        #A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
+        x = torch.stack(xs, dim=3).mean(3) #+ self.att4(torch.bmm(A, values))
 
         if self.gf:
             x = graph_filtering(x)
