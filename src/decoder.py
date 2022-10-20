@@ -647,29 +647,31 @@ class PCGenH(nn.Module):
         self.group_conv = nn.ModuleList()
 
         for _ in range(self.num_groups):
-            modules = []
-            for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-                modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-            modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-            self.group_conv.append(nn.Sequential(*modules))
+            self.group_conv.append(PointsConvLayer(self.h_dim[1], self.h_dim[2], act=nn.ReLU(inplace=True)))
+        modules = []
+        for in_dim, out_dim in zip(self.h_dim[2:-1], self.h_dim[3:]):
+            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+        modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+        self.final = nn.Sequential(*modules)
 
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
         m = self.m_training if self.training else self.m
-        group_size = m // self.num_groups
-        assert group_size, f"Number of generated points should be larger than {self.num_groups}"
-        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
+        x = s if s is not None else torch.randn(batch, self.sample_dim, m // self.num_groups, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
+        group_size = x.shape[2]
+        assert group_size, f"Number of generated points should be larger than {self.num_groups}"
         x = self.map_sample1(x)
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
         xs = []
         for group in range(self.num_groups):
-            x_group = x[..., group * group_size: (group + 1) * group_size]
+            x_group = x
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
         x = torch.cat(xs, dim=2)
+        x = self.final(x)
         if self.gf:
             x = graph_filtering(x)
         return x
