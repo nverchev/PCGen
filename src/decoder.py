@@ -665,12 +665,12 @@ class PCGenH(nn.Module):
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
         xs = []
-        x_old = 0
         for group in range(self.num_groups):
             x_group = x
             x_group = self.group_conv[group](x_group)
-            xs.append(x_group + x_old)
-            x_old = (x_old * group + x_group)/(group + 1)
+            xs.append(x_group)
+        xs_mean = torch.stack(xs, dim=3).mean(3)
+        xs = [x - xs_mean for x in xs]
         x = torch.cat(xs, dim=2)
         if self.gf:
             x = graph_filtering(x)
