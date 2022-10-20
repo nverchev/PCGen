@@ -653,11 +653,16 @@ class PCGenH(nn.Module):
             modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
 
+        self.att1 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
+        self.att2 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
+        self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
+        self.att4 = PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
+
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
         m = self.m_training if self.training else self.m
-        x = s if s is not None else torch.randn(batch, self.sample_dim, m // self.num_groups, device=device)
+        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
         group_size = x.shape[2]
         assert group_size, f"Number of generated points should be larger than {self.num_groups}"
@@ -669,9 +674,13 @@ class PCGenH(nn.Module):
             x_group = x
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
-        xs_mean = torch.stack(xs, dim=3).mean(3)
-        xs = [x - xs_mean for x in xs]
-        x = torch.cat(xs, dim=2)
+        x = torch.cat(xs, dim=1)
+        keys = self.att1(x)
+        queries = self.att2(x)
+        values = self.att3(x)
+        A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
+        x = torch.stack(xs, dim=3).mean(3) + self.att4(torch.bmm(A, values))
+
         if self.gf:
             x = graph_filtering(x)
         return x
