@@ -654,7 +654,7 @@ class PCGenH(nn.Module):
             modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
 
-        self.att1 = PointsConvLayer(cw_dim, 1, batch_norm=False, act=None)
+        self.att1 = PointsConvLayer((self.num_groups + 1) * OUT_CHAN, 1, batch_norm=False, act=None)
         #self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
         #self.att4 = PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
 
@@ -673,7 +673,7 @@ class PCGenH(nn.Module):
         for group in range(self.num_groups + 1):
             x_group = self.group_conv[group](x)
             xs.append(x_group)
-        att = torch.sigmoid(self.att1(x))
+        att = torch.sigmoid(self.att1(torch.cat(xs, dim=1)))
         x = (att * xs[0]).repeat(1, 1, self.num_groups) + (1-att).repeat(1, 1, self.num_groups) * torch.cat(xs[1:], dim=2)
 
 
