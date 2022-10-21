@@ -710,17 +710,19 @@ class PCGenH(nn.Module):
         self.group_conv = nn.ModuleList()
         self.group_att1 = nn.ModuleList()
         self.group_att2 = nn.ModuleList()
-
+        self.group_final=nn.ModuleList()
         for _ in range(self.num_groups):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-            modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+            #modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
             # self.group_att1.append(PointsConvLayer(self.num_groups * OUT_CHAN, 1, batch_norm=False, act=None))
             # self.group_att2.append(PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups, batch_norm=False, act=None))
-            self.group_att1.append(PointsConvLayer(self.num_groups * OUT_CHAN, 64, act=None))
+            self.group_att1.append(PointsConvLayer(self.num_groups * self.h_dim[-1], 64, act=None))
             self.group_att2.append(LinearLayer(64, self.num_groups, batch_norm=False, act=None))
+            self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+
         # self.att1 = PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups , batch_norm=False, act=None)
         # self.att2 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN , batch_norm=False, act=None)
         #self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
@@ -754,8 +756,9 @@ class PCGenH(nn.Module):
             x1_group = self.group_att1[group](x1)
             x1_group = x1_group.max(dim=2)[0]
             x1_group = self.group_att2[group](x1_group)
-            A = F.gumbel_softmax(x1_group, dim=1).unsqueeze(1)
-            xs.append((x * A.unsqueeze(1)).sum(3))
+            A = F.softmax(x1_group, dim=1).unsqueeze(1)
+            x_group = self.group_final[group]((x * A.unsqueeze(1)).sum(3))
+            xs.append(x_group)
 
         x = torch.cat(xs, dim=2)
 
