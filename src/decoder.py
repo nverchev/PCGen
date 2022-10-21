@@ -717,8 +717,10 @@ class PCGenH(nn.Module):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
             modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
-            self.group_att1.append(PointsConvLayer(self.num_groups * OUT_CHAN, 1, batch_norm=False, act=None))
-            self.group_att2.append(PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups, batch_norm=False, act=None))
+            # self.group_att1.append(PointsConvLayer(self.num_groups * OUT_CHAN, 1, batch_norm=False, act=None))
+            # self.group_att2.append(PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups, batch_norm=False, act=None))
+            self.group_att1.append(PointsConvLayer(self.num_groups * OUT_CHAN, 64, act=None))
+            self.group_att2.append(LinearLayer(64, self.num_groups, batch_norm=False, act=None))
         # self.att1 = PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups , batch_norm=False, act=None)
         # self.att2 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN , batch_norm=False, act=None)
         #self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
@@ -741,14 +743,18 @@ class PCGenH(nn.Module):
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
         x = torch.stack(xs, dim=3)
-        #print(f"{x.shape=}")
         x1 = torch.cat(xs, dim=1)
+        #print(f"{x1.shape=}")
 
         xs = []
         for group in range(self.num_groups):
-            queries = self.group_att1[group](x1)
-            keys = self.group_att2[group](x1).transpose(2, 1)
-            A = F.softmax(torch.bmm(queries, keys), dim=2)
+            # queries = self.group_att1[group](x1)
+            # keys = self.group_att2[group](x1).transpose(2, 1)
+            # A = torch.softmax(torch.bmm(queries, keys), dim=2)
+            x1_group = self.group_att1[group](x1)
+            x1_group = x1_group.max(dim=2)[0]
+            x1_group = self.group_att2[group](x1_group)
+            A = torch.softmax(x1_group, dim=1).unsqueeze(1)
             xs.append((x * A.unsqueeze(1)).sum(3))
 
         x = torch.cat(xs, dim=2)
