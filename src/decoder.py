@@ -748,7 +748,7 @@ class PCGenH(nn.Module):
         for group in range(self.num_groups):
             keys = self.group_att1[group](x1)
             queries = self.group_att2[group](x.mean(2).transpose(2, 1))
-            A = torch.softmax(torch.bmm(queries, keys).transpose(2, 1), dim=2)
+            A = F.gumbel_softmax(torch.bmm(queries, keys).transpose(2, 1), dim=2)
             xs.append((x * A.unsqueeze(1)).sum(3))
 
         x = torch.cat(xs, dim=2)
