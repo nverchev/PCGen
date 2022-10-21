@@ -654,7 +654,8 @@ class PCGenH(nn.Module):
             modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
 
-        self.att1 = PointsConvLayer((self.num_groups + 1) * OUT_CHAN, 1, batch_norm=False, act=None)
+        self.att1 = nn.Sequential(PointsConvLayer((self.num_groups + 1) * OUT_CHAN, 256, act=nn.ReLU(inplace=True)),
+                                  PointsConvLayer(256, 1, act=None))
         #self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
         #self.att4 = PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
 
