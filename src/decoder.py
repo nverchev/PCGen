@@ -717,8 +717,8 @@ class PCGenH(nn.Module):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
             modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
             self.group_conv.append(nn.Sequential(*modules))
-            self.group_att1.append(PointsConvLayer(self.num_groups * OUT_CHAN, 16, batch_norm=False, act=None))
-            self.group_att2.append(LinearLayer(OUT_CHAN, 16, batch_norm=False, act=None))
+            self.group_att1.append(PointsConvLayer(self.num_groups * OUT_CHAN, 1, batch_norm=False, act=None))
+            self.group_att2.append(PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups, batch_norm=False, act=None))
         # self.att1 = PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups , batch_norm=False, act=None)
         # self.att2 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN , batch_norm=False, act=None)
         #self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
@@ -746,9 +746,9 @@ class PCGenH(nn.Module):
 
         xs = []
         for group in range(self.num_groups):
-            keys = self.group_att1[group](x1)
-            queries = self.group_att2[group](x.mean(2).transpose(2, 1))
-            A = F.gumbel_softmax(torch.bmm(queries, keys).transpose(2, 1), dim=2)
+            queries = self.group_att1[group](x1)
+            keys = self.group_att2[group](x1).transpose(2, 1)
+            A = F.softmax(torch.bmm(queries, keys), dim=2)
             xs.append((x * A.unsqueeze(1)).sum(3))
 
         x = torch.cat(xs, dim=2)
