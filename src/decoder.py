@@ -754,7 +754,7 @@ class PCGenH(nn.Module):
             x1_group = self.group_att1[group](x1)
             x1_group = x1_group.max(dim=2)[0]
             x1_group = self.group_att2[group](x1_group)
-            A = torch.softmax(x1_group, dim=1).unsqueeze(1)
+            A = F.gumbel_softmax(x1_group, dim=1).unsqueeze(1)
             xs.append((x * A.unsqueeze(1)).sum(3))
 
         x = torch.cat(xs, dim=2)
