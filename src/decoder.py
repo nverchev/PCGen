@@ -644,6 +644,11 @@ class PCGenH(nn.Module):
                                            act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
+        modules = []
+        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+        modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+        self.conv = nn.Sequential(*modules)
         self.group_conv = nn.ModuleList()
 
         for _ in range(self.num_groups):
@@ -664,116 +669,118 @@ class PCGenH(nn.Module):
         m = self.m_training if self.training else self.m
         x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        group_size = x.shape[2]
+        group_size = x.shape[2] // self.num_groups
         assert group_size, f"Number of generated points should be larger than {self.num_groups}"
         x = self.map_sample1(x)
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
+        x_base = self.conv(x)
         xs = []
         for group in range(self.num_groups):
-            x_group = x
+            x_group = x[..., group * group_size: (group + 1) * group_size]
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
-        x = torch.stack(xs, dim=3)
+        x = (x_base + torch.cat(xs, dim=2)) / 2
 
 
-        #x = torch.cat(xs, dim=1)
+
         #keys = self.att1(x)
         #values = self.att3(x)
         #A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
          #+ self.att4(torch.bmm(A, values))
-        x1 = torch.cat(xs, dim=1)
-        keys = self.att1(x1)
-        queries = self.att2(x.mean(2).transpose(2, 1))
-        A = torch.softmax(torch.bmm(queries, keys).transpose(2, 1), dim=2)
-        x = (x * A.unsqueeze(1)).sum(3)
-
-        if self.gf:
-            x = graph_filtering(x)
-        return x
-
-
-class PCGenH(nn.Module):
-
-    def __init__(self, cw_dim, m, gf=True):
-        super().__init__()
-        self.h_dim = [256, cw_dim, 512, 512, 512, 64]
-        self.m = m
-        self.m_training = m
-        self.gf = gf
-        self.sample_dim = 16
-        self.num_groups = 8
-        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False,
-                                           act=nn.ReLU(inplace=True))
-        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-        self.group_conv = nn.ModuleList()
-        self.group_att1 = nn.ModuleList()
-        self.group_att2 = nn.ModuleList()
-        self.final=PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None)
-        for _ in range(self.num_groups):
-            modules = []
-            for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-                modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-            #modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-            self.group_conv.append(nn.Sequential(*modules))
-            # self.group_att1.append(PointsConvLayer(self.num_groups * OUT_CHAN, 1, batch_norm=False, act=None))
-            # self.group_att2.append(PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups, batch_norm=False, act=None))
-            self.group_att1.append(PointsConvLayer(self.num_groups * self.h_dim[-1], 64, act=None))
-            self.group_att2.append(LinearLayer(64, self.num_groups, batch_norm=False, act=None))
-
-        # self.att1 = PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups , batch_norm=False, act=None)
-        # self.att2 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN , batch_norm=False, act=None)
-        #self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
-        #self.att4 = PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
-
-    def forward(self, z, s=None):
-        batch = z.size()[0]
-        device = z.device
-        m = self.m_training if self.training else self.m
-        x = s if s is not None else torch.randn(batch, self.sample_dim, m // self.num_groups, device=device)
-        x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        group_size = x.shape[2]
-        assert group_size, f"Number of generated points should be larger than {self.num_groups}"
-        x = self.map_sample1(x)
-        x = self.map_sample2(x)
-        x = z.unsqueeze(2) * x
-        xs = []
-        for group in range(self.num_groups):
-            x_group = x
-            x_group = self.group_conv[group](x_group)
-            xs.append(x_group)
-        x = torch.stack(xs, dim=3)
-        x1 = torch.cat(xs, dim=1)
-        #print(f"{x1.shape=}")
-
-        xs = []
-        for group in range(self.num_groups):
-            # queries = self.group_att1[group](x1)
-            # keys = self.group_att2[group](x1).transpose(2, 1)
-            # A = torch.softmax(torch.bmm(queries, keys), dim=2)
-            x1_group = self.group_att1[group](x1)
-            x1_group = x1_group.max(dim=2)[0]
-            x1_group = self.group_att2[group](x1_group)
-            A = F.softmax(x1_group, dim=1).unsqueeze(1)
-            xs.append((x * A.unsqueeze(1)).sum(3))
-
-        x = torch.cat(xs, dim=2)
-        x = self.final(x)
-        #keys = self.att1(x)
-        #values = self.att3(x)
-        #A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
-         #+ self.att4(torch.bmm(A, values))
-
-        # keys = self.att1(x1)
-        # queries = self.att2(x1)
-        # A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
-        # x = (x * A.unsqueeze(2)).sum(3)
+        #x = torch.stack(xs, dim=3)
         # x1 = torch.cat(xs, dim=1)
+        # keys = self.att1(x1)
+        # queries = self.att2(x.mean(2).transpose(2, 1))
+        # A = torch.softmax(torch.bmm(queries, keys).transpose(2, 1), dim=2)
+        # x = (x * A.unsqueeze(1)).sum(3)
 
         if self.gf:
             x = graph_filtering(x)
         return x
+
+#
+# class PCGenH(nn.Module):
+#
+#     def __init__(self, cw_dim, m, gf=True):
+#         super().__init__()
+#         self.h_dim = [256, cw_dim, 512, 512, 512, 64]
+#         self.m = m
+#         self.m_training = m
+#         self.gf = gf
+#         self.sample_dim = 16
+#         self.num_groups = 8
+#         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False,
+#                                            act=nn.ReLU(inplace=True))
+#         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
+#                                            act=nn.Hardtanh(inplace=True))
+#         self.group_conv = nn.ModuleList()
+#         self.group_att1 = nn.ModuleList()
+#         self.group_att2 = nn.ModuleList()
+#         self.final=PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None)
+#         for _ in range(self.num_groups):
+#             modules = []
+#             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+#                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+#             #modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+#             self.group_conv.append(nn.Sequential(*modules))
+#             # self.group_att1.append(PointsConvLayer(self.num_groups * OUT_CHAN, 1, batch_norm=False, act=None))
+#             # self.group_att2.append(PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups, batch_norm=False, act=None))
+#             self.group_att1.append(PointsConvLayer(self.num_groups * self.h_dim[-1], 64, act=None))
+#             self.group_att2.append(LinearLayer(64, self.num_groups, batch_norm=False, act=None))
+#
+#         # self.att1 = PointsConvLayer(self.num_groups * OUT_CHAN, self.num_groups , batch_norm=False, act=None)
+#         # self.att2 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN , batch_norm=False, act=None)
+#         #self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
+#         #self.att4 = PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
+#
+#     def forward(self, z, s=None):
+#         batch = z.size()[0]
+#         device = z.device
+#         m = self.m_training if self.training else self.m
+#         x = s if s is not None else torch.randn(batch, self.sample_dim, m // self.num_groups, device=device)
+#         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
+#         group_size = x.shape[2]
+#         assert group_size, f"Number of generated points should be larger than {self.num_groups}"
+#         x = self.map_sample1(x)
+#         x = self.map_sample2(x)
+#         x = z.unsqueeze(2) * x
+#         xs = []
+#         for group in range(self.num_groups):
+#             x_group = x
+#             x_group = self.group_conv[group](x_group)
+#             xs.append(x_group)
+#         x = torch.stack(xs, dim=3)
+#         x1 = torch.cat(xs, dim=1)
+#         #print(f"{x1.shape=}")
+#
+#         xs = []
+#         for group in range(self.num_groups):
+#             # queries = self.group_att1[group](x1)
+#             # keys = self.group_att2[group](x1).transpose(2, 1)
+#             # A = torch.softmax(torch.bmm(queries, keys), dim=2)
+#             x1_group = self.group_att1[group](x1)
+#             x1_group = x1_group.max(dim=2)[0]
+#             x1_group = self.group_att2[group](x1_group)
+#             A = F.softmax(x1_group, dim=1).unsqueeze(1)
+#             xs.append((x * A.unsqueeze(1)).sum(3))
+#
+#         x = torch.cat(xs, dim=2)
+#         x = self.final(x)
+#         #keys = self.att1(x)
+#         #values = self.att3(x)
+#         #A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
+#          #+ self.att4(torch.bmm(A, values))
+#
+#         # keys = self.att1(x1)
+#         # queries = self.att2(x1)
+#         # A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
+#         # x = (x * A.unsqueeze(2)).sum(3)
+#         # x1 = torch.cat(xs, dim=1)
+#
+#         if self.gf:
+#             x = graph_filtering(x)
+#         return x
 
 def get_decoder(decoder_name):
     decoder_dict = {
