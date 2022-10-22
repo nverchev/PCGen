@@ -682,7 +682,7 @@ class PCGenH(nn.Module):
             xs.append(x_group)
        # x_att = torch.cat([x_base, torch.cat(xs, dim=1).contiguous().repeat(1, 1, self.num_groups)], dim=1)
         #att = torch.sigmoid(self.att1(x_att))
-        x = (x_base) + torch.cat(xs, dim=2)
+        x = ((x_base) + torch.cat(xs, dim=2))/2
 
 
 
