@@ -634,7 +634,7 @@ class PCGenH(nn.Module):
 
     def __init__(self, cw_dim, m, gf=True):
         super().__init__()
-        self.h_dim = [256, cw_dim, 512, 512, 512, 64]
+        self.h_dim = [256, cw_dim, 512, 256, 128, 64]
         self.m = m
         self.m_training = m
         self.gf = gf
@@ -644,22 +644,18 @@ class PCGenH(nn.Module):
                                            act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-        modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.conv = nn.Sequential(*modules)
         self.group_conv = nn.ModuleList()
+        self.group_final = nn.ModuleList()
 
         for _ in range(self.num_groups + 1):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-            modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-            self.group_conv.append(nn.Sequential(*modules))
 
-        self.att1 = nn.Sequential(PointsConvLayer((self.num_groups + 1) * OUT_CHAN, 256, act=nn.ReLU(inplace=True)),
-                                  PointsConvLayer(256, 1, act=None))
+            self.group_conv.append(nn.Sequential(*modules))
+            self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+        self.att1 = LinearLayer(self.h_dim[-1] * self.num_groups, 8, act=None)
+
         #self.att3 = PointsConvLayer(self.num_groups * OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
         #self.att4 = PointsConvLayer(OUT_CHAN, OUT_CHAN, batch_norm=False, act=None)
 
@@ -669,20 +665,22 @@ class PCGenH(nn.Module):
         m = self.m_training if self.training else self.m
         x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        group_size = x.shape[2] // self.num_groups
+        group_size = x.shape[2]
         assert group_size, f"Number of generated points should be larger than {self.num_groups}"
         x = self.map_sample1(x)
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
-        x_base = self.conv(x)
         xs = []
         for group in range(self.num_groups):
-            x_group = x[..., group * group_size: (group + 1) * group_size]
-            x_group = self.group_conv[group](x_group)
+            x_group = self.group_conv[group](x)
             xs.append(x_group)
-       # x_att = torch.cat([x_base, torch.cat(xs, dim=1).contiguous().repeat(1, 1, self.num_groups)], dim=1)
-        #att = torch.sigmoid(self.att1(x_att))
-        x = ((x_base) + torch.cat(xs, dim=2))/2
+        x_att = torch.cat([x.max(2)[0] for x in xs], dim=1).contiguous()
+        att = torch.softmax(self.att1(x_att), dim=1)
+        x_final = []
+        for group, x_group in enumerate(xs):
+            x_group = self.group_final[group](x_group)
+            x_final.append(x_group)
+        x = torch.stack(x_final, dim=3) * att.view(-1, 1, 1, self.num_groups)
 
 
 
