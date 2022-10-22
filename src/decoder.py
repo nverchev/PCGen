@@ -680,9 +680,9 @@ class PCGenH(nn.Module):
             x_group = x[..., group * group_size: (group + 1) * group_size]
             x_group = self.group_conv[group](x_group)
             xs.append(x_group)
-        x_att = torch.cat([x_base, torch.cat(xs, dim=1).contiguous().repeat(1, 1, self.num_groups)], dim=1)
-        att = torch.sigmoid(self.att1(x_att))
-        x = (att * x_base) + (1-att) * torch.cat(xs, dim=2)
+       # x_att = torch.cat([x_base, torch.cat(xs, dim=1).contiguous().repeat(1, 1, self.num_groups)], dim=1)
+        #att = torch.sigmoid(self.att1(x_att))
+        x = (x_base) + torch.cat(xs, dim=2)
 
 
 
