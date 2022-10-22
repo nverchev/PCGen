@@ -644,7 +644,11 @@ class PCGenH(nn.Module):
                                            act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
-
+        modules = []
+        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+        modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+        self.conv = nn.Sequential(*modules)
         self.group_conv = nn.ModuleList()
 
         for _ in range(self.num_groups + 1):
@@ -663,19 +667,22 @@ class PCGenH(nn.Module):
         batch = z.size()[0]
         device = z.device
         m = self.m_training if self.training else self.m
-        x = s if s is not None else torch.randn(batch, self.sample_dim, m // (self.num_groups), device=device)
+        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        group_size = x.shape[2]
+        group_size = x.shape[2] // self.num_groups
         assert group_size, f"Number of generated points should be larger than {self.num_groups}"
         x = self.map_sample1(x)
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
+        x_base = self.conv(x)
         xs = []
-        for group in range(self.num_groups + 1):
-            x_group = self.group_conv[group](x)
+        for group in range(self.num_groups):
+            x_group = x[..., group * group_size: (group + 1) * group_size]
+            x_group = self.group_conv[group](x_group)
             xs.append(x_group)
-        att = torch.sigmoid(self.att1(torch.cat(xs, dim=1)))
-        x = (att * xs[0]).repeat(1, 1, self.num_groups) + (1-att).repeat(1, 1, self.num_groups) * torch.cat(xs[1:], dim=2)
+        x_att = torch.cat([x_base, torch.cat(xs, dim=1).contiguous().repeat(1, 1, self.num_groups)], dim=1)
+        att = torch.sigmoid(self.att1(x_att))
+        x = (att * x_base) + (1-att) * torch.cat(xs, dim=2)
 
 
 
