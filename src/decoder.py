@@ -674,7 +674,7 @@ class PCGenH(nn.Module):
         for group in range(self.num_groups):
             x_group = self.group_conv[group](x)
             xs.append(x_group)
-        x_att = torch.cat(xs, dim=1).contiguous()
+        x_att = torch.cat(xs, dim=1).contiguous().detach()
         att = torch.softmax(self.att1(x_att), dim=1).transpose(2, 1)
         x_final = []
         for group, x_group in enumerate(xs):
