@@ -634,7 +634,7 @@ class PCGenH(nn.Module):
 
     def __init__(self, cw_dim, m, gf=True):
         super().__init__()
-        self.h_dim = [256, cw_dim, 512, 256, 128, 64]
+        self.h_dim = [256, cw_dim, 512, 512, 512, 64]
         self.m = m
         self.m_training = m
         self.gf = gf
