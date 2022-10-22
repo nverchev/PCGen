@@ -680,7 +680,7 @@ class PCGenH(nn.Module):
         for group, x_group in enumerate(xs):
             x_group = self.group_final[group](x_group)
             x_final.append(x_group)
-        x = torch.stack(x_final, dim=3) * att.view(-1, 1, 1, self.num_groups)
+        x = (torch.stack(x_final, dim=3) * att.view(-1, 1, 1, self.num_groups)).sum(3)
 
 
 
