@@ -1,4 +1,21 @@
+import numpy as np
 import torch
+import torch.nn.functional as F
+from pykeops.torch import LazyTensor
+
+def square_distance(t1, t2):
+    t1 = LazyTensor(t1[:, :, None, :])
+    t2 = LazyTensor(t2[:, None, :, :])
+    dist = ((t1 - t2) ** 2).sum(-1)
+    return dist
+
+
+# def square_distance(t1, t2):
+#     t2 = t2.transpose(-1, -2)
+#     dist = -2 * torch.matmul(t1, t2)
+#     dist += torch.sum(t1 ** 2, -1, keepdim=True)
+#     dist += torch.sum(t2 ** 2, -2, keepdim=True)
+#     return dist.unsqueeze(3)
 
 
 def self_square_distance(t1):
@@ -57,13 +74,22 @@ def get_graph_features(x, k=20, indices=None):
     # (batch_size, 2 * num_dims, num_points, k)
     return feature
 
-
 def graph_filtering(x):
     dist, neighbours = get_neighbours(x, k=4, indices=None)
     dist1 = dist[..., 1:]  # dist[:, :,  0] == 0
     neighbours1 = neighbours[..., 1:]
-    sigma2 = torch.sqrt(dist1.mean(-1, keepdims=True))
+    sigma2 = np.sqrt(0.02) #dist1.mean(-1, keepdims=True)
     weights = torch.softmax(-dist1 / sigma2, dim=-1)
     weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours1
     x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
+    return x
+
+def graph_filtering(x):
+    minus_dist = -self_square_distance(x)
+    sigma2 = np.sqrt(0.)
+    exclude_self = torch.arange(x.size(2), device=x.device).view(1, -1, 1).expand(x.size(0), -1, -1)
+    minus_dist.scatter_(2, exclude_self, -torch.inf)
+    weights = torch.softmax(minus_dist / sigma2, dim=1)
+    weighted_neighbours = torch.bmm(x, weights)
+    x = 1.5 * x - 0.5 * weighted_neighbours
     return x

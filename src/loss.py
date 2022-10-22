@@ -4,23 +4,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import geomloss
-from pykeops.torch import LazyTensor
-
-
-# tensor_dims = (batch, (samples,) vertices, coordinates )
-def square_distance(t1, t2):
-    t1 = LazyTensor(t1[:, :, None, :])
-    t2 = LazyTensor(t2[:, None, :, :])
-    dist = ((t1 - t2) ** 2).sum(-1)
-    return dist
-
-
-# def square_distance(t1, t2):
-#     t2 = t2.transpose(-1, -2)
-#     dist = -2 * torch.matmul(t1, t2)
-#     dist += torch.sum(t1 ** 2, -1, keepdim=True)
-#     dist += torch.sum(t2 ** 2, -2, keepdim=True)
-#     return dist.unsqueeze(3)
+from src.neighbour_op import square_distance
 
 
 # Chamfer Distance
