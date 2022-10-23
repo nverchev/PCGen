@@ -639,23 +639,20 @@ class PCGenH(nn.Module):
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
-        self.num_groups = 4
-        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False,
-                                           act=nn.ReLU(inplace=True))
-        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
+        self.num_groups = 8
+        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Hardtanh(inplace=True))
         self.group_conv = nn.ModuleList()
         self.group_final = nn.ModuleList()
-
         for _ in range(self.num_groups):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-
             self.group_conv.append(nn.Sequential(*modules))
             self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
         self.att1 = PointsConvLayer(self.h_dim[-1] * self.num_groups,  self.num_groups, act=None)
-
+        self.att2 = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, act=None)
+        self.att3 = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, act=None)
 
     def forward(self, z, s=None):
         batch = z.size()[0]
@@ -671,7 +668,11 @@ class PCGenH(nn.Module):
             x_group = self.group_conv[group](x)
             xs.append(x_group)
         x_att = torch.cat(xs, dim=1).contiguous().detach()
-        att = torch.softmax(self.att1(x_att), dim=1).transpose(2, 1)
+        keys = self.att1(x_att)
+        queries = self.att2(x_att)
+        att_weights = torch.softmax(torch.bmm(queries, keys.transpose(2,1)), dim=2)
+        values = self.att3(x_att)
+        att = torch.softmax(torch.bmm(att_weights, values), dim=1).transpose(2, 1)
         x_final = []
         for group, x_group in enumerate(xs):
             x_group = self.group_final[group](x_group)
