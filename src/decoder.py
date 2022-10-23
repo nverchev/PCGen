@@ -667,7 +667,7 @@ class PCGenH(nn.Module):
             x_group = self.group_conv[group](x)
             xs.append(x_group)
         x_att = torch.cat(xs, dim=1).contiguous().detach()
-        keys = self.att2(x_att.mean(2))
+        keys = self.att2(x_att.max(2)[0])
         x_att = x_att * torch.sigmoid(keys).unsqueeze(2)
         att = torch.softmax(self.att1(x_att), dim=1).transpose(2, 1)
         x_final = []
