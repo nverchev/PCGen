@@ -639,7 +639,7 @@ class PCGenH(nn.Module):
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
-        self.num_groups = 8
+        self.num_groups = 4
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False,
                                            act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
@@ -647,15 +647,14 @@ class PCGenH(nn.Module):
         self.group_conv = nn.ModuleList()
         self.group_final = nn.ModuleList()
 
-        for _ in range(self.num_groups + 1):
+        for _ in range(self.num_groups):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
 
             self.group_conv.append(nn.Sequential(*modules))
             self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.att1 = nn.Sequential(PointsConvLayer(self.h_dim[-1] * self.num_groups, self.h_dim[-1]),
-                                  PointsConvLayer(self.h_dim[-1], 8, act=None))
+        self.att1 = PointsConvLayer(self.h_dim[-1] * self.num_groups,  self.num_groups, act=None)
 
 
     def forward(self, z, s=None):
