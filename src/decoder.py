@@ -647,6 +647,7 @@ class PCGenH(nn.Module):
         self.group_conv = nn.ModuleList()
         self.group_final = nn.ModuleList()
         self.group_att = nn.ModuleList()
+        self.group_att2 = nn.ModuleList()
 
         for _ in range(self.num_groups):
             modules = []
@@ -655,7 +656,7 @@ class PCGenH(nn.Module):
             self.group_conv.append(nn.Sequential(*modules))
             self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, act=None))
             self.group_att.append(PointsConvLayer(self.h_dim[-1], 1, act=None))
-            self.group_att2 = LinearLayer(cw_dim, self.h_dim[-1], act=None)
+            self.group_att2.append(LinearLayer(cw_dim, self.h_dim[-1], act=None))
     def forward(self, z, s=None):
         batch = z.size()[0]
         device = z.device
@@ -669,7 +670,7 @@ class PCGenH(nn.Module):
         x_atts = []
         for group in range(self.num_groups):
             x_group = self.group_conv[group](x)
-            x_att = x_group * torch.softmax(self.group_att2(z), dim=1).unsqueeze(2)
+            x_att = x_group * torch.softmax(self.group_att2[group](z), dim=1).unsqueeze(2)
             x_att = self.group_att[group](x_att)
             x_atts.append(x_att)
             x_group = self.group_final[group](x_group)
