@@ -674,7 +674,7 @@ class PCGenH(nn.Module):
             x_group = self.group_final[group](x_group)
             xs.append(x_group)
         att = torch.softmax(torch.cat(x_atts, dim=1).contiguous().transpose(2, 1), dim=2)
-        x = (torch.stack(xs, dim=3) * att.unsqueeze(1)).sum(3)
+        x = (torch.stack(xs, dim=3).contiguous() * att.unsqueeze(1)).sum(3)
         if self.gf:
             x = graph_filtering(x)
         return x
@@ -713,18 +713,17 @@ class PCGenH(nn.Module):
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
         xs = []
+        x_atts = []
         for group in range(self.num_groups):
             x_group = self.group_conv[group](x)
+            x_atts.append(x_group)
+            x_group = self.group_final[group](x_group)
             xs.append(x_group)
-        x_att = torch.cat(xs, dim=1).contiguous()
+        x_att = torch.cat(x_atts, dim=1).contiguous()
         #keys = self.att2(x_att.max(2)[0])
         #x_att = x_att * torch.sigmoid(keys).unsqueeze(2)
         att = torch.softmax(self.att1(x_att), dim=1).transpose(2, 1)
-        x_final = []
-        for group, x_group in enumerate(xs):
-            x_group = self.group_final[group](x_group)
-            x_final.append(x_group)
-        x = (torch.stack(x_final, dim=3) * att.unsqueeze(1)).sum(3)
+        x = (torch.stack(xs, dim=3) * att.unsqueeze(1)).sum(3)
 
         if self.gf:
             x = graph_filtering(x)
