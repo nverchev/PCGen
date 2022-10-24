@@ -700,7 +700,7 @@ class PCGenH(nn.Module):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
             self.group_conv.append(nn.Sequential(*modules))
             self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.att1 = PointsConvLayer(self.h_dim[-1] * self.num_groups,  self.num_groups, act=None)
+        self.att1 = PointsConvLayer(self.h_dim[-1] * self.num_groups,  self.num_groups, batch_norm=False, act=None)
         #self.att2 = LinearLayer(self.h_dim[-1] * self.num_groups, self.h_dim[-1] * self.num_groups, act=None)
 
     def forward(self, z, s=None):
