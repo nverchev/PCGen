@@ -674,7 +674,7 @@ class PCGenH(nn.Module):
             x_group = self.group_final[group](x_group)
             xs.append(x_group)
         att = torch.softmax(torch.cat(x_atts, dim=1).contiguous().transpose(2, 1), dim=2)
-        x = (torch.stack(xs, dim=3).contiguous() * att.unsqueeze(1)).sum(3)
+        x = torch.stack(xs, dim=3 * att.unsqueeze(1)).sum(3)
         if self.gf:
             x = graph_filtering(x)
         return x
@@ -700,7 +700,7 @@ class PCGenH(nn.Module):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
             self.group_conv.append(nn.Sequential(*modules))
             self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.att1 = PointsConvLayer(self.h_dim[-1] * self.num_groups,  self.num_groups, batch_norm=False, act=None)
+        self.att1 = PointsConvLayer(self.h_dim[-1] * self.num_groups,  self.num_groups, act=None)
         #self.att2 = LinearLayer(self.h_dim[-1] * self.num_groups, self.h_dim[-1] * self.num_groups, act=None)
 
     def forward(self, z, s=None):
