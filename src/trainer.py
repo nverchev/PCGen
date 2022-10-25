@@ -26,7 +26,7 @@ def apply(obj, check, f):  # changes device in dictionary and lists
     return obj
 
 
-# Dict for list of (list of) Tensor
+# Dict for (nested) list of Tensor
 class TorchDictList(UserDict):
 
     def __getitem__(self, key_or_index):
@@ -34,7 +34,7 @@ class TorchDictList(UserDict):
             return self._index_dict_list(key_or_index)
         return super().__getitem__(key_or_index)
 
-    # Indexes a list (inside of a list) inside of a dictionary
+    # Indexes a (nested) list in a dictionary
     def _index_dict_list(self, ind):
         out_dict = {}
         for k, v in self.items():
@@ -45,16 +45,16 @@ class TorchDictList(UserDict):
             out_dict[k] = new_v
         return out_dict
 
-    # Separates batch into list and appends to (creates) structure (dict of lists, dict of lists of lists)
+    # Separates batch into list and appends (or creates) to structure dict of (nested) lists
     def extend_dict(self, new_dict):
         for key, value in new_dict.items():
             if isinstance(value, list):
-                for elem, new_elem in zip(super().setdefault(key, [[]] * len(value)), value):
+                for elem, new_elem in zip(self.setdefault(key, [[]] * len(value)), value):
                     assert torch.is_tensor(new_elem)
                     elem.extend(new_elem)
             else:
                 assert torch.is_tensor(value)
-                super().setdefault(key, []).extend(value)
+                self.setdefault(key, []).extend(value)
 
 
 '''

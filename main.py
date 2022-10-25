@@ -18,6 +18,8 @@ def parse_args():
     parser.add_argument('--decoder', type=str, default='PCGen',
                         choices=['PCGen', 'PCGenC', 'Full', 'FoldingNet', 'TearingNet',
                                  'AtlasNetDeformation', 'AtlasNetStructures'])
+    parser.add_argument('--components', type=int, default=0,
+                        help='Components of PCGenC or patches in AtlasNet, 0 is for default (resp. 8 and 16)')
     parser.add_argument('--exp', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
@@ -63,6 +65,7 @@ def main(task='train/eval'):
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
+    components = args.components
     graph_filtering = args.gf
     experiment = args.exp
     recon_loss = args.recon_loss
@@ -116,6 +119,7 @@ def main(task='train/eval'):
     )
     model_settings = dict(encoder_name=encoder_name,
                           decoder_name=decoder_name,
+                          components=components,
                           gf=graph_filtering,
                           cw_dim=cw_dim,
                           k=k,
@@ -123,7 +127,6 @@ def main(task='train/eval'):
                           ae=ae,
                           book_size=book_size,
                           dim_embedding=dim_embedding
-
                           )
     model = get_model(**model_settings).to(device).eval()  # set to train by the trainer class later
     if task == 'return model for profiling':

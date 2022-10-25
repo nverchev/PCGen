@@ -20,8 +20,9 @@ class CWEncoder(nn.Module):
     def forward(self, x):
         return self.encode(x)
 
+
 class LDGCNN(nn.Module):
-    def __init__(self, cw_dim=512, k=20):
+    def __init__(self, cw_dim, k, **model_settings):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
@@ -49,7 +50,7 @@ class LDGCNN(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, cw_dim=512, k=20):
+    def __init__(self, cw_dim, k, **model_settings):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
@@ -76,7 +77,7 @@ class DGCNN(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self, cw_dim=512, k=16):
+    def __init__(self, cw_dim, k, **model_settings):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 64, 128, 1024, 1024]

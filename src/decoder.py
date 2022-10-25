@@ -26,7 +26,7 @@ class CWDecoder(nn.Module):
 
 class FullyConnected(nn.Module):
 
-    def __init__(self, cw_dim, m, gf):
+    def __init__(self, cw_dim, m, gf, **model_settings):
         super().__init__()
         self.cw_dim = cw_dim
         self.h_dim = [256] * 2
@@ -58,7 +58,7 @@ class FoldingBlock(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self, cw_dim, m, gf):
+    def __init__(self, cw_dim, m, gf, **model_settings):
         super().__init__()
         self.cw_dim = cw_dim
         self.h_dim = [512] * 4
@@ -119,7 +119,7 @@ class FoldingNet(nn.Module):
 
 
 class TearingNet(FoldingNet):
-    def __init__(self, cw_dim, m, gf):
+    def __init__(self, cw_dim, m, gf, **model_settings):
         super().__init__(cw_dim, m, gf=gf)
         self.h_dim.extend([512, 512, 64, 512, 512, 2])
         modules = [nn.Conv2d(self.cw_dim + 5, self.h_dim[4], kernel_size=1)]
@@ -160,12 +160,12 @@ class AtlasNetv2(nn.Module):
     """Atlas net PatchDeformMLPAdj"""
     deformed_patch_dim = 2
 
-    def __init__(self, cw_dim, m, gf):
+    def __init__(self, cw_dim, m, gf, components, **model_settings):
         super().__init__()
         self.cw_dim = cw_dim
         self.m = m
         self.gf = gf
-        self.num_patches = 16
+        self.num_patches = components if components else 16
         self.m_patch = self.m // self.num_patches
         self.dim_embedding = self.cw_dim + self.deformed_patch_dim
         self.h_dim = [128]
@@ -200,8 +200,8 @@ class AtlasNetv2Deformation(AtlasNetv2):
     """Atlas net PatchDeformMLPAdj"""
     deformed_patch_dim = 10
 
-    def __init__(self, cw_dim, m, gf):
-        super().__init__(cw_dim, m, gf)
+    def __init__(self, cw_dim, m, components, gf, **model_settings):
+        super().__init__(cw_dim, m, components, gf)
         self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
 
     def get_patch_deformation(self):
@@ -231,8 +231,8 @@ class AtlasNetv2Structures(AtlasNetv2):
     """Atlas net PatchDeformMLPAdj"""
     deformed_patch_dim = 10
 
-    def __init__(self, cw_dim, m, gf):
-        super().__init__(cw_dim, m, gf)
+    def __init__(self, cw_dim, m, components, gf, **model_settings):
+        super().__init__(cw_dim, m, components, gf)
         self.grid = nn.Parameter(torch.rand(self.num_patches, self.deformed_patch_dim, self.m_patch))
 
     def forward(self, x):
@@ -296,7 +296,7 @@ class AtlasNetv2Structures(AtlasNetv2):
 
 class PCGen(nn.Module):
 
-    def __init__(self, cw_dim, m, gf=True):
+    def __init__(self, cw_dim, m, gf=True, **model_settings):
         super().__init__()
         self.h_dim = [256, cw_dim, 512, 512, 512, 64]
         self.m = m
@@ -363,7 +363,7 @@ class PCGen(nn.Module):
 
 class PCGenH(nn.Module):
 
-    def __init__(self, cw_dim, m, gf=True):
+    def __init__(self, cw_dim, m, gf=True, **model_settings):
         super().__init__()
 
         self.m = m
@@ -442,7 +442,7 @@ class PCGenH(nn.Module):
 
 class PCGenH(nn.Module):
 
-    def __init__(self, cw_dim, m, gf=True):
+    def __init__(self, cw_dim, m, gf=True, **model_settings):
         super().__init__()
 
         self.m = m
@@ -505,71 +505,9 @@ class PCGenH(nn.Module):
         return x
 
 
-from src.neighbour_op import get_graph_features
-
-
 class PCGenH(nn.Module):
 
-    def __init__(self, cw_dim, m, gf=True):
-        super().__init__()
-
-        self.m = m
-        self.m_training = m
-        self.gf = gf
-        self.sample_dim = 16
-        h_dim = [128, cw_dim, 128]
-        self.h_dim = h_dim
-        self.map_sample1 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample2 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-
-        self.points_convs1 = nn.Sequential(*modules)
-        h_dim = [128, cw_dim + 256, 512, 64]
-        self.h_dim.extend(h_dim)
-
-        self.map_sample3 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample4 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-
-        modules.append(PointsConvLayer(h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.points_convs2 = nn.Sequential(*modules)
-        self.h_dim.extend(h_dim)
-
-    def forward(self, z, s=None):
-        batch, cw_dim = z.size()
-        device = z.device
-        z = z.unsqueeze(2)
-        m = self.m_training if self.training else self.m
-        m_top = m // 16
-        assert m_top, "Hierarchical version needs at least 16 points"
-        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 17, device=device)
-        s = s / torch.linalg.vector_norm(s, dim=1, keepdim=True)
-        x = s[..., :m_top]
-        x = self.map_sample1(x)
-        x = self.map_sample2(x)
-        x = z * x
-        x = self.points_convs1(x)
-        x1 = get_graph_features(x, 16).flatten(2)
-        x = s[..., m_top:]
-        x = self.map_sample3(x)
-        x = self.map_sample4(x)
-        x = z * x
-        x = torch.cat([x1, x], dim=1).contiguous()
-        x = self.points_convs2(x)
-        if self.gf:
-            x = graph_filtering(x)
-        return x
-
-
-class PCGenH(nn.Module):
-
-    def __init__(self, cw_dim, m, gf=True):
+    def __init__(self, cw_dim, m, components, gf=True, **model_settings):
         super().__init__()
         self.h_dim = [256, cw_dim, 512, 512, 512, 64]
         self.m = m
@@ -633,14 +571,14 @@ class PCGenH(nn.Module):
 
 class PCGenComponents(nn.Module):
 
-    def __init__(self, cw_dim, m, gf=True):
+    def __init__(self, cw_dim, m, components, gf=True, **model_settings):
         super().__init__()
         self.h_dim = [256, cw_dim, 512, 512, 512, 64]
         self.m = m
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
-        self.num_groups = 8
+        self.num_groups = components if components else 8
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Hardtanh(inplace=True))
         self.group_conv = nn.ModuleList()

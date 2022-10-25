@@ -1,6 +1,3 @@
-# @title Libraries
-from abc import ABC
-
 import torch
 import torch.nn as nn
 from torch.autograd import Function
@@ -178,12 +175,12 @@ class VAECW(nn.Module):
 class AE(nn.Module):
     settings = {}
 
-    def __init__(self, encoder_name, decoder_name, cw_dim, gf, k=20, m=2048, **settings):
+    def __init__(self, encoder_name, decoder_name, **model_settings):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
-        self.encoder = get_encoder(encoder_name)(cw_dim, k)
-        self.decoder = get_decoder(decoder_name)(cw_dim, m, gf=gf)
+        self.encoder = get_encoder(encoder_name)(model_settings)
+        self.decoder = get_decoder(decoder_name)(model_settings)
         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim, 'k': k}
 
     def forward(self, x, indices):
@@ -203,9 +200,9 @@ class AE(nn.Module):
 class VQVAE(AE):
     recon_cw = False
 
-    def __init__(self, encoder_name, decoder_name, cw_dim, gf, book_size, dim_embedding, k, m):
+    def __init__(self, book_size, cw_dim,  dim_embedding, **model_settings):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
-        super().__init__(encoder_name, decoder_name, cw_dim, gf, k, m)
+        super().__init__(**model_settings)
         self.dim_codes = cw_dim // dim_embedding
         self.book_size = book_size
         self.dim_embedding = dim_embedding
@@ -275,8 +272,4 @@ class VQVAE(AE):
 
 
 def get_model(ae, **model_settings):
-    if ae == 'AE':
-        model = AE(**model_settings)
-    else:
-        model = VQVAE(**model_settings)
-    return model
+    return (AE if ae == 'AE' else VQVAE)(**model_settings)
