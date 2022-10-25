@@ -631,8 +631,7 @@ class PCGenH(nn.Module):
         return x
 
 
-
-class PCGenH(nn.Module):
+class PCGenComponents(nn.Module):
 
     def __init__(self, cw_dim, m, gf=True):
         super().__init__()
@@ -684,7 +683,7 @@ def get_decoder(decoder_name):
         'AtlasNetDeformation': AtlasNetv2Deformation,
         'AtlasNetStructures': AtlasNetv2Structures,
         'PCGen': PCGen,
-        'PCGenH': PCGenH,
+        'PCGenC': PCGenComponents,
 
     }
     return decoder_dict[decoder_name]

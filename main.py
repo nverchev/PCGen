@@ -16,7 +16,7 @@ def parse_args():
 
     parser.add_argument('--encoder', type=str, default='LDGCNN', choices=['LDGCNN', 'DGCNN', 'FoldingNet'])
     parser.add_argument('--decoder', type=str, default='PCGen',
-                        choices=['PCGen', 'PCGenH', 'Full', 'FoldingNet', 'TearingNet',
+                        choices=['PCGen', 'PCGenC', 'Full', 'FoldingNet', 'TearingNet',
                                  'AtlasNetDeformation', 'AtlasNetStructures'])
     parser.add_argument('--exp', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
