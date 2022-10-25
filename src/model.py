@@ -179,8 +179,8 @@ class AE(nn.Module):
         super().__init__()
         self.encoder_name = encoder_name
         self.decoder_name = decoder_name
-        self.encoder = get_encoder(encoder_name)(model_settings)
-        self.decoder = get_decoder(decoder_name)(model_settings)
+        self.encoder = get_encoder(encoder_name)(**model_settings)
+        self.decoder = get_decoder(decoder_name)(**model_settings)
         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim, 'k': k}
 
     def forward(self, x, indices):
