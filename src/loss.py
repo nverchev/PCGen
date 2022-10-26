@@ -118,7 +118,7 @@ class ReconLoss:
     def __call__(self, inputs, recons):
         pairwise_dist = square_distance(inputs, recons)
         squared, augmented = chamfer(inputs, recons, pairwise_dist)
-        dict_recon = {'Chamfer': squared, 'Chamfer_Augmented': augmented}
+        dict_recon = {'Chamfer': squared, 'Chamfer Augmented': augmented}
         if self.backprop == "Chamfer":
             recon = squared
         elif self.backprop == "ChamferA":
@@ -126,7 +126,7 @@ class ReconLoss:
         elif self.backprop == "ChamferS":
             smooth = chamfer_smooth(inputs, recons, pairwise_dist)
             recon = smooth
-            dict_recon['Chamfer_Smooth'] = smooth
+            dict_recon['Chamfer Smooth'] = smooth
         else:
             assert self.backprop == "Sinkhorn", f"Loss {self.backprop} not known"
             sk_loss = self.sinkhorn(inputs, recons).mean()

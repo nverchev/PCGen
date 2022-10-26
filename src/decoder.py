@@ -607,7 +607,7 @@ class PCGenComponents(nn.Module):
             group_atts.append(x_group)
             x_group = self.group_final[group](x_group)
             xs.append(x_group)
-        x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), dim=1).transpose(2, 1)
+        x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), tau=8., dim=1).transpose(2, 1)
         x = (torch.stack(xs, dim=3) * x_att.unsqueeze(1)).sum(3)
         if self.gf:
             x = graph_filtering(x)
