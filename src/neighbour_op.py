@@ -76,7 +76,7 @@ def get_graph_features(x, k=20, indices=None):
 
 def graph_filtering(x):
     dist, neighbours = get_neighbours(x, k=4, indices=None)
-    dist1 = dist[..., 1:]  # dist[:, :,  0] == 0
+    dist1 = torch.sqrt(dist[..., 1:])  # dist[:, :,  0] == 0
     neighbours1 = neighbours[..., 1:]
     sigma = dist1.mean(-1, keepdims=True)
     weights = torch.softmax(-dist1 / sigma, dim=-1)
