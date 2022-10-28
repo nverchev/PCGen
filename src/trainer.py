@@ -398,7 +398,10 @@ class AETrainer(Trainer):
         return self._loss(output, inputs, targets)
 
     def helper_inputs(self, inputs, labels):
-        return {'x': inputs[0], 'indices': inputs[1]}
+        indices = inputs[1]
+        if torch.all(indices == 0):
+            indices = None
+        return {'x': inputs[0], 'indices': indices}
 
 
 class CWTrainer(Trainer):

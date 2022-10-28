@@ -4,7 +4,6 @@ import numpy as np
 import torch.nn.functional as F
 from src.layer import PointsConvLayer, LinearLayer
 from src.neighbour_op import graph_filtering
-from pykeops.torch import LazyTensor
 
 OUT_CHAN = 3
 
@@ -165,7 +164,9 @@ class AtlasNetv2(nn.Module):
         self.cw_dim = cw_dim
         self.m = m
         self.gf = gf
-        self.num_patches = components if components else 16
+        #self.num_patches = components if components else 16
+        self.num_patches = 10
+        print(self.num_patches)
         self.m_patch = self.m // self.num_patches
         self.dim_embedding = self.cw_dim + self.patch_embed_dim
         self.h_dim = [128]
@@ -228,7 +229,7 @@ class AtlasNetv2Deformation(AtlasNetv2):
 
 
 class AtlasNetv2Structures(AtlasNetv2):
-    """Atlas net PatchDeformMLPAdj"""
+    """Atlas net PointTranslationMLPAdj"""
     patch_embed_dim = 10
 
     def __init__(self, cw_dim, m, components, gf, **model_settings):
@@ -253,7 +254,7 @@ class AtlasNetv2Structures(AtlasNetv2):
 # AtlasNet with grouped convolutions. Inference time is halved by 2 but efficient backward pass has
 # not yet been implemented by in pytorch.
 
-# class AtlasNetv2(nn.Module):
+# class AtlasNetv2Deformation(nn.Module):
 #     """Atlas net PatchDeformMLPAdj"""
 #
 #     def __init__(self, cw_dim, m, gf):
