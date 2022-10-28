@@ -158,7 +158,7 @@ class TearingNet(FoldingNet):
 # AtlasNet
 class AtlasNetv2(nn.Module):
     """Atlas net PatchDeformMLPAdj"""
-    deformed_patch_dim = 2
+    patch_embed_dim = 2
 
     def __init__(self, cw_dim, m, gf, components, **model_settings):
         super().__init__()
@@ -167,7 +167,7 @@ class AtlasNetv2(nn.Module):
         self.gf = gf
         self.num_patches = components if components else 16
         self.m_patch = self.m // self.num_patches
-        self.dim_embedding = self.cw_dim + self.deformed_patch_dim
+        self.dim_embedding = self.cw_dim + self.patch_embed_dim
         self.h_dim = [128]
         self.decoder = nn.ModuleList([self.get_mlp_adj() for _ in range(self.num_patches)])
 
@@ -198,7 +198,7 @@ class AtlasNetv2(nn.Module):
 
 class AtlasNetv2Deformation(AtlasNetv2):
     """Atlas net PatchDeformMLPAdj"""
-    deformed_patch_dim = 10
+    patch_embed_dim = 10
 
     def __init__(self, cw_dim, m, components, gf, **model_settings):
         super().__init__(cw_dim, m, components, gf)
@@ -208,7 +208,7 @@ class AtlasNetv2Deformation(AtlasNetv2):
         dim = self.h_dim[0]
         modules = [PointsConvLayer(2, dim, act=nn.ReLU(inplace=True)),
                    PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True)),
-                   PointsConvLayer(dim, self.deformed_patch_dim, batch_norm=False, act=nn.Tanh())]
+                   PointsConvLayer(dim, self.patch_embed_dim, batch_norm=False, act=nn.Tanh())]
         return nn.Sequential(*modules)
 
     def forward(self, x):
@@ -229,11 +229,12 @@ class AtlasNetv2Deformation(AtlasNetv2):
 
 class AtlasNetv2Structures(AtlasNetv2):
     """Atlas net PatchDeformMLPAdj"""
-    deformed_patch_dim = 10
+    patch_embed_dim = 10
 
     def __init__(self, cw_dim, m, components, gf, **model_settings):
         super().__init__(cw_dim, m, components, gf)
-        self.grid = nn.Parameter(torch.rand(self.num_patches, self.deformed_patch_dim, self.m_patch))
+        self.grid = nn.Parameter(torch.rand(self.num_patches, 2, self.m_patch))
+        self.grid.data = F.pad(self.grid, (0, 0, 0, self.patch_embed_dim - 2))
 
     def forward(self, x):
         batch = x.size(0)
@@ -323,247 +324,6 @@ class PCGen(nn.Module):
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
-        if self.gf:
-            x = graph_filtering(x)
-        return x
-
-
-# class PCGen(nn.Module):
-#
-#     def __init__(self, cw_dim, m, gf=True):
-#         super().__init__()
-#         self.h_dim = [256, cw_dim, 512, 256, 128, 64]
-#         self.m = m
-#         self.m_training = m
-#         self.gf = gf
-#         self.sample_dim = 16
-#         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-#         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
-#                                            act=nn.Hardtanh(inplace=True))
-#         modules = []
-#         for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-#             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-#
-#         modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-#         self.points_convs = nn.Sequential(*modules)
-#
-#     def forward(self, z, s=None):
-#         batch = z.size()[0]
-#         device = z.device
-#         m = self.m_training if self.training else self.m
-#         x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
-#         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
-#         x = self.map_sample1(x)
-#         x = self.map_sample2(x)
-#         x = z.unsqueeze(2) * x
-#         x = self.points_convs(x)
-#         if self.gf:
-#             x = graph_filtering(x)
-#         return x
-
-class PCGenH(nn.Module):
-
-    def __init__(self, cw_dim, m, gf=True, **model_settings):
-        super().__init__()
-
-        self.m = m
-        self.m_training = m
-        self.gf = gf
-        self.sample_dim = 16
-        h_dim = [128, cw_dim, 512, 64]
-        self.h_dim = h_dim
-        self.map_sample1 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample2 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-
-        modules.append(PointsConvLayer(h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.points_convs1 = nn.Sequential(*modules)
-        h_dim = [128, cw_dim + 3, 512, 64]
-        self.h_dim.extend(h_dim)
-
-        self.map_sample3 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample4 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-
-        modules.append(PointsConvLayer(h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.points_convs2 = nn.Sequential(*modules)
-        h_dim = [128, cw_dim + 3, 512, 512, 512, 64]
-        self.h_dim.extend(h_dim)
-
-        self.map_sample5 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample6 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-
-        modules = []
-        for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-
-        modules.append(PointsConvLayer(h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.points_convs3 = nn.Sequential(*modules)
-
-    def forward(self, z, s=None):
-        batch, cw_dim = z.size()
-        device = z.device
-        z = z.unsqueeze(2)
-        m = self.m_training if self.training else self.m
-        m_top = m // 16
-        assert m_top, "Hierarchical version needs at least 16 points"
-        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 21, device=device)
-        s = s / torch.linalg.vector_norm(s, dim=1, keepdim=True)
-        x = s[..., :m_top]
-        x = self.map_sample1(x)
-        x = self.map_sample2(x)
-        x = z * x
-        x = self.points_convs1(x)
-        x1 = x.repeat(1, 1, 4)
-        x = s[..., m_top:5 * m_top]
-        x = self.map_sample3(x)
-        x = self.map_sample4(x)
-        x = z * x
-        x = torch.cat([x1, x], dim=1).contiguous()
-        x = self.points_convs2(x)
-        x2 = x.repeat(1, 1, 4)
-        x = s[..., 5 * m_top:]
-        x = self.map_sample5(x)
-        x = self.map_sample6(x)
-        x = z * x
-        x = torch.cat([x2, x], dim=1).contiguous()
-        x = self.points_convs3(x)
-        if self.gf:
-            x = graph_filtering(x)
-        return x
-
-
-class PCGenH(nn.Module):
-
-    def __init__(self, cw_dim, m, gf=True, **model_settings):
-        super().__init__()
-
-        self.m = m
-        self.m_training = m
-        self.gf = gf
-        self.sample_dim = 16
-        h_dim = [256, cw_dim, 512]
-        self.h_dim = h_dim
-        self.map_sample1 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample2 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-        self.points_convs1 = nn.Sequential(*modules)
-        h_dim = [256, cw_dim, 512, 512]
-        self.h_dim.extend(h_dim)
-
-        self.map_sample3 = PointsConvLayer(self.sample_dim, h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample4 = PointsConvLayer(h_dim[0], cw_dim, batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(h_dim[1:-1], h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-        self.points_convs2 = nn.Sequential(*modules)
-        self.att0 = PointsConvLayer(512, 64, batch_norm=False, act=None)
-        self.att1 = PointsConvLayer(512, 64, batch_norm=False, act=None)
-        self.att2 = PointsConvLayer(512, 64, batch_norm=False, act=None)
-        self.att3 = PointsConvLayer(512, 64, batch_norm=False, act=None)
-
-        self.final = nn.Sequential(PointsConvLayer(64, OUT_CHAN, batch_norm=False, act=None))
-
-    def forward(self, z, s=None):
-        batch, cw_dim = z.size()
-        device = z.device
-        z = z.unsqueeze(2)
-        m = self.m_training if self.training else self.m
-        m_top = m // 16
-        assert m_top, "Hierarchical version needs at least 16 points"
-        s = s if s is not None else torch.randn(batch, self.sample_dim, m_top * 17, device=device)
-        s = s / torch.linalg.vector_norm(s, dim=1, keepdim=True)
-        x = s[..., :m_top]
-        x = self.map_sample1(x)
-        x = self.map_sample2(x)
-        x = z * x
-        x1 = self.points_convs1(x)
-        x = s[..., m_top:]
-        x = self.map_sample3(x)
-        x = self.map_sample4(x)
-        x = z * x
-        x = self.points_convs2(x)
-        queries = self.att0(x1)
-        keys = self.att1(x1)
-        values = self.att2(x)
-        A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)) / np.sqrt(64), dim=1)
-        x = self.att3(x) + torch.bmm(A, values)
-        x = self.final(x)
-        if self.gf:
-            x = graph_filtering(x)
-        return x
-
-
-class PCGenH(nn.Module):
-
-    def __init__(self, cw_dim, m, components, gf=True, **model_settings):
-        super().__init__()
-        self.h_dim = [256, cw_dim, 512, 512, 512, 64]
-        self.m = m
-        self.m_training = m
-        self.gf = gf
-        self.sample_dim = 16
-        self.num_groups = 8
-        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-        self.group_conv = nn.ModuleList()
-        self.group_final = nn.ModuleList()
-        self.group_att1 = nn.ModuleList()
-        self.group_att2 = nn.ModuleList()
-        self.group_att3 = nn.ModuleList()
-        self.group_att4 = nn.ModuleList()
-
-        for _ in range(self.num_groups):
-            modules = []
-            for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-                modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-            self.group_conv.append(nn.Sequential(*modules))
-            self.group_att1.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
-            self.group_att2.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
-            self.group_att3.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
-            self.group_att4.append(PointsConvLayer(self.h_dim[-1], self.h_dim[-1], batch_norm=False, act=None))
-            self.group_final.append(PointsConvLayer(self.h_dim[-1], 3, batch_norm=False, act=None))
-
-
-    def forward(self, z, s=None):
-        batch = z.size()[0]
-        device = z.device
-        m = self.m_training if self.training else self.m
-        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
-        x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        x = self.map_sample1(x)
-        x = self.map_sample2(x)
-        group_size = m // self.num_groups
-        assert group_size, f"Number of generared point should be larger than {self.num_groups}"
-        x = z.unsqueeze(2) * x
-        xs = []
-        x_old = None
-        for group in range(self.num_groups):
-            x_group = x[..., group * group_size: (group + 1) * group_size]
-            x_group = self.group_conv[group](x_group)
-            if x_old is not None:
-                keys = self.group_att1[group](x_old)
-                queries = self.group_att2[group](x_old)
-                values = self.group_att3[group](x_group)
-                A = torch.softmax(torch.bmm(queries, keys.transpose(2, 1)), dim=2)
-                x_group = x_group + self.group_att4[group](torch.bmm(A, values))
-
-            x_old = x_group
-            x_group = self.group_final[group](x_group)
-            xs.append(x_group)
-        x = torch.cat(xs, dim=2)
         if self.gf:
             x = graph_filtering(x)
         return x

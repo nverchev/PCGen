@@ -18,12 +18,13 @@ def parse_args():
     parser.add_argument('--decoder', type=str, default='PCGen',
                         choices=['PCGen', 'PCGenC', 'Full', 'FoldingNet', 'TearingNet',
                                  'AtlasNetDeformation', 'AtlasNetStructures'])
-    parser.add_argument('--components', type=int, default=0,
-                        help='Components of PCGenC or patches in AtlasNet, 0 is for default (resp. 8 and 16)')
+
     parser.add_argument('--exp', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Default is given by "_".join(model(GF), recon_loss, exp)')
+    parser.add_argument('--components', type=int, default=0,
+                        help='Components of PCGenC or patches in AtlasNet, 0 is for default (resp. 8 and 16)')
     parser.add_argument('--gf', action='store_true', default=False, help='Graph filtering after decoder')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='PC reconstruction loss')
@@ -65,11 +66,11 @@ def main(task='train/eval'):
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
-    components = args.components
     graph_filtering = args.gf
     experiment = args.exp
     recon_loss = args.recon_loss
     ae = args.ae
+    components = args.components
     gf = 'GF' if graph_filtering else ''
     exp_name = args.model_path or '_'.join([encoder_name, decoder_name + gf, recon_loss, ae, experiment])
     final = experiment[:5] == 'final'
