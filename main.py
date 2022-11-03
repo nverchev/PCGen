@@ -114,7 +114,7 @@ def main(task='train/eval'):
         # preprocess k index to speed up training (invariant to rotations and scale)
         k=k,
         translation=False,
-        rotation=True,
+        rotation=False,
         batch_size=batch_size,
         final=final,
     )
