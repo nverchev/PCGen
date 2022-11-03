@@ -398,10 +398,12 @@ class AETrainer(Trainer):
         return self._loss(output, inputs, targets)
 
     def helper_inputs(self, inputs, labels):
-        indices = inputs[1]
+        # inputs length vary on the dataset, when resampling two different resamplings of the shape are given
+        indices = inputs[-1]
         if torch.all(indices == 0):
             indices = None
-        return {'x': inputs[0], 'indices': indices}
+        input_shape = inputs[-2]
+        return {'x': input_shape, 'indices': indices}
 
 
 class CWTrainer(Trainer):

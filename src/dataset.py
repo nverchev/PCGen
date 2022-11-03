@@ -11,24 +11,29 @@ def normalize(cloud):
     return cloud.astype(np.float32)
 
 
-def random_rotation(cloud):
+def random_rotation(*clouds):
     theta = 2 * torch.pi * torch.rand(1)
     s = torch.sin(theta)
     rotation_matrix = torch.eye(2) * torch.cos(theta)
     rotation_matrix[0, 1] = -s
     rotation_matrix[1, 0] = s
-    new_cloud = cloud.clone()
-    new_cloud[:, [0, 2]] = cloud[:, [0, 2]].mm(rotation_matrix)
-    return new_cloud
+    new_clouds = []
+    for cloud in clouds:
+        new_cloud = cloud.clone()
+        new_cloud[:, [0, 2]] = cloud[:, [0, 2]].mm(rotation_matrix)
+        new_clouds.append(new_cloud)
+    return new_clouds
 
-
-def random_scale_translate(cloud):
+def random_scale_translate(*clouds):
     scale = torch.rand(1, 3) * 5 / 6 + 2 / 3
     translate = torch.rand(1, 3) * 0.4 - 0.2
-    new_cloud = cloud.clone()
-    new_cloud *= scale
-    new_cloud += translate
-    return new_cloud
+    new_clouds = []
+    for cloud in clouds:
+        new_cloud = cloud.clone()
+        new_cloud *= scale
+        new_cloud += translate
+        new_clouds.append(new_cloud)
+    return new_clouds
 
 
 def jitter(cloud, sigma=0.01, clip=0.02):
@@ -152,9 +157,9 @@ class PCDataset(Dataset):
         cloud = torch.from_numpy(cloud)
         index = torch.from_numpy(index).long()
         if self.rotation:
-            random_rotation(cloud)
+            cloud, = random_rotation(cloud)
         if self.translation_and_scale:
-            cloud = random_scale_translate(cloud)
+            cloud, = random_scale_translate(cloud)
         return [cloud, index], label
 
 
@@ -238,81 +243,83 @@ class PCDatasetResampled(Dataset):
 
     def __len__(self):
         return len(self.paths)
+
     def __getitem__(self, index):
         path = self.paths[index]
         cloud = np.load(path)
-        sampling = np.random.choice(np.arange(cloud.shape[0]), size=self.num_points, replace=False)
-        cloud = cloud[sampling]
+        index_pool = np.arange(cloud.shape[0])
+        sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
+        sampling_target = np.random.choice(index_pool, size=self.num_points, replace=False)
+        cloud_recon = torch.from_numpy(normalize(cloud[sampling_recon]))
+        cloud_input = torch.from_numpy(normalize(cloud[sampling_target]))
+        if True:
+            cloud_recon, cloud_input = random_rotation(cloud_recon, cloud_input)
+        if self.translation_and_scale:
+            cloud_recon, cloud_input = random_scale_translate(cloud_recon, sampling_target)
         label = os.path.split(os.path.split(path)[0])[1]
         label = self.label_index.index(label)
-        cloud = normalize(cloud)
-        cloud = torch.from_numpy(cloud)
-        if self.rotation:
-            random_rotation(cloud)
-        if self.translation_and_scale:
-            cloud = random_scale_translate(cloud)
-        return [cloud, 0], label
-#
-# class ShapeNetDataset:
-#
-#     def __init__(self, dir_path, k, num_points, **augmentation_settings):
-#         self.dir_path = dir_path
-#         self.data_dir = os.path.join(dir_path, '../dataset')
-#         self.data_name = 'shapenet'
-#         self.val_ratio = 0.2
-#         self.test_ratio = 0.2
-#         self.augmentation_settings = augmentation_settings
-#         self.num_points = num_points
-#         folders = glob2.glob(os.path.join(self.data_dir, self.data_name, '*'))
-#         self.paths = {}
-#         for folder in folders:
-#             files = glob2.glob(os.path.join(folder, '*'))
-#             first_split = int(len(files) * (1 - self.val_ratio - self.test_ratio))
-#             second_split = int(len(files) * (1 - self.test_ratio))
-#             self.paths.setdefault('train', []).extend(files[:first_split])
-#             self.paths.setdefault('trainval', []).extend(files[:second_split])
-#             self.paths.setdefault('val', []).extend(files[first_split:second_split])
-#             self.paths.setdefault('test', []).extend(files[second_split:])
-#
-#     def split(self, split):
-#         return PCDatasetResampled(self.paths[split], self.num_points, **self.augmentation_settings)
-#
-#
-# def get_loaders(dataset_name, batch_size, final, **dataset_settings):
-#     pin_memory = torch.cuda.is_available()
-#     if dataset_name == 'coins':
-#         dataset = PiercedCoinsDataset(**dataset_settings)
-#         loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, pin_memory=pin_memory)
-#         return loader, loader, loader
-#     if dataset_name == 'modelnet40':
-#         dataset = Modelnet40Dataset(**dataset_settings)
-#     elif dataset_name == 'shapenet':
-#         dataset = ShapeNetDataset(**dataset_settings)
-#     else:
-#         print(dataset_name)
-#         raise ValueError()
-#
-#     if final:
-#         train_dataset = dataset.split('trainval')
-#         train_loader = torch.utils.data.DataLoader(
-#             train_dataset, drop_last=True, batch_size=batch_size,
-#             shuffle=True, pin_memory=pin_memory)
-#         val_loader = None
-#     else:
-#         train_dataset = dataset.split('train')
-#         val_dataset = dataset.split('val')
-#
-#         train_loader = torch.utils.data.DataLoader(
-#             train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
-#
-#         val_loader = torch.utils.data.DataLoader(
-#             val_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
-#
-#     test_dataset = dataset.split('test')
-#     test_loader = torch.utils.data.DataLoader(
-#         test_dataset, batch_size=batch_size, drop_last=False, shuffle=False, pin_memory=pin_memory)
-#     del dataset
-#     return train_loader, val_loader, test_loader
+        return [cloud_recon, cloud_input, 0], label
+
+class ShapeNetDataset:
+
+    def __init__(self, dir_path, k, num_points, **augmentation_settings):
+        self.dir_path = dir_path
+        self.data_dir = os.path.join(dir_path, '../dataset')
+        self.data_name = 'shapenet'
+        self.val_ratio = 0.2
+        self.test_ratio = 0.2
+        self.augmentation_settings = augmentation_settings
+        self.num_points = num_points
+        folders = glob2.glob(os.path.join(self.data_dir, self.data_name, '*'))
+        self.paths = {}
+        for folder in folders:
+            files = glob2.glob(os.path.join(folder, '*'))
+            first_split = int(len(files) * (1 - self.val_ratio - self.test_ratio))
+            second_split = int(len(files) * (1 - self.test_ratio))
+            self.paths.setdefault('train', []).extend(files[:first_split])
+            self.paths.setdefault('trainval', []).extend(files[:second_split])
+            self.paths.setdefault('val', []).extend(files[first_split:second_split])
+            self.paths.setdefault('test', []).extend(files[second_split:])
+
+    def split(self, split):
+        return PCDatasetResampled(self.paths[split], self.num_points, **self.augmentation_settings)
+
+
+def get_loaders(dataset_name, batch_size, final, **dataset_settings):
+    pin_memory = torch.cuda.is_available()
+    if dataset_name == 'coins':
+        dataset = PiercedCoinsDataset(**dataset_settings)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, pin_memory=pin_memory)
+        return loader, loader, loader
+    if dataset_name == 'modelnet40':
+        dataset = Modelnet40Dataset(**dataset_settings)
+    elif dataset_name == 'shapenet':
+        dataset = ShapeNetDataset(**dataset_settings)
+    else:
+        print(dataset_name)
+        raise ValueError()
+
+    if final:
+        train_dataset = dataset.split('trainval')
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset, drop_last=True, batch_size=batch_size,
+            shuffle=True, pin_memory=pin_memory)
+        val_loader = None
+    else:
+        train_dataset = dataset.split('train')
+        val_dataset = dataset.split('val')
+
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+
+        val_loader = torch.utils.data.DataLoader(
+            val_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
+
+    test_dataset = dataset.split('test')
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=batch_size, drop_last=False, shuffle=False, pin_memory=pin_memory)
+    del dataset
+    return train_loader, val_loader, test_loader
 
 
 def get_cw_loaders(t, final, filter_class=None):
