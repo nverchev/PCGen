@@ -111,8 +111,7 @@ def main(task='train/eval'):
         dataset_name=dataset_name,
         dir_path=dir_path,
         num_points=num_points,
-        # preprocess k index to speed up training (invariant to rotations and scale)
-        k=k,
+        k=k, # preprocess k index to speed up training (invariant to rotations and scale)
         translation=False,
         rotation=False,
         batch_size=batch_size,
@@ -182,7 +181,6 @@ def main(task='train/eval'):
 
         cw_train_loader, cw_test_loader = get_cw_loaders(trainer, final)
         block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader))
-        #block_args['optim_args']['lr'] *= 100  #CW encoder needs larger learning rate
         cw_trainer = CWTrainer(model, exp_name, block_args)
         if not model_eval:
             while training_epochs > cw_trainer.epoch:

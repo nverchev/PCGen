@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 from src.utils import download_zip, index_k_neighbours, load_h5
 import glob2
 
+
 def normalize(cloud):
     cloud -= cloud.mean(axis=0)
     cloud /= np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
@@ -23,6 +24,7 @@ def random_rotation(*clouds):
         new_cloud[:, [0, 2]] = cloud[:, [0, 2]].mm(rotation_matrix)
         new_clouds.append(new_cloud)
     return new_clouds
+
 
 def random_scale_translate(*clouds):
     scale = torch.rand(1, 3) * 5 / 6 + 2 / 3
@@ -261,6 +263,7 @@ class PCDatasetResampled(Dataset):
         label = self.label_index.index(label)
         return [cloud_recon, cloud_input, 0], label
 
+
 class ShapeNetDataset:
 
     def __init__(self, dir_path, k, num_points, **augmentation_settings):
@@ -284,14 +287,10 @@ class ShapeNetDataset:
 
     def split(self, split):
         return PCDatasetResampled(self.paths[split], self.num_points, **self.augmentation_settings)
+
     @staticmethod
     def to_numpy(self):
-        obj_files = glob2.glob(
-            os.path.join('/scratch/dataset', 'ShapeNetCore.v2', '**', 'models', 'model_normalized.obj'))
-        for obj in obj_files:
-            with open(obj) as file:
-                cloud = np.loadtxt(obj, comments=['#', 'm', 'vt', 'vn', 'f', 'g', 'u', 'l'], usecols=(1, 2, 3))
-                np.save(os.path.join(os.path.split(obj)[0], 'pc.npy'), cloud)
+        pass
 
 
 #
@@ -357,6 +356,7 @@ def get_loaders(dataset_name, batch_size, final, **dataset_settings):
         test_dataset, batch_size=batch_size, drop_last=False, shuffle=False, pin_memory=pin_memory)
     del dataset
     return train_loader, val_loader, test_loader
+
 
 def get_cw_loaders(t, final, filter_class=None):
     pin_memory = torch.cuda.is_available()
