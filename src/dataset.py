@@ -2,8 +2,9 @@ import numpy as np
 import torch
 import os
 from torch.utils.data import Dataset
-from src.utils import download_zip, index_k_neighbours, load_h5
+from src.utils import download_zip, index_k_neighbours, load_h5_modelnet, load_h5_dfaust
 import glob2
+import openmesh
 
 
 def normalize(cloud):
@@ -167,15 +168,16 @@ class PCDataset(Dataset):
 
 class Modelnet40Dataset:
 
-    def __init__(self, dir_path, k, num_points, **augmentation_settings):
-        self.dir_path = dir_path
+    def __init__(self, data_dir, k, num_points, **augmentation_settings):
+        self.data_dir = data_dir
         self.data_name = 'modelnet40_hdf5_2048'
         self.augmentation_settings = augmentation_settings
         data_path = self.download()
         files_path = lambda x: os.path.join(data_path, f'*{x}*.h5')
         self.pcd, self.indices, self.labels = {}, {}, {}
         for split in ['train', 'test']:
-            self.pcd[split], self.indices[split], self.labels[split] = load_h5(files_path(split), num_points, k)
+            self.pcd[split], self.indices[split], self.labels[split] = \
+                load_h5_modelnet(files_path(split), num_points, k)
 
     def split(self, split):
         if split == 'trainval':
@@ -188,7 +190,7 @@ class Modelnet40Dataset:
 
     def download(self):
         url = 'https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097/?dl=1'
-        return download_zip(dir_path=self.dir_path, zip_name=self.data_name + '.zip', url=url)
+        return download_zip(data_dir=self.data_dir, zip_name=self.data_name + '.zip', url=url)
 
     def trainval_to_train_and_val(self, val_every=6):
         train_idx = list(range(self.pcd['train'].shape[0]))
@@ -200,17 +202,19 @@ class Modelnet40Dataset:
             self.labels[new_split] = self.labels['train'][new_split_idx]
 
 
-class ShapeNetDataset:
+class ShapeNetOldDataset:
 
-    def __init__(self, dir_path, k, num_points, **augmentation_settings):
-        self.dir_path = dir_path
-        self.data_name = 'shapenetcorev2_hdf5_2048'
+    def __init__(self, data_dir, k, num_points, **augmentation_settings):
+        self.data_dir = data_dir
+        self.shapenet_path = os.path.join(self.data_dir, 'shapenetcorev2_hdf5_2048')
         self.augmentation_settings = augmentation_settings
-        data_path = self.download()
-        files_path = lambda x: os.path.join(data_path, f'*{x}*.h5')
+        self.download()
+        files_path = lambda x: os.path.join(self.shapenet_path, f'{x}*.h5')
+        print(files_path('test'))
         self.pcd, self.indices, self.labels = {}, {}, {}
         for split in ['train', 'val', 'test']:
-            self.pcd[split], self.indices[split], self.labels[split] = load_h5(files_path(split), num_points, k)
+            self.pcd[split], self.indices[split], self.labels[split] = \
+                load_h5_modelnet(files_path(split), num_points, k)
         self.pcd['trainval'] = np.concatenate([self.pcd['train'], self.pcd['val']], axis=0)
         self.indices['trainval'] = np.concatenate([self.indices['train'], self.indices['val']], axis=0)
         self.labels['trainval'] = np.concatenate([self.labels['train'], self.labels['val']], axis=0)
@@ -221,28 +225,16 @@ class ShapeNetDataset:
 
     def download(self):
         url = 'https://cloud.tsinghua.edu.cn/f/06a3c383dc474179b97d/?dl=1'
-        return download_zip(dir_path=self.dir_path, zip_name=self.data_name + '.zip', url=url)
+        return download_zip(data_dir=self.data_dir, zip_path=self.shapenet_path + '.zip', url=url)
 
 
 class PCDatasetResampled(Dataset):
-    def __init__(self, paths, num_points, rotation, translation):
+    def __init__(self, paths, num_points, labels, rotation, translation):
         self.paths = paths
         self.rotation = rotation
         self.translation_and_scale = translation
         self.num_points = num_points
-        self.label_index = ['plane',
-                            'bench',
-                            'cabinet',
-                            'car',
-                            'chair',
-                            'monitor',
-                            'lamp',
-                            'speaker',
-                            'firearm',
-                            'couch',
-                            'table',
-                            'cellphone',
-                            'watercraft']
+        self.label_index = list(labels.values())
 
     def __len__(self):
         return len(self.paths)
@@ -265,16 +257,33 @@ class PCDatasetResampled(Dataset):
 
 
 class ShapeNetDataset:
+    labels = {
+        '02958343': 'car',
+        '03001627': 'chair',
+        '03211117': 'monitor',
+        '03636649': 'lamp',
+        '03691459': 'speaker',
+        '04090263': 'firearm',
+        '04256520': 'couch',
+        '04379243': 'table',
+        '04401088': 'cellphone',
+        '04530566': 'watercraft',
+        '02691156': 'plane',
+        '02828884': 'bench',
+        '02933112': 'cabinet'
+    }
 
-    def __init__(self, dir_path, k, num_points, **augmentation_settings):
-        self.dir_path = dir_path
-        self.data_dir = os.path.join(dir_path, './dataset')
-        self.data_name = 'shapenet'
+    def __init__(self, data_dir, k, num_points, **augmentation_settings):
+        self.data_dir = data_dir
+        self.shapenet_path = os.path.join(self.data_dir, 'shapenet')
+        if not os.path.exists(self.shapenet_path):
+            os.mkdir(self.shapenet_path)
+            self.to_numpy()
         self.val_ratio = 0.2
         self.test_ratio = 0.2
         self.augmentation_settings = augmentation_settings
         self.num_points = num_points
-        folders = glob2.glob(os.path.join(self.data_dir, self.data_name, '*'))
+        folders = glob2.glob(os.path.join(self.shapenet_path, '*'))
         self.paths = {}
         for folder in folders:
             files = glob2.glob(os.path.join(folder, '*'))
@@ -286,42 +295,106 @@ class ShapeNetDataset:
             self.paths.setdefault('test', []).extend(files[second_split:])
 
     def split(self, split):
-        return PCDatasetResampled(self.paths[split], self.num_points, **self.augmentation_settings)
+        return PCDatasetResampled(self.paths[split], self.num_points, self.labels, **self.augmentation_settings)
 
-    @staticmethod
     def to_numpy(self):
-        pass
+        original_path = os.path.join(self.data_dir, 'customShapeNet')
+        if not os.path.exists(original_path):
+            "Download shapenet as in https://github.com/TheoDEPRELLE/AtlasNetV2"
+        for code, label in self.labels.items():
+            files = glob2.glob(os.path.join(original_path, code, 'ply', '*.ply'))
+            shapenet_label_path = os.path.join(self.shapenet_path, label)
+            if not os.path.exists(shapenet_label_path):
+                os.mkdir(shapenet_label_path)
+            i = 0
+            for file in files:
+                if file.find('*.') > -1:  # Here * is not a wildcard but a character
+                    continue
+                np_file = os.path.join(shapenet_label_path, str(i))
+                if os.path.exists(np_file):
+                    i += 1
+                    continue
+                try:
+                    pc = np.loadtxt(file, skiprows=12, usecols=(0, 1, 2))
+                except UnicodeDecodeError:
+                    print(f'File with path: \n {file} \n is corrupted.')
+                else:
+                    np.save(np_file, pc)
+                finally:
+                    i += 1
 
 
-#
-# class FaustDataset:
-#
-#     def __init__(self, dir_path, num_points, **augmentation_settings):
-#         self.dir_path = dir_path
-#         self.data_dir = os.path.join(dir_path, './dataset')
-#         self.augmentation_settings = augmentation_settings
-#         self.num_points = num_points
-#         trainer_folders = glob2.glob(os.path.join(self.data_dir, 'dfaust', '*'))
-#         assert trainer_folders, 'registrations in dataset/dfaust are missing and/or the folder has not been created' \
-#                                 '\nregistrations can be dowloaded from https://dfaust.is.tue.mpg.de/download.php '
-#         test_folder = glob2.glob(os.path.join(self.data_dir, 'dfaust', '*'))
-#
-#         /"MPI - FAUST" "training"
-#         self.paths = {}
-#         for folder in folders:
-#             files = glob2.glob(os.path.join(folder, '*'))
-#             first_split = int(len(files) * (1 - self.val_ratio - self.test_ratio))
-#             second_split = int(len(files) * (1 - self.test_ratio))
-#             self.paths.setdefault('train', []).extend(files[:first_split])
-#             self.paths.setdefault('trainval', []).extend(files[:second_split])
-#             self.paths.setdefault('val', []).extend(files[first_split:second_split])
-#             self.paths.setdefault('test', []).extend(files[second_split:])
-#
-#     def split(self, split):
-#         return PCDatasetResampled(self.paths[split], self.num_points, **self.augmentation_settings)
+class DFaustDataset(Dataset):
+
+    def __init__(self, data_dir, k, num_points, rotation, translation):
+        self.data_dir = data_dir
+        self.rotation = rotation
+        self.translation_and_scale = translation
+        files = glob2.glob(os.path.join(self.data_dir, 'dfaust', '*'))
+        assert files, 'registrations in dataset/dfaust are missing and/or the folder has not been created' \
+                      '\nregistrations can be dowloaded from https://dfaust.is.tue.mpg.de/download.php '
+        self.pcd, self.indices = load_h5_dfaust(files, k)
+
+    mesh = openmesh.read_trimesh('/scratch/dataset/MPI-FAUST/training/registrations/tr_reg_000.ply')
+
+    def __len__(self):
+        return len(self.pcd)
+
+    def __getitem__(self, index):
+        cloud, index = self.pcd[index], self.indices[index]
+        cloud = torch.from_numpy(cloud)
+        index = torch.from_numpy(index).long()
+        if self.rotation:
+            cloud, = random_rotation(cloud)
+        if self.translation_and_scale:
+            cloud, = random_scale_translate(cloud)
+        return [cloud, index], 0
 
 
-def get_loaders(dataset_name, batch_size, final, **dataset_settings):
+class MPIFaustDataset(Dataset):
+
+    def __init__(self, data_dir, k, num_points, rotation, translation):
+        self.data_dir = data_dir
+        self.rotation = rotation
+        self.translation_and_scale = translation
+        self.num_points = num_points
+        self.files = glob2.glob(os.path.join(self.data_dir, 'MPI-FAUST', 'training', 'registrations', '*.ply'))
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self, index):
+        mesh = openmesh.read_trimesh(self.files[index])
+        cloud = mesh.points().astype(np.float32)
+        cloud = torch.from_numpy(cloud)
+        if self.rotation:
+            cloud, = random_rotation(cloud)
+        if self.translation_and_scale:
+            cloud, = random_scale_translate(cloud)
+        return [cloud, 0], 0
+
+
+class FaustDataset:
+
+    def __init__(self, data_dir, k, num_points, **augmentation_settings):
+        self.data_dir = data_dir
+        self.k = k
+        self.augmentation_settings = augmentation_settings
+        self.num_points = num_points
+
+    def split(self, split):
+        assert split in ['trainval', 'test'], "Dataset only used for testing"
+        if split == 'trainval':
+            return DFaustDataset(self.data_dir, self.k, self.num_points, **self.augmentation_settings)
+        if split == 'test':
+            return MPIFaustDataset(self.data_dir, self.k, self.num_points, **self.augmentation_settings)
+
+
+def get_loaders(dataset_name, batch_size, final, dir_path, **dataset_settings):
+    data_dir = os.path.join(dir_path, 'dataset')
+    if not os.path.exists(data_dir):
+        os.mkdir(data_dir)
+    dataset_settings.update(data_dir=data_dir)
     pin_memory = torch.cuda.is_available()
     if dataset_name == 'coins':
         dataset = PiercedCoinsDataset(**dataset_settings)
@@ -331,6 +404,10 @@ def get_loaders(dataset_name, batch_size, final, **dataset_settings):
         dataset = Modelnet40Dataset(**dataset_settings)
     elif dataset_name == 'shapenet':
         dataset = ShapeNetDataset(**dataset_settings)
+    elif dataset_name == 'shapenet_old':
+        dataset = ShapeNetOldDataset(**dataset_settings)
+    elif dataset_name == 'faust':
+        dataset = FaustDataset(**dataset_settings)
     else:
         print(dataset_name)
         raise ValueError()

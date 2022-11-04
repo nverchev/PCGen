@@ -13,17 +13,14 @@ try:
 except:
     pass
 
-def download_zip(dir_path, zip_name, url):
-    data_dir = os.path.join(dir_path, '../dataset')
-    if not os.path.exists(data_dir):
-        os.mkdir(data_dir)
-    zip_path = os.path.join(data_dir, zip_name)
+
+def download_zip(data_dir, zip_path, url):
     if not os.path.exists(zip_path):
         r = requests.get(url, verify=False)
         open(zip_path, 'wb').write(r.content)
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(data_dir)
-    return zip_path[:-4]
+    return
 
 
 def index_k_neighbours(pcs, k):
@@ -35,7 +32,7 @@ def index_k_neighbours(pcs, k):
     return np.stack(indices_list, axis=0)
 
 
-def load_h5(wild_path, num_points, k):
+def load_h5_modelnet(wild_path, num_points, k):
     pcd = []
     indices = []
     labels = []
@@ -62,4 +59,33 @@ def load_h5(wild_path, num_points, k):
     return pcd, indices, labels.ravel()
 
 
+def load_h5_dfaust(files, k):
+    clouds = []
+    indices = []
 
+    def load_file(file):
+        clouds = []
+        indices = []
+        with h5py.File(file, 'r+') as f:
+            for name, dset in f.items():
+                if name == 'faces' or name.find('index') > -1:
+                    continue
+                pcs = dset[:].transpose((2, 0, 1))
+                index_k = f'{name}_index_{k}'
+                if index_k in f.keys():
+                    index = f[index_k][:].astype(np.short)
+                else:
+                    del f[index_k]
+                    index = index_k_neighbours(pcs, k).astype(np.short)
+                    f.create_dataset(index_k, data=index)
+                clouds.extend(pcs)
+                indices.extend(index)
+        return clouds, indices
+
+    for file in files:
+        print('Load: ', file)
+        pcs, index = load_file(file)
+        clouds.extend(pcs)
+        indices.extend(index)
+
+    return clouds, indices

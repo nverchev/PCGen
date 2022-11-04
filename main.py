@@ -18,7 +18,6 @@ def parse_args():
     parser.add_argument('--decoder', type=str, default='PCGen',
                         choices=['PCGen', 'PCGenC', 'Full', 'FoldingNet', 'TearingNet',
                                  'AtlasNetDeformation', 'AtlasNetStructures'])
-
     parser.add_argument('--exp', type=str, default='',
                         help='Name of the experiment. If it starts with "final" the test set is used for eval.')
     parser.add_argument('--model_path', type=str, default='', metavar='N',
@@ -30,7 +29,8 @@ def parse_args():
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='PC reconstruction loss')
     parser.add_argument('--ae', type=str, default='AE', choices=['AE', 'VQVAE'], help='VQVAE adds quantisation')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
-    parser.add_argument('--dataset', type=str, default='modelnet40', choices=['modelnet40', 'shapenet', 'coins'])
+    parser.add_argument('--dataset', type=str, default='modelnet40',
+                        choices=['modelnet40', 'shapenet', 'coins', 'faust', 'shapenet_old'])
     parser.add_argument('--num_points', type=int, default=2048,
                         help='Number of points of the training dataset')
     parser.add_argument('--batch_size', type=int, default=16)
