@@ -158,7 +158,6 @@ def main(task='train/eval'):
         training_epochs=training_epochs,
         schedule=CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
         minio_client=minio_client,
-        model_path=os.path.join(dir_path, 'model'),
         recon_loss=recon_loss,
         ae=ae,
         c_reg=c_reg,
