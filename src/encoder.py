@@ -35,12 +35,12 @@ class LDGCNN(nn.Module):
 
     def forward(self, x, indices):
         x = x.transpose(2, 1)
-        x = get_graph_features(x, k=self.k, indices=indices)
+        indices, x = get_graph_features(x, k=self.k, indices=indices)
         x = self.edge_conv(x)
         x = x.max(dim=3, keepdim=False)[0]
         xs = [x]
         for conv in self.points_convs:
-            x = graph_max_pooling(x)
+            x = graph_max_pooling(x, k=self.k, indices=indices)
             x = conv(x)
             xs.append(x)
         x = torch.cat(xs, dim=1).contiguous()
@@ -64,7 +64,7 @@ class DGCNN(nn.Module):
         xs = []
         x = x.transpose(2, 1)
         for conv in self.edge_convs:
-            x = get_graph_features(x, k=self.k, indices=indices)  # [batch, features, num_points, k]
+            indices, x = get_graph_features(x, k=self.k, indices=indices)  # [batch, features, num_points, k]
             indices = None  # finds new neighbours dynamically after first iteration
             x = conv(x)
             x = x.max(dim=3, keepdim=False)[0]  # [batch, features, num_points]
