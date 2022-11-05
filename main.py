@@ -37,7 +37,8 @@ def parse_args():
     parser.add_argument('--optim', type=str, default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum has momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate')
-    parser.add_argument('--wd', type=float, default=0.000001, help='Wweight decay')
+    parser.add_argument('--wd', type=float, default=0.000001, help='Wwight decay')
+    parser.add_argument('--min_decay', type=float, default=0.01, help='fraction of the initial lr at the end of train')
     parser.add_argument('--k', type=int, default=20,
                         help='Number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--cw_dim', type=int, default=512, help='Dimension of the codeword space')
@@ -46,6 +47,7 @@ def parse_args():
     parser.add_argument('--c_reg', type=float, default=1, help='Coefficient for regularization')
     parser.add_argument('--no_cuda', action='store_true', default=False, help='Runs on CPU')
     parser.add_argument('--epochs', type=int, default=250, help='Number of total training epochs')
+    parser.add_argument('--decay_period', type=int, default=250, help='Number of epochs before lr decays stops')
     parser.add_argument('--checkpoint', type=int, default=10, help='Number of epochs between checkpoints')
     parser.add_argument('--m_training', type=int, default=0,
                         help='Points generated when training,'
@@ -98,6 +100,8 @@ def main(task='train/eval'):
     c_reg = args.c_reg
     device = torch.device('cuda:0' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
     training_epochs = args.epochs
+    decay_period = args.decay_period
+    min_decay = args.min_decay
     checkpoint_every = args.checkpoint
     m = args.m_test if args.m_test else num_points
     m_training = args.m_training if args.m_training else num_points
@@ -115,8 +119,7 @@ def main(task='train/eval'):
     else:
         minio_client = None
 
-    torch.manual_seed = 112358
-    np.random.seed = 112358
+    torch.manual_seed = np.random.seed = 112358
     data_loader_settings = dict(
         dataset_name=dataset_name,
         dir_path=dir_path,
@@ -165,7 +168,7 @@ def main(task='train/eval'):
         device=device,
         batch_size=batch_size,
         training_epochs=training_epochs,
-        schedule=CosineSchedule(decay_steps=training_epochs, min_decay=0.1),
+        schedule=CosineSchedule(decay_steps=decay_period, min_decay=0.01),
         minio_client=minio_client,
         recon_loss=recon_loss,
         ae=ae,
