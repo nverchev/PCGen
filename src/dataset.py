@@ -173,7 +173,7 @@ class Modelnet40Dataset:
         self.modelnet_path = os.path.join(data_dir, 'modelnet40_hdf5_2048')
         self.augmentation_settings = augmentation_settings
         self.download()
-        files_path = lambda x: os.path.join(modelnet_path, f'*{x}*.h5')
+        files_path = lambda x: os.path.join(self.modelnet_path, f'*{x}*.h5')
         self.pcd, self.indices, self.labels = {}, {}, {}
         for split in ['train', 'test']:
             self.pcd[split], self.indices[split], self.labels[split] = \
