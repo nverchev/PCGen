@@ -31,8 +31,8 @@ def parse_args():
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40',
                         choices=['modelnet40', 'shapenet', 'coins', 'faust', 'shapenet_old'])
-    parser.add_argument('--num_points', type=int, default=2048,
-                        help='Number of points of the training dataset')
+    parser.add_argument('--num_points', type=int, default=0,
+                        help='Number of (maximum) points of the training dataset, 0 is default for dataset')
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--optim', type=str, default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum has momentum = 0.9')
@@ -47,9 +47,11 @@ def parse_args():
     parser.add_argument('--no_cuda', action='store_true', default=False, help='Runs on CPU')
     parser.add_argument('--epochs', type=int, default=250, help='Number of total training epochs')
     parser.add_argument('--checkpoint', type=int, default=10, help='Number of epochs between checkpoints')
-    parser.add_argument('--m_training', type=int, default=2048,
-                        help='Points generated when training, 0 for  increasing sequence 128 -> 4096 ')
-    parser.add_argument('--m_test', type=int, default=2048, help='Points generated when testing')
+    parser.add_argument('--m_training', type=int, default=0,
+                        help='Points generated when training,'
+                             '-1 for  increasing sequence 128 -> 4096, 0 input points ')
+    parser.add_argument('--m_test', type=int, default=0, help='Points generated when testing,'
+                                                              ' 0 for input number of points')
     parser.add_argument('--load', type=int, default=-1,
                         help='Load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
@@ -76,7 +78,15 @@ def main(task='train/eval'):
     final = experiment[:5] == 'final'
     dir_path = args.dir_path
     dataset_name = args.dataset
-    num_points = args.num_points
+    if args.num_points:
+        num_points = args.num_points
+    else:
+        if dataset_name in ['modelnet40', 'shapenet_old']:
+            num_points = 2048
+        elif dataset_name in ['faust']:
+            num_points = 6890
+        else:
+            num_points = 2500
     batch_size = args.batch_size
     k = args.k
     opt_name = args.optim
@@ -89,8 +99,8 @@ def main(task='train/eval'):
     device = torch.device('cuda:0' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
     training_epochs = args.epochs
     checkpoint_every = args.checkpoint
-    m = args.m_test
-    m_training = args.m_training
+    m = args.m_test if args.m_test else num_points
+    m_training = args.m_training if args.m_training else num_points
     load = args.load
     model_eval = args.eval
     minio_credential = args.minio_credential
@@ -219,7 +229,7 @@ def main(task='train/eval'):
             trainer.model.load_state_dict(state_dict, strict=False)
 
         while training_epochs > trainer.epoch:
-            if m_training == 0:
+            if m_training == -1:
                 m_training = max(512, (4096 * trainer.epoch) // training_epochs)
                 trainer.update_m_training(m_training)
             trainer.train(checkpoint_every)
