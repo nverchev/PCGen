@@ -335,8 +335,6 @@ class DFaustDataset(Dataset):
                       '\nregistrations can be dowloaded from https://dfaust.is.tue.mpg.de/download.php '
         self.pcd, self.indices = load_h5_dfaust(files, k)
 
-    mesh = openmesh.read_trimesh('/scratch/dataset/MPI-FAUST/training/registrations/tr_reg_000.ply')
-
     def __len__(self):
         return len(self.pcd)
 
