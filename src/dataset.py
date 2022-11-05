@@ -170,7 +170,7 @@ class Modelnet40Dataset:
 
     def __init__(self, data_dir, k, num_points, **augmentation_settings):
         self.data_dir = data_dir
-        self.data_name = 'modelnet40_hdf5_2048'
+        self.modelnet_path = os.path.join(data_dir, 'modelnet40_hdf5_2048')
         self.augmentation_settings = augmentation_settings
         data_path = self.download()
         files_path = lambda x: os.path.join(data_path, f'*{x}*.h5')
@@ -190,7 +190,7 @@ class Modelnet40Dataset:
 
     def download(self):
         url = 'https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097/?dl=1'
-        return download_zip(data_dir=self.data_dir, zip_name=self.data_name + '.zip', url=url)
+        return download_zip(data_dir=self.data_dir, zip_path=self.modelnet_path + '.zip', url=url)
 
     def trainval_to_train_and_val(self, val_every=6):
         train_idx = list(range(self.pcd['train'].shape[0]))
