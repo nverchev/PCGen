@@ -156,7 +156,7 @@ class TearingNet(FoldingNet):
 
 # AtlasNet
 class AtlasNetv2(nn.Module):
-    """Atlas net PatchDeformMLPAdj"""
+    '''Atlas net PatchDeformMLPAdj'''
     patch_embed_dim = 2
 
     def __init__(self, cw_dim, m, components, gf, **model_settings):
@@ -196,7 +196,7 @@ class AtlasNetv2(nn.Module):
 
 
 class AtlasNetv2Deformation(AtlasNetv2):
-    """Atlas net PatchDeformMLPAdj"""
+    '''Atlas net PatchDeformMLPAdj'''
     patch_embed_dim = 10
 
     def __init__(self, cw_dim, m, components, gf, **model_settings):
@@ -227,7 +227,7 @@ class AtlasNetv2Deformation(AtlasNetv2):
 
 
 class AtlasNetv2Structures(AtlasNetv2):
-    """Atlas net PointTranslationMLPAdj"""
+    '''Atlas net PointTranslationMLPAdj'''
     patch_embed_dim = 10
 
     def __init__(self, cw_dim, m, components, gf, **model_settings):
@@ -253,7 +253,7 @@ class AtlasNetv2Structures(AtlasNetv2):
 # not yet been implemented by in pytorch.
 
 # class AtlasNetv2Deformation(nn.Module):
-#     """Atlas net PatchDeformMLPAdj"""
+#     '''Atlas net PatchDeformMLPAdj'''
 #
 #     def __init__(self, cw_dim, m, gf):
 #         super().__init__()

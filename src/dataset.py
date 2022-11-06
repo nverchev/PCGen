@@ -181,7 +181,7 @@ class Modelnet40Dataset:
 
     def split(self, split):
         if split == 'trainval':
-            assert 'val' not in self.pcd.keys(), "train dataset has already been split"
+            assert 'val' not in self.pcd.keys(), 'train dataset has already been split'
             split = 'train'
         elif split in ['train', 'val'] and 'val' not in self.pcd.keys():
             self.trainval_to_train_and_val()
@@ -253,7 +253,7 @@ class PCDatasetResampled(Dataset):
             cloud_recon, cloud_input = random_scale_translate(cloud_recon, sampling_target)
         label = os.path.split(os.path.split(path)[0])[1]
         label = self.label_index.index(label)
-        return [cloud_input, cloud_input, 0], label
+        return [cloud_recon, cloud_input, 0], label
 
 
 class ShapeNetDataset:
@@ -300,7 +300,7 @@ class ShapeNetDataset:
     def to_numpy(self):
         original_path = os.path.join(self.data_dir, 'customShapeNet')
         if not os.path.exists(original_path):
-            "Download shapenet as in https://github.com/TheoDEPRELLE/AtlasNetV2"
+            'Download shapenet as in https://github.com/TheoDEPRELLE/AtlasNetV2'
         for code, label in self.labels.items():
             files = glob2.glob(os.path.join(original_path, code, 'ply', '*.ply'))
             shapenet_label_path = os.path.join(self.shapenet_path, label)
@@ -381,7 +381,7 @@ class FaustDataset:
         self.num_points = num_points
 
     def split(self, split):
-        assert split in ['trainval', 'test'], "Dataset only used for testing"
+        assert split in ['trainval', 'test'], 'Dataset only used for testing'
         if split == 'trainval':
             return DFaustDataset(self.data_dir, self.k, self.num_points, **self.augmentation_settings)
         if split == 'test':
@@ -437,7 +437,7 @@ def get_cw_loaders(t, final, filter_class=None):
     pin_memory = torch.cuda.is_available()
     batch_size = t.train_loader.batch_size
     t.train_loader.dataset.rotation = False
-    t.test(partition="train")
+    t.test(partition='train')
     t.train_loader.dataset.rotation = True
     cw_train_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets, filter_class)
     t.test(partition='test' if final else 'val')

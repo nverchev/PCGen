@@ -34,10 +34,10 @@ def chamfer(t1, t2, dist):
 #            +  torch.min(dist, axis=-2)[0].mean()
 
 
-# Nll reconstruction
-def chamfer_smooth(inputs, recons, pairwise_dist):
+# Nll recontruction
+def chamfer_smooth(inputs, recon, pairwise_dist):
     n = inputs.size()[1]
-    m = recons.size()[1]
+    m = recon.size()[1]
     # variance of the components (model assumption)
     sigma2 = 0.001
     pairwise_dist /= - 2 * sigma2
@@ -67,13 +67,13 @@ class VAELoss(nn.Module):
 
     def forward(self, outputs, inputs, targets):
         inputs = inputs[0]  # get input shape (resampled depending on the dataset)
-        recons = outputs['recon']
-        if recons.dim == 4:
-            n_samples = recons.size()[1]
+        recon = outputs['recon']
+        if recon.dim == 4:
+            n_samples = recon.size()[1]
             inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
         reg_loss_dict = self.get_reg_loss(inputs, outputs)
         reg_loss = reg_loss_dict.pop('reg')
-        recon_loss_dict = self.get_recon_loss(inputs, recons)
+        recon_loss_dict = self.get_recon_loss(inputs, recon)
         recon_loss = recon_loss_dict.pop('recon')
         criterion = recon_loss + self.c_reg * reg_loss
         return {
@@ -110,26 +110,26 @@ class VQVAELoss:
 class ReconLoss:
     c_rec = 1
 
-    def __init__(self, backprop="Chamfer"):
-        self.backprop = backprop
+    def __init__(self, backprop='Chamfer'):
+        self.recon_loss = backprop
         self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.03,
                                              diameter=2, scaling=.3, backend='tensorized')
 
-    def __call__(self, inputs, recons):
-        pairwise_dist = square_distance(inputs, recons)
-        squared, augmented = chamfer(inputs, recons, pairwise_dist)
+    def __call__(self, inputs, recon):
+        pairwise_dist = square_distance(inputs, recon)
+        squared, augmented = chamfer(inputs, recon, pairwise_dist)
         dict_recon = {'Chamfer': squared, 'Chamfer Augmented': augmented}
-        if self.backprop == "Chamfer":
+        if self.recon_loss == 'Chamfer':
             recon = squared
-        elif self.backprop == "ChamferA":
+        elif self.recon_loss == 'ChamferA':
             recon = augmented
-        elif self.backprop == "ChamferS":
-            smooth = chamfer_smooth(inputs, recons, pairwise_dist)
+        elif self.recon_loss == 'ChamferS':
+            smooth = chamfer_smooth(inputs, recon, pairwise_dist)
             recon = smooth
             dict_recon['Chamfer Smooth'] = smooth
         else:
-            assert self.backprop == "Sinkhorn", f"Loss {self.backprop} not known"
-            sk_loss = self.sinkhorn(inputs, recons).mean()
+            assert self.recon_loss == 'Sinkhorn', f'Loss {self.recon_loss} not known'
+            sk_loss = self.sinkhorn(inputs, recon).mean()
             recon = sk_loss
             dict_recon['Sinkhorn'] = sk_loss
 
@@ -161,7 +161,7 @@ class CWEncoderLoss(nn.Module):
 
 def get_ae_loss(block_args):
     get_recon_loss = ReconLoss(block_args['recon_loss'])
-    if block_args['ae'] == 'AE':
+    if block_args['ae'] in ('AE', 'Oracle'):
         get_reg_loss = AELoss()
     elif block_args['ae'] == 'VQVAE':
         get_reg_loss = VQVAELoss()

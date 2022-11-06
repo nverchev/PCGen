@@ -27,7 +27,8 @@ def parse_args():
     parser.add_argument('--gf', action='store_true', default=False, help='Graph filtering after decoder')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='PC reconstruction loss')
-    parser.add_argument('--ae', type=str, default='AE', choices=['AE', 'VQVAE'], help='VQVAE adds quantisation')
+    parser.add_argument('--ae', type=str, default='AE', choices=['Oracle', 'AE', 'VQVAE'],
+                        help='Oracle is identity (measures resampling error), VQVAE adds quantisation')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40',
                         choices=['modelnet40', 'shapenet', 'coins', 'faust', 'shapenet_old'])
@@ -147,9 +148,9 @@ def main(task='train/eval'):
                        torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
         return model, dummy_input
     elif task == 'return loaded model for random generation':
-        assert ae == "VQVAE", "Autoencoder does not support realistic cloud generation"
+        assert ae == 'VQVAE', 'Autoencoder does not support realistic cloud generation'
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
-        assert os.path.exists(load_path), "No pretrained experiment in " + load_path
+        assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
         model.load_state_dict(torch.load(load_path, map_location=device))
         z_dim = cw_dim // 64
         z = torch.randn(batch_size, z_dim).to(device)
@@ -178,16 +179,16 @@ def main(task='train/eval'):
     block_args = {**data_loader_settings, **model_settings, **trainer_settings}
     trainer = get_ae_trainer(model, exp_name, block_args)
     if task == 'train cw encoder':
-        assert ae == "VQVAE", "Only VQVAE supported"
+        assert ae == 'VQVAE', 'Only VQVAE supported'
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
-        assert os.path.exists(load_path), "No pretrained experiment in " + load_path
+        assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
         model_state = torch.load(load_path, map_location=device)
-        assert load < 1, "Only loading the last saved version is supported"
+        assert load < 1, 'Only loading the last saved version is supported'
 
         for name in list(model_state):
             if load == -1:
                 #trainer.model.cw_encoder.reset_parameters()
-                if name[:10] == "cw_encoder":
+                if name[:10] == 'cw_encoder':
                     model_state.popitem(name)  # temporary feature to experiment with different cw_encoders
         trainer.model.load_state_dict(model_state, strict=False)
 
@@ -214,9 +215,9 @@ def main(task='train/eval'):
     elif load > 0:
         trainer.load(load)
     if task == 'train cw encoder and VQVAE':
-        assert ae == "VQVAE", "Only VQVAE supported"
+        assert ae == 'VQVAE', 'Only VQVAE supported'
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
-        assert os.path.exists(load_path), "No pretrained experiment in " + load_path
+        assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
         trainer.model.load_state_dict(torch.load(load_path, map_location=device))
         trainer.model.recon_cw = True
         training_epochs += 100
@@ -227,7 +228,7 @@ def main(task='train/eval'):
             exp_name_split = exp_name.split('_')
             exp_name_split[1] = 'FoldingNet'
             load_path = os.path.join(dir_path, 'models', '_'.join(exp_name_split), f'model_epoch{training_epochs}.pt')
-            assert os.path.exists(load_path), "No pretrained experiment in " + load_path
+            assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
             state_dict = torch.load(load_path, map_location=device)
             trainer.model.load_state_dict(state_dict, strict=False)
 

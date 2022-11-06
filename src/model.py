@@ -172,6 +172,15 @@ class VAECW(nn.Module):
 #         self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
 #
 
+class Oracle(nn.Module):
+    settings = {}
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.decoder = nn.Module()
+        self.decoder.m = 0
+    def forward(self, x, indices):
+        return {'recon': x[:, :self.decoder.m, :]}
+
 class AE(nn.Module):
     settings = {}
 
@@ -272,4 +281,9 @@ class VQVAE(AE):
 
 
 def get_model(ae, **model_settings):
-    return (AE if ae == 'AE' else VQVAE)(**model_settings)
+    model_map = dict(
+                    Oracle=Oracle,
+                    AE=AE,
+                    VQVAE=VQVAE,
+                    )
+    return model_map[ae](**model_settings)

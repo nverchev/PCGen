@@ -340,10 +340,10 @@ class BaseKittiDataset(DatasetTemplate):
 
 class KittiDataset(BaseKittiDataset):
     def __init__(self, root_path, class_names, split, training, logger=None):
-        """
+        '''
         :param root_path: KITTI data path
         :param split:
-        """
+        '''
         super().__init__(root_path=root_path, split=split)
 
         self.class_names = class_names

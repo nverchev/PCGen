@@ -349,7 +349,7 @@ class AETrainer(Trainer):
         try:
             self.model.recon_cw = True
         except AttributeError:
-            print('Codeword reconstruction is only supported for the VQVAE model')
+            print('Codeword recontruction is only supported for the VQVAE model')
         else:
             self.test(partition=partition, m=m)
             self.model.recon_cw = False
