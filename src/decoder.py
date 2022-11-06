@@ -164,7 +164,7 @@ class AtlasNetv2(nn.Module):
         self.cw_dim = cw_dim
         self.m = m
         self.gf = gf
-        self.num_patches = components if components else 16
+        self.num_patches = components if components else 10
         self.m_patch = self.m // self.num_patches
         self.dim_embedding = self.cw_dim + self.patch_embed_dim
         self.h_dim = [128]

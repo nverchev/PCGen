@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--model_path', type=str, default='', metavar='N',
                         help='Default is given by "_".join(model(GF), recon_loss, exp)')
     parser.add_argument('--components', type=int, default=0,
-                        help='Components of PCGenC or patches in AtlasNet, 0 is for default (resp. 8 and 16)')
+                        help='Components of PCGenC or patches in AtlasNet, 0 is for default (resp. 8 and 10)')
     parser.add_argument('--gf', action='store_true', default=False, help='Graph filtering after decoder')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='PC reconstruction loss')
