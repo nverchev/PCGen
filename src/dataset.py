@@ -126,7 +126,7 @@ class PiercedCoinsDataset(Dataset):
         return np.hstack([x, y, z])
 
     def __len__(self):
-        return 32
+        return 4096
 
     def __getitem__(self, index):
         n_holes = np.random.randint(low=1, high=4)
@@ -253,7 +253,7 @@ class PCDatasetResampled(Dataset):
             cloud_recon, cloud_input = random_scale_translate(cloud_recon, sampling_target)
         label = os.path.split(os.path.split(path)[0])[1]
         label = self.label_index.index(label)
-        return [cloud_recon, cloud_input, 0], label
+        return [cloud_input, cloud_input, 0], label
 
 
 class ShapeNetDataset:
