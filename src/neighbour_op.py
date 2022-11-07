@@ -75,9 +75,10 @@ def get_graph_features(x, k=20, indices=None):
 def graph_filtering(x, k=4):
     neighbours = get_neighbours(x, k=k, indices=None)[1]
     neighbours = neighbours[..., 1:]  # closest neighbour is point itself
-    dist = torch.sqrt(((x.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours) ** 2).sum(1))
+    diff = x.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours
+    weights = 1 / (diff ** 2).sum(1)
     # sigma = dist[..., 0:1]
-    weights = torch.softmax(dist[..., 0:1]/dist, dim=-1)
-    weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours
-    x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1).detach()
-    return x
+    # weights = torch.softmax(-dist/sigma, dim=-1)
+    # weighted_neighbours =
+    # x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1).detach()
+    return x - 0.5 * (weights.unsqueeze(1).expand(-1, 3, -1, -1) * diff)

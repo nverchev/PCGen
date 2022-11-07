@@ -231,7 +231,7 @@ class ShapeNetOldDataset:
 class PCDatasetResampled(Dataset):
     def __init__(self, paths, num_points, labels, resample, rotation, translation):
         self.paths = paths
-        self.resample = resample
+        self.resample = False
         self.rotation = rotation
         self.translation_and_scale = translation
         self.num_points = num_points
