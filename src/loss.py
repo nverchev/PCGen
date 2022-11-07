@@ -66,7 +66,7 @@ class VAELoss(nn.Module):
         self.c_reg = c_reg
 
     def forward(self, outputs, inputs, targets):
-        inputs = inputs[0]  # get input shape (resampled depending on the dataset)
+        inputs = inputs[-2]  # get input shape (resampled depending on the dataset)
         recon = outputs['recon']
         if recon.dim == 4:
             n_samples = recon.size()[1]

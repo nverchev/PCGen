@@ -165,10 +165,10 @@ class AtlasNetv2(nn.Module):
         self.m = m
         self.gf = gf
         self.num_patches = components if components else 10
-        self.m_patch = self.m // self.num_patches
         self.dim_embedding = self.cw_dim + self.patch_embed_dim
         self.h_dim = [128]
         self.decoder = nn.ModuleList([self.get_mlp_adj() for _ in range(self.num_patches)])
+        self.patchDeformation = [lambda x: x for _ in range(self.num_patches)]
 
     def get_mlp_adj(self):
         dim = self.dim_embedding
@@ -184,7 +184,7 @@ class AtlasNetv2(nn.Module):
         device = x.device
         outs = []
         for i in range(self.num_patches):
-            rand_grid = torch.rand(batch, 2, self.m_patch, device=device)
+            rand_grid = torch.rand(batch, 2, m_patch, device=device)
             rand_grid = self.patchDeformation[i](rand_grid)
             y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
             y = torch.cat((rand_grid, y), 1).contiguous()
@@ -210,21 +210,6 @@ class AtlasNetv2Deformation(AtlasNetv2):
                    PointsConvLayer(dim, self.patch_embed_dim, batch_norm=False, act=nn.Tanh())]
         return nn.Sequential(*modules)
 
-    def forward(self, x):
-        batch = x.size(0)
-        device = x.device
-        outs = []
-        for i in range(self.num_patches):
-            rand_grid = torch.rand(batch, 2, self.m_patch, device=device)
-            rand_grid = self.patchDeformation[i](rand_grid)
-            y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
-            y = torch.cat((rand_grid, y), 1).contiguous()
-            outs.append(self.decoder[i](y))
-        x = torch.cat(outs, 2).contiguous()
-        if self.gf:
-            x = graph_filtering(x)
-        return x
-
 
 class AtlasNetv2Structures(AtlasNetv2):
     '''Atlas net PointTranslationMLPAdj'''
@@ -232,7 +217,8 @@ class AtlasNetv2Structures(AtlasNetv2):
 
     def __init__(self, cw_dim, m, components, gf, **model_settings):
         super().__init__(cw_dim, m, components, gf)
-        self.grid = nn.Parameter(torch.rand(self.num_patches, 2, self.m_patch))
+        self.m_patch = self.m // self.num_patches
+        self.grid = nn.Parameter(torch.rand(self.num_patches, 2,  self.m // self.num_patches))
         self.grid.data = F.pad(self.grid, (0, 0, 0, self.patch_embed_dim - 2))
 
     def forward(self, x):

@@ -229,8 +229,9 @@ class ShapeNetOldDataset:
 
 
 class PCDatasetResampled(Dataset):
-    def __init__(self, paths, num_points, labels, rotation, translation):
+    def __init__(self, paths, num_points, labels, resample, rotation, translation):
         self.paths = paths
+        self.resample = resample
         self.rotation = rotation
         self.translation_and_scale = translation
         self.num_points = num_points
@@ -243,17 +244,18 @@ class PCDatasetResampled(Dataset):
         path = self.paths[index]
         cloud = np.load(path)
         index_pool = np.arange(cloud.shape[0])
-        sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
-        sampling_target = np.random.choice(index_pool, size=self.num_points, replace=False)
-        cloud_recon = torch.from_numpy(normalize(cloud[sampling_recon]))
-        cloud_input = torch.from_numpy(normalize(cloud[sampling_target]))
+        sampling_input = np.random.choice(index_pool, size=self.num_points, replace=False)
+        clouds = [torch.from_numpy(normalize(cloud[sampling_input]))]
+        if self.resample:
+            sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
+            clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
         if self.rotation:
-            cloud_recon, cloud_input = random_rotation(cloud_recon, cloud_input)
+            clouds = random_rotation(*clouds)
         if self.translation_and_scale:
-            cloud_recon, cloud_input = random_scale_translate(cloud_recon, sampling_target)
+            clouds = random_scale_translate(*clouds)
         label = os.path.split(os.path.split(path)[0])[1]
         label = self.label_index.index(label)
-        return [cloud_recon, cloud_input, 0], label
+        return [*clouds, 0], label
 
 
 class ShapeNetDataset:
@@ -295,7 +297,8 @@ class ShapeNetDataset:
             self.paths.setdefault('test', []).extend(files[second_split:])
 
     def split(self, split):
-        return PCDatasetResampled(self.paths[split], self.num_points, self.labels, **self.augmentation_settings)
+        return PCDatasetResampled(self.paths[split], self.num_points, self.labels, resample=split in ['val', 'test'],
+                                  **self.augmentation_settings)
 
     def to_numpy(self):
         original_path = os.path.join(self.data_dir, 'customShapeNet')
@@ -340,7 +343,7 @@ class DFaustDataset(Dataset):
 
     def __getitem__(self, index):
         cloud, index = self.pcd[index], self.indices[index]
-        cloud = torch.from_numpy(cloud)
+        cloud = torch.from_numpy(normalize(cloud))
         index = torch.from_numpy(index).long()
         if self.rotation:
             cloud, = random_rotation(cloud)

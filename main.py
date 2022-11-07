@@ -43,6 +43,7 @@ def parse_args():
     parser.add_argument('--k', type=int, default=20,
                         help='Number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--cw_dim', type=int, default=512, help='Dimension of the codeword space')
+    parser.add_argument('--z_dim', type=int, default=32, help='Dimension of the second encoding space')
     parser.add_argument('--book_size', type=int, default=16, help='Dictionary size for vector quantisation')
     parser.add_argument('--dim_embedding', type=int, default=4, help='Dimension of the vector for vector quantisation')
     parser.add_argument('--c_reg', type=float, default=1, help='Coefficient for regularization')
@@ -55,6 +56,7 @@ def parse_args():
                              '-1 for  increasing sequence 128 -> 4096, 0 input points ')
     parser.add_argument('--m_test', type=int, default=0, help='Points generated when testing,'
                                                               ' 0 for input number of points')
+    parser.add_argument('--ind', type=int, default=0, nargs='+', help='index for reconstruction to visualize')
     parser.add_argument('--load', type=int, default=-1,
                         help='Load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
@@ -67,7 +69,7 @@ def parse_args():
 
 def main(task='train/eval'):
     assert task in ['train/eval', 'return model for profiling', 'return loaded model for random generation',
-                    'train cw encoder', 'train cw encoder and VQVAE']
+                    'train cw encoder', 'visualise reconstructions']
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
@@ -96,6 +98,7 @@ def main(task='train/eval'):
     initial_learning_rate = args.lr
     weight_decay = args.wd
     cw_dim = args.cw_dim
+    z_dim = args.z_dim
     book_size = args.book_size
     dim_embedding = args.dim_embedding
     c_reg = args.c_reg
@@ -106,6 +109,7 @@ def main(task='train/eval'):
     checkpoint_every = args.checkpoint
     m = args.m_test if args.m_test else num_points
     m_training = args.m_training if args.m_training else num_points
+    ind = args.ind
     load = args.load
     model_eval = args.eval
     minio_credential = args.minio_credential
@@ -125,7 +129,7 @@ def main(task='train/eval'):
         dataset_name=dataset_name,
         dir_path=dir_path,
         num_points=num_points,
-        k=k, # preprocess k index to speed up training (invariant to rotations and scale)
+        k=k,  # preprocess k index to speed up training (invariant to rotations and scale)
         translation=False,
         rotation=False,
         batch_size=batch_size,
@@ -152,9 +156,7 @@ def main(task='train/eval'):
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
         model.load_state_dict(torch.load(load_path, map_location=device))
-        z_dim = cw_dim // 64
         z = torch.randn(batch_size, z_dim).to(device)
-        #t = model.cw_encoder.codebook[torch.randint(model.cw_encoder.book_size, [batch_size])]
         return model, z
 
     train_loader, val_loader, test_loader = get_loaders(**data_loader_settings)
@@ -169,7 +171,7 @@ def main(task='train/eval'):
         device=device,
         batch_size=batch_size,
         training_epochs=training_epochs,
-        schedule=CosineSchedule(decay_steps=decay_period, min_decay=0.01),
+        schedule=CosineSchedule(decay_steps=decay_period, min_decay=min_decay),
         minio_client=minio_client,
         recon_loss=recon_loss,
         ae=ae,
@@ -178,6 +180,7 @@ def main(task='train/eval'):
 
     block_args = {**data_loader_settings, **model_settings, **trainer_settings}
     trainer = get_ae_trainer(model, exp_name, block_args)
+
     if task == 'train cw encoder':
         assert ae == 'VQVAE', 'Only VQVAE supported'
         load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
@@ -187,11 +190,10 @@ def main(task='train/eval'):
 
         for name in list(model_state):
             if load == -1:
-                #trainer.model.cw_encoder.reset_parameters()
+                # trainer.model.cw_encoder.reset_parameters()
                 if name[:10] == 'cw_encoder':
                     model_state.popitem(name)  # temporary feature to experiment with different cw_encoders
         trainer.model.load_state_dict(model_state, strict=False)
-
 
         cw_train_loader, cw_test_loader = get_cw_loaders(trainer, final)
         block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader))
@@ -203,10 +205,10 @@ def main(task='train/eval'):
                 assert torch.all(torch.isclose(cw_trainer.model.codebook, trainer.model.cw_encoder.codebook))
                 cw_trainer.test(partition='test')  # tests on val when not final because val has been saved as test
                 trainer.model.load_state_dict(torch.load(load_path, map_location=device))
-                trainer.test_cw_recon(partition='test' if final else 'val')
+                trainer.test_cw_recon(partition='test' if final else 'val', m=m)
         else:
             cw_trainer.test(partition='test')
-            trainer.test_cw_recon(partition='test' if final else 'val')
+            trainer.test_cw_recon(partition='test' if final else 'val', m=m)
         return
 
     # loads last model
@@ -214,14 +216,17 @@ def main(task='train/eval'):
         trainer.load()
     elif load > 0:
         trainer.load(load)
-    if task == 'train cw encoder and VQVAE':
-        assert ae == 'VQVAE', 'Only VQVAE supported'
-        load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
-        assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
-        trainer.model.load_state_dict(torch.load(load_path, map_location=device))
-        trainer.model.recon_cw = True
-        training_epochs += 100
-
+    if task == 'visualise reconstructions':
+        trainer.test(partition='train' if not model_eval else 'test' if final else 'val', m=m)
+        recon = trainer.test_outputs['recon']
+        input_pcs = []
+        recon_pcs = []
+        for i in ind:
+            assert i < len(recon), 'Index is too large for the selected dataset'
+            dataset = test_loader.dataset if final else val_loader.dataset  # TO DO: fix train input
+            input_pcs.append(dataset[i][0][0])
+            recon_pcs.append(recon[i])
+        return input_pcs, recon_pcs
 
     if not model_eval:
         if load == -1 and decoder_name == 'TearingNet':
@@ -238,9 +243,9 @@ def main(task='train/eval'):
                 trainer.update_m_training(m_training)
             trainer.train(checkpoint_every)
             trainer.save()
-            trainer.test(partition='test' if final else 'val')
+            trainer.test(partition='test' if final else 'val', m=m)
     else:
-        trainer.test(partition='test' if final else 'val')
+        trainer.test(partition='test' if final else 'val', m=m)
 
 
 if __name__ == '__main__':

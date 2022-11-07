@@ -161,7 +161,7 @@ class Trainer(metaclass=ABCMeta):
                 self._run_session(partition='val', inference=True)  # best to test instead if interested in metrics
         return
 
-    def test(self, partition='val'):  # runs and stores evaluated test samples
+    def test(self, partition):  # runs and stores evaluated test samples
         if not self.quiet_mode:
             print('Version ', self.exp_name)
         self._run_session(partition=partition, inference=True, save_outputs=True)
@@ -338,14 +338,14 @@ class AETrainer(Trainer):
         self._loss = get_ae_loss(block_args)
         return
 
-    def test(self, partition='val', m=2048):
+    def test(self, partition, m):
         m_old = self.model.decoder.m
         self.model.decoder.m = m
         super().test(partition=partition)
         self.model.decoder.m = m_old
         return
 
-    def test_cw_recon(self, partition='val', m=2048):
+    def test_cw_recon(self, partition, m):
         try:
             self.model.recon_cw = True
         except AttributeError:
@@ -402,7 +402,7 @@ class AETrainer(Trainer):
         indices = inputs[-1]
         if torch.all(indices == 0):
             indices = None
-        input_shape = inputs[-2]
+        input_shape = inputs[0]
         return {'x': input_shape, 'indices': indices}
 
 
