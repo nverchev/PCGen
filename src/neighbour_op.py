@@ -10,14 +10,14 @@ def square_distance(t1, t2):
     dist = ((t1 - t2) ** 2).sum(-1)
     return dist
 
-
+#
 # def square_distance(t1, t2):
 #     # [batch, points, features]
 #     t2 = t2.transpose(-1, -2)
 #     dist = -2 * torch.matmul(t1, t2)
 #     dist += torch.sum(t1 ** 2, -1, keepdim=True)
-#     dist += torch.sum(t2 ** 2, -2, keepdim=True)
-#     return dist
+# #     dist += torch.sum(t2 ** 2, -2, keepdim=True)
+# #     return dist
 #
 # def self_square_distance(t1):
 #     t2 = t1.transpose(-1, -2)
@@ -30,7 +30,7 @@ def square_distance(t1, t2):
 #
 # def knn(x, k):
 #     d_ij = self_square_distance(x)
-#     return d_ij.topk(k=k, largest=False, dim=-1)
+#     return d_ij.topk(k=k, largest=False, dim=-1)[1]
 
 def knn(x, k):
     x = x.transpose(2, 1)
@@ -76,9 +76,9 @@ def graph_filtering(x, k=4):
     neighbours = get_neighbours(x, k=k, indices=None)[1]
     neighbours = neighbours[..., 1:]  # closest neighbour is point itself
     diff = x.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours
-    weights = 1 / (diff ** 2).sum(1)
-    # sigma = dist[..., 0:1]
-    # weights = torch.softmax(-dist/sigma, dim=-1)
-    # weighted_neighbours =
-    # x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1).detach()
-    return x - 0.5 * (weights.unsqueeze(1).expand(-1, 3, -1, -1) * diff)
+    dist = torch.sqrt((diff ** 2).sum(1))
+    sigma = dist[..., 0:1]
+    weights = torch.softmax(-dist/sigma, dim=-1)
+    weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours
+    x = 1.5 * x - 0.5 * weighted_neighbours.sum(-1)
+    return x
