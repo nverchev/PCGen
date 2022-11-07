@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument('--gf', action='store_true', default=False, help='Graph filtering after decoder')
     parser.add_argument('--recon_loss', type=str, default='Chamfer',
                         choices=['Chamfer', 'ChamferA', 'ChamferS', 'Sinkhorn'], help='PC reconstruction loss')
-    parser.add_argument('--ae', type=str, default='AE', choices=['Oracle', 'AE', 'VQVAE'],
+    parser.add_argument('--ae', type=str, default='AE', choices=['Oracle', 'AE', 'VAE', 'VQVAE'],
                         help='Oracle is identity (measures resampling error), VQVAE adds quantisation')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40',
@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument('--optim', type=str, default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum has momentum = 0.9')
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate')
-    parser.add_argument('--wd', type=float, default=0.000001, help='Wwight decay')
+    parser.add_argument('--wd', type=float, default=0.000001, help='Weight decay')
     parser.add_argument('--min_decay', type=float, default=0.01, help='fraction of the initial lr at the end of train')
     parser.add_argument('--k', type=int, default=20,
                         help='Number of neighbours of a point (counting the point itself) in DGCNN]')
@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument('--checkpoint', type=int, default=10, help='Number of epochs between checkpoints')
     parser.add_argument('--m_training', type=int, default=0,
                         help='Points generated when training,'
-                             '-1 for  increasing sequence 128 -> 4096, 0 input points ')
+                             '-1 for  increasing sequence 128 -> 4096, 0 input number of points ')
     parser.add_argument('--m_test', type=int, default=0, help='Points generated when testing,'
                                                               ' 0 for input number of points')
     parser.add_argument('--ind', type=int, default=0, nargs='+', help='index for reconstruction to visualize')

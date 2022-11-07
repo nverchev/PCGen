@@ -367,7 +367,7 @@ class MPIFaustDataset(Dataset):
     def __getitem__(self, index):
         mesh = openmesh.read_trimesh(self.files[index])
         cloud = mesh.points().astype(np.float32)
-        cloud = torch.from_numpy(cloud)
+        cloud = torch.from_numpy(normalize(cloud))
         if self.rotation:
             cloud, = random_rotation(cloud)
         if self.translation_and_scale:
