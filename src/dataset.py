@@ -172,7 +172,6 @@ class Modelnet40Dataset:
         self.modelnet_path = os.path.join(data_dir, 'modelnet40_hdf5_2048')
         self.augmentation_settings = augmentation_settings
         self.download()
-        print(self.classes)
         files_path = lambda x: os.path.join(self.modelnet_path, f'*{x}*.h5')
         self.pcd, self.indices, self.labels = {}, {}, {}
         for split in ['train', 'test']:
@@ -252,7 +251,7 @@ class ShapeNetOldDataset:
 class PCDatasetResampled(Dataset):
     def __init__(self, paths, num_points, labels, resample, rotation, translation):
         self.paths = paths
-        self.resample = resample
+        self.resample = False
         self.rotation = rotation
         self.translation_and_scale = translation
         self.num_points = num_points

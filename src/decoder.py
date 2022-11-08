@@ -311,8 +311,6 @@ class PCGen(nn.Module):
         x = self.points_convs(x)
         if self.gf:
             x = graph_filtering(x)
-        if self.gf:
-            x = graph_filtering(x)
         return x
 
 
