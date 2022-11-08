@@ -32,6 +32,8 @@ def parse_args():
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
     parser.add_argument('--dataset', type=str, default='modelnet40',
                         choices=['modelnet40', 'shapenet', 'coins', 'faust', 'shapenet_old'])
+    parser.add_argument('--select_classes', type=str, default=[], nargs='+',
+                        help='selects only specific classes of the dataset')
     parser.add_argument('--num_points', type=int, default=0,
                         help='Number of (maximum) points of the training dataset, 0 is default for dataset')
     parser.add_argument('--batch_size', type=int, default=16)
@@ -56,7 +58,7 @@ def parse_args():
                              '-1 for  increasing sequence 128 -> 4096, 0 input number of points ')
     parser.add_argument('--m_test', type=int, default=0, help='Points generated when testing,'
                                                               ' 0 for input number of points')
-    parser.add_argument('--ind', type=int, default=0, nargs='+', help='index for reconstruction to visualize')
+    parser.add_argument('--ind', type=int, default=[0], nargs='+', help='index for reconstruction to visualize')
     parser.add_argument('--load', type=int, default=-1,
                         help='Load a saved model with the same settings. -1 for starting from scratch,'
                              '0 for most recent, otherwise epoch after which the model was saved')
@@ -83,6 +85,7 @@ def main(task='train/eval'):
     final = experiment[:5] == 'final'
     dir_path = args.dir_path
     dataset_name = args.dataset
+    select_classes = args.select_classes
     if args.num_points:
         num_points = args.num_points
     else:
@@ -127,6 +130,7 @@ def main(task='train/eval'):
     torch.manual_seed = np.random.seed = 112358
     data_loader_settings = dict(
         dataset_name=dataset_name,
+        select_classes=select_classes,
         dir_path=dir_path,
         num_points=num_points,
         k=k,  # preprocess k index to speed up training (invariant to rotations and scale)
@@ -153,7 +157,7 @@ def main(task='train/eval'):
         return model, dummy_input
     elif task == 'return loaded model for random generation':
         assert ae == 'VQVAE', 'Autoencoder does not support realistic cloud generation'
-        load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
+        load_path = os.path.join('models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
         model.load_state_dict(torch.load(load_path, map_location=device))
         z = torch.randn(batch_size, z_dim).to(device)
@@ -183,7 +187,7 @@ def main(task='train/eval'):
 
     if task == 'train cw encoder':
         assert ae == 'VQVAE', 'Only VQVAE supported'
-        load_path = os.path.join(dir_path, 'models', exp_name, f'model_epoch{training_epochs}.pt')
+        load_path = os.path.join('models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
         model_state = torch.load(load_path, map_location=device)
         assert load < 1, 'Only loading the last saved version is supported'
@@ -195,7 +199,7 @@ def main(task='train/eval'):
                     model_state.popitem(name)  # temporary feature to experiment with different cw_encoders
         trainer.model.load_state_dict(model_state, strict=False)
 
-        cw_train_loader, cw_test_loader = get_cw_loaders(trainer, final)
+        cw_train_loader, cw_test_loader = get_cw_loaders(trainer, m, final)
         block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader))
         cw_trainer = CWTrainer(model, exp_name, block_args)
         if not model_eval:

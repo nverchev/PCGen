@@ -211,7 +211,7 @@ class VQVAE(AE):
 
     def __init__(self, book_size, cw_dim,  dim_embedding, **model_settings):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
-        super().__init__(**model_settings)
+        super().__init__(cw_dim=cw_dim, **model_settings)
         self.dim_codes = cw_dim // dim_embedding
         self.book_size = book_size
         self.dim_embedding = dim_embedding

@@ -3,6 +3,7 @@ import torch
 import os
 from torch.utils.data import Dataset
 from src.utils import download_zip, index_k_neighbours, load_h5_modelnet, load_h5_dfaust
+import json
 import glob2
 import openmesh
 
@@ -47,14 +48,10 @@ def jitter(cloud, sigma=0.01, clip=0.02):
 
 
 class CWDataset(Dataset):
-    def __init__(self, cw_q, cw_e, labels, filter_class=None):
+    def __init__(self, cw_q, cw_e, labels):
         self.cw_q = torch.stack(cw_q)
         self.cw_e = torch.stack(cw_e)
         self.labels = torch.stack(labels)
-        if filter_class is not None:
-            idx = (self.labels == filter_class).squeeze()
-            self.cw_q = self.cw_q[idx]
-            self.cw_e = self.cw_e[idx]
 
     def __len__(self):
         return self.cw_q.shape[0]
@@ -167,17 +164,30 @@ class PCDataset(Dataset):
 
 
 class Modelnet40Dataset:
+    with open(os.path.join('metadata', 'modelnet_classes.txt'), 'r') as f:
+        classes = f.read().splitlines()
 
-    def __init__(self, data_dir, k, num_points, **augmentation_settings):
+    def __init__(self, data_dir, k, num_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.modelnet_path = os.path.join(data_dir, 'modelnet40_hdf5_2048')
         self.augmentation_settings = augmentation_settings
         self.download()
+        print(self.classes)
         files_path = lambda x: os.path.join(self.modelnet_path, f'*{x}*.h5')
         self.pcd, self.indices, self.labels = {}, {}, {}
         for split in ['train', 'test']:
             self.pcd[split], self.indices[split], self.labels[split] = \
                 load_h5_modelnet(files_path(split), num_points, k)
+            if select_classes:
+                try:
+                    selected_labels = [self.classes.index(selected_class) for selected_class in select_classes]
+                except ValueError:
+                    print(f'One of classes in {select_classes} not in {split} dataset')
+                    raise
+                selected_indices = np.isin(self.labels[split], selected_labels)
+                self.pcd[split] = self.pcd[split][selected_indices]
+                self.indices[split] = self.indices[split][selected_indices]
+                self.labels[split] = self.labels[split][selected_indices]
 
     def split(self, split):
         if split == 'trainval':
@@ -203,18 +213,29 @@ class Modelnet40Dataset:
 
 
 class ShapeNetOldDataset:
+    with open(os.path.join('metadata', 'shapenet_old_classes.txt'), 'r') as f:
+        classes = f.read().splitlines()  # TO DO: order files (currently labels do not match index)
 
-    def __init__(self, data_dir, k, num_points, **augmentation_settings):
+    def __init__(self, data_dir, k, num_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.shapenet_path = os.path.join(self.data_dir, 'shapenetcorev2_hdf5_2048')
         self.augmentation_settings = augmentation_settings
         self.download()
         files_path = lambda x: os.path.join(self.shapenet_path, f'{x}*.h5')
-        print(files_path('test'))
         self.pcd, self.indices, self.labels = {}, {}, {}
         for split in ['train', 'val', 'test']:
             self.pcd[split], self.indices[split], self.labels[split] = \
                 load_h5_modelnet(files_path(split), num_points, k)
+            if select_classes:
+                try:
+                    selected_labels = [self.classes.index(selected_class) for selected_class in select_classes]
+                except ValueError:
+                    print(f'One of classes in {select_classes} not in {split} dataset')
+                    raise
+                selected_indices = np.isin(self.labels[split], selected_labels)
+                self.pcd[split] = self.pcd[split][selected_indices]
+                self.indices[split] = self.indices[split][selected_indices]
+                self.labels[split] = self.labels[split][selected_indices]
         self.pcd['trainval'] = np.concatenate([self.pcd['train'], self.pcd['val']], axis=0)
         self.indices['trainval'] = np.concatenate([self.indices['train'], self.indices['val']], axis=0)
         self.labels['trainval'] = np.concatenate([self.labels['train'], self.labels['val']], axis=0)
@@ -231,7 +252,7 @@ class ShapeNetOldDataset:
 class PCDatasetResampled(Dataset):
     def __init__(self, paths, num_points, labels, resample, rotation, translation):
         self.paths = paths
-        self.resample = False
+        self.resample = resample
         self.rotation = rotation
         self.translation_and_scale = translation
         self.num_points = num_points
@@ -259,23 +280,9 @@ class PCDatasetResampled(Dataset):
 
 
 class ShapeNetDataset:
-    labels = {
-        '02958343': 'car',
-        '03001627': 'chair',
-        '03211117': 'monitor',
-        '03636649': 'lamp',
-        '03691459': 'speaker',
-        '04090263': 'firearm',
-        '04256520': 'couch',
-        '04379243': 'table',
-        '04401088': 'cellphone',
-        '04530566': 'watercraft',
-        '02691156': 'plane',
-        '02828884': 'bench',
-        '02933112': 'cabinet'
-    }
+    classes = json.load(open(os.path.join(os.getcwd(), 'metadata', 'shapenet_classes.json'), 'r'))
 
-    def __init__(self, data_dir, k, num_points, **augmentation_settings):
+    def __init__(self, data_dir, k, num_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.shapenet_path = os.path.join(self.data_dir, 'shapenet')
         if not os.path.exists(self.shapenet_path):
@@ -287,6 +294,9 @@ class ShapeNetDataset:
         self.num_points = num_points
         folders = glob2.glob(os.path.join(self.shapenet_path, '*'))
         self.paths = {}
+        if select_classes:
+            folders = [folder for folder in folders if os.path.split(folder)[1] in select_classes]
+            assert folders, 'class is not in dataset'
         for folder in folders:
             files = glob2.glob(os.path.join(folder, '*'))
             first_split = int(len(files) * (1 - self.val_ratio - self.test_ratio))
@@ -297,14 +307,14 @@ class ShapeNetDataset:
             self.paths.setdefault('test', []).extend(files[second_split:])
 
     def split(self, split):
-        return PCDatasetResampled(self.paths[split], self.num_points, self.labels, resample=split in ['val', 'test'],
+        return PCDatasetResampled(self.paths[split], self.num_points, self.classes, resample=split in ['val', 'test'],
                                   **self.augmentation_settings)
 
     def to_numpy(self):
         original_path = os.path.join(self.data_dir, 'customShapeNet')
         if not os.path.exists(original_path):
             'Download shapenet as in https://github.com/TheoDEPRELLE/AtlasNetV2'
-        for code, label in self.labels.items():
+        for code, label in self.classes.items():
             files = glob2.glob(os.path.join(original_path, code, 'ply', '*.ply'))
             shapenet_label_path = os.path.join(self.shapenet_path, label)
             if not os.path.exists(shapenet_label_path):
@@ -377,7 +387,7 @@ class MPIFaustDataset(Dataset):
 
 class FaustDataset:
 
-    def __init__(self, data_dir, k, num_points, **augmentation_settings):
+    def __init__(self, data_dir, k, num_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.k = k
         self.augmentation_settings = augmentation_settings
@@ -436,15 +446,15 @@ def get_loaders(dataset_name, batch_size, final, dir_path, **dataset_settings):
     return train_loader, val_loader, test_loader
 
 
-def get_cw_loaders(t, final, filter_class=None):
+def get_cw_loaders(t, m, final):
     pin_memory = torch.cuda.is_available()
     batch_size = t.train_loader.batch_size
     t.train_loader.dataset.rotation = False
-    t.test(partition='train')
+    t.test(partition='train', m=m)
     t.train_loader.dataset.rotation = True
-    cw_train_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets, filter_class)
-    t.test(partition='test' if final else 'val')
-    cw_test_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets, filter_class)
+    cw_train_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets)
+    t.test(partition='test' if final else 'val', m=m)
+    cw_test_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets)
     cw_train_loader = torch.utils.data.DataLoader(
         cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
     cw_test_loader = torch.utils.data.DataLoader(
