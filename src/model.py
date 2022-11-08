@@ -4,19 +4,7 @@ from torch.autograd import Function
 from src.encoder import get_encoder, CWEncoder
 from src.decoder import get_decoder, CWDecoder
 from src.loss import square_distance
-
-
-class TransferGrad(Function):
-
-    @staticmethod
-    # transfer the grad from output to input during backprop
-    def forward(ctx, input, output):
-        return output
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output, None
-
+from src.layer import TransferGrad
 
 class VAECW(nn.Module):
     settings = {}

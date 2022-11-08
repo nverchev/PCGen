@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.autograd import Function
 
 negative_slope = 0.2
 act = nn.LeakyReLU(negative_slope=0.2, inplace=True)
@@ -79,3 +80,13 @@ class EdgeConvLayer(LinearLayer):
         return nn.BatchNorm2d(self.out_dim)
 
 
+class TransferGrad(Function):
+
+    @staticmethod
+    # transfer the grad from output to input during backprop
+    def forward(ctx, input, output):
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output, None
