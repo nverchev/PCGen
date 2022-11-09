@@ -196,6 +196,7 @@ class AE(nn.Module):
 
 class VQVAE(AE):
     recon_cw = False
+    transfer_grad = TransferGrad()
 
     def __init__(self, book_size, cw_dim,  dim_embedding, **model_settings):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
@@ -209,6 +210,7 @@ class VQVAE(AE):
         self.settings['book_size'] = self.book_size
         self.settings['dim_embedding'] = self.dim_embedding
         self.settings['cw_encoder'] = self.cw_encoder.settings
+
 
     def quantise(self, x):
         batch, embed = x.size()
@@ -232,7 +234,7 @@ class VQVAE(AE):
 
     def decode(self, data):
         data['cw_e'], data['cw_idx'] = self.quantise(data['cw_q'])
-        data['cw'] = TransferGrad().apply(data['cw_q'], data['cw_e'])
+        data['cw'] = self.transfer_grad.apply(data['cw_q'], data['cw_e'])
         return super().decode(data)
 
     def forward(self, x, indices):

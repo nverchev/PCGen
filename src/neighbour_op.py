@@ -73,22 +73,21 @@ def get_graph_features(x, k=20, indices=None):
     return indices, feature
 
 
-def graph_filtering(x_in, k=4):
-    neighbours = get_neighbours(x_in, k=k, indices=None)[1]
+def graph_filtering(x, k=4):
+    neighbours = get_neighbours(x, k=k, indices=None)[1]
     neighbours = neighbours[..., 1:]  # closest neighbour is point itself
-    diff = x_in.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours
+    diff = x.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours
     dist = torch.sqrt((diff ** 2).sum(1))
     sigma = dist[..., 0:1]
     weights = torch.softmax(-dist/sigma, dim=-1)
     weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours
     #x = 1.5 * x - 0.5 * neighbours.mean(-1).detach()
-    delta_x = 0.5 * (x_in - weighted_neighbours.sum(-1))
-    n1 = neighbours[..., 1] - neighbours[..., 0]
-    n1 = n1 / torch.linalg.vector_norm(n1, dim=1, keepdim=True)
-    n2 = neighbours[..., 2] - neighbours[..., 0]
-    n2 = n2 / torch.linalg.vector_norm(n2, dim=1, keepdim=True)
-    delta_x1 = torch.sum(delta_x * n1, dim=1, keepdim=True) * n1
-    delta_x2 = torch.sum(delta_x * n2, dim=1, keepdim=True) * n2
-    x_out = x_in + delta_x1 + delta_x2
-    TransferGrad().apply(x_out, x_in)
-    return x_in
+    delta_x = 0.5 * (x - weighted_neighbours.sum(-1))
+    # n1 = neighbours[..., 1] - neighbours[..., 0]
+    # n1 = n1 / torch.linalg.vector_norm(n1, dim=1, keepdim=True)
+    # n2 = neighbours[..., 2] - neighbours[..., 0]
+    # n2 = n2 / torch.linalg.vector_norm(n2, dim=1, keepdim=True)
+    # delta_x1 = torch.sum(delta_x * n1, dim=1, keepdim=True) * n1
+    # delta_x2 = torch.sum(delta_x * n2, dim=1, keepdim=True) * n2
+    x_out = x + delta_x.detach()
+    return x
