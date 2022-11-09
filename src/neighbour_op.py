@@ -89,5 +89,5 @@ def graph_filtering(x, k=4):
     # n2 = n2 / torch.linalg.vector_norm(n2, dim=1, keepdim=True)
     # delta_x1 = torch.sum(delta_x * n1, dim=1, keepdim=True) * n1
     # delta_x2 = torch.sum(delta_x * n2, dim=1, keepdim=True) * n2
-    x_out = x + delta_x.detach()
+    x = x + delta_x.detach()
     return x
