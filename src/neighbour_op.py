@@ -82,7 +82,7 @@ def graph_filtering(x, k=4):
     weights = torch.softmax(-dist/sigma, dim=-1)
     weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours
     #x = 1.5 * x - 0.5 * neighbours.mean(-1).detach()
-    delta_x = 0.5 * (x - weighted_neighbours.sum(-1))
+    delta_x = (x - weighted_neighbours.sum(-1))
     n1 = neighbours[..., 1] - neighbours[..., 0]
     n1 = n1 / torch.linalg.vector_norm(n1, dim=1, keepdim=True)
     n2 = neighbours[..., 2] - neighbours[..., 0]
