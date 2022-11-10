@@ -4,9 +4,21 @@ basket
 bathtub
 bed
 bench
-birdhouse
-bookshelf
 bottle
+birdhouse
+bus
+bottle2
+cabinet
+helmet
+jar
+chair
+monitor
+table
+pillow
+not sure
+earphone
+car
+bookshelf
 bowl
 bus
 cabinet

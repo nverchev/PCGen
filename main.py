@@ -236,7 +236,7 @@ def main(task='train/eval'):
         if load == -1 and decoder_name == 'TearingNet':
             exp_name_split = exp_name.split('_')
             exp_name_split[1] = 'FoldingNet'
-            load_path = os.path.join(dir_path, 'models', '_'.join(exp_name_split), f'model_epoch{training_epochs}.pt')
+            load_path = os.path.join('models', '_'.join(exp_name_split), f'model_epoch{training_epochs}.pt')
             assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
             state_dict = torch.load(load_path, map_location=device)
             trainer.model.load_state_dict(state_dict, strict=False)
