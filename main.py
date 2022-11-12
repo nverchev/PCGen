@@ -30,8 +30,8 @@ def parse_args():
     parser.add_argument('--ae', type=str, default='AE', choices=['Oracle', 'AE', 'VAE', 'VQVAE'],
                         help='Oracle is identity (measures resampling error), VQVAE adds quantisation')
     parser.add_argument('--dir_path', type=str, default='./', help='Directory for storing data and models')
-    parser.add_argument('--dataset', type=str, default='modelnet40',
-                        choices=['modelnet40', 'shapenet', 'coins', 'faust', 'shapenet_old'])
+    parser.add_argument('--dataset', type=str, default='Modelnet40',
+                        choices=['Modelnet40', 'ShapenetAtlas', 'Coins', 'Faust', 'ShapenetFlow'])
     parser.add_argument('--select_classes', type=str, default=[], nargs='+',
                         help='selects only specific classes of the dataset')
     parser.add_argument('--num_points', type=int, default=0,
@@ -45,7 +45,7 @@ def parse_args():
     parser.add_argument('--k', type=int, default=20,
                         help='Number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--cw_dim', type=int, default=512, help='Dimension of the codeword space')
-    parser.add_argument('--z_dim', type=int, default=32, help='Dimension of the second encoding space')
+    parser.add_argument('--z_dim', type=int, default=64, help='Dimension of the second encoding space')
     parser.add_argument('--book_size', type=int, default=16, help='Dictionary size for vector quantisation')
     parser.add_argument('--dim_embedding', type=int, default=4, help='Dimension of the vector for vector quantisation')
     parser.add_argument('--c_reg', type=float, default=1, help='Coefficient for regularization')
@@ -89,9 +89,9 @@ def main(task='train/eval'):
     if args.num_points:
         num_points = args.num_points
     else:
-        if dataset_name in ['modelnet40', 'shapenet_old']:
+        if dataset_name in ['Modelnet40', 'ShapenetFlow']:
             num_points = 2048
-        elif dataset_name in ['faust']:
+        elif dataset_name in ['Faust']:
             num_points = 6890
         else:
             num_points = 2500
