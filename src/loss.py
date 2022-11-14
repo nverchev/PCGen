@@ -112,8 +112,8 @@ class ReconLoss:
 
     def __init__(self, backprop='Chamfer'):
         self.recon_loss = backprop
-        self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.03,
-                                             diameter=2, scaling=.3, backend='tensorized')
+        self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.001,
+                                             diameter=2, scaling=.9, backend='online')
 
     def __call__(self, inputs, recon):
         pairwise_dist = square_distance(inputs, recon)

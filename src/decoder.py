@@ -309,10 +309,11 @@ class PCGen(nn.Module):
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
+        #torch.save(x, 'before_filter.pt')
         if self.gf:
             x = graph_filtering(x)
-        if self.gf:
-            x = graph_filtering(x)
+        #torch.save(x, 'after_filter.pt')
+        #raise
         return x
 
 

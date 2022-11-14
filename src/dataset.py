@@ -13,7 +13,6 @@ def normalize(cloud):
     cloud /= np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
     return cloud.astype(np.float32)
 
-
 def random_rotation(*clouds):
     theta = 2 * torch.pi * torch.rand(1)
     s = torch.sin(theta)
@@ -180,7 +179,7 @@ class PCDatasetResampled(Dataset):
         cloud = np.load(path)
         index_pool = np.arange(cloud.shape[0])
         sampling_input = np.random.choice(index_pool, size=self.num_points, replace=False)
-        clouds = [cloud[sampling_input]]
+        clouds = [normalize(cloud[sampling_input])]
         if self.resample:
             sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
             clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
@@ -192,68 +191,40 @@ class PCDatasetResampled(Dataset):
         label = self.label_index.index(label)
         return [*clouds, 0], label
 
-class PCDatasetResampled(Dataset):
-    def __init__(self, paths, num_points, labels, resample, rotation, translation):
-        self.paths = paths
-        self.resample = resample
-        self.rotation = rotation
-        self.translation_and_scale = translation
-        self.num_points = num_points
-        self.label_index = list(labels.keys())
-
-    def __len__(self):
-        return len(self.paths)
-
-    def __getitem__(self, index):
-        path = self.paths[index]
-        cloud = np.load(path)
-        index_pool = np.arange(cloud.shape[0])
-        sampling_input = np.random.choice(index_pool, size=self.num_points, replace=False)
-        clouds = [cloud[sampling_input]]
-        if self.resample:
-            sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
-            clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
-        if self.rotation:
-            clouds = random_rotation(*clouds)
-        if self.translation_and_scale:
-            clouds = random_scale_translate(*clouds)
-        label = os.path.split(os.path.split(os.path.split(path)[0])[0])[1]
-        label = self.label_index.index(label)
-        return [*clouds, 0], label
-
-class PCDatasetResampled(Dataset):
-    def __init__(self, paths, num_points, labels, resample, rotation, translation):
-        self.paths = paths
-        self.pcd = []
-        self.labels = []
-        self.resample = resample
-        self.rotation = rotation
-        self.translation_and_scale = translation
-        self.num_points = num_points
-        self.label_index = list(labels.keys())
-        for path in paths:
-            self.pcd.append(np.load(path))
-            label = os.path.split(os.path.split(os.path.split(path)[0])[0])[1]
-            self.labels.append(self.label_index.index(label))
-
-    def __len__(self):
-        return len(self.paths)
-
-    def __getitem__(self, index):
-        cloud = self.pcd[index]
-        label = self.labels[index]
-        index_pool = np.arange(cloud.shape[0])
-        sampling_input = np.random.choice(index_pool, size=self.num_points, replace=False)
-        clouds = [torch.from_numpy(normalize(cloud[sampling_input]))]
-        if self.resample:
-            sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
-            clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
-        if self.rotation:
-            clouds = random_rotation(*clouds)
-        if self.translation_and_scale:
-            clouds = random_scale_translate(*clouds)
-        return [*clouds, 0], label
-
+#
+# class PCDatasetResampled(Dataset):
+#     def __init__(self, paths, num_points, labels, resample, rotation, translation):
+#         self.paths = paths
+#         self.pcd = []
+#         self.labels = []
+#         self.resample = resample
+#         self.rotation = rotation
+#         self.translation_and_scale = translation
+#         self.num_points = num_points
+#         self.label_index = list(labels.keys())
+#         for path in paths:
+#             self.pcd.append(np.load(path))
+#             label = os.path.split(os.path.split(os.path.split(path)[0])[0])[1]
+#             self.labels.append(self.label_index.index(label))
+#
+#     def __len__(self):
+#         return len(self.paths)
+#
+#     def __getitem__(self, index):
+#         cloud = self.pcd[index]
+#         label = self.labels[index]
+#         index_pool = np.arange(cloud.shape[0])
+#         sampling_input = np.random.choice(index_pool, size=self.num_points, replace=False)
+#         clouds = [torch.from_numpy(normalize(cloud[sampling_input]))]
+#         if self.resample:
+#             sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
+#             clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
+#         if self.rotation:
+#             clouds = random_rotation(*clouds)
+#         if self.translation_and_scale:
+#             clouds = random_scale_translate(*clouds)
+#         return [*clouds, 0], label
+#
 
 class Modelnet40Dataset:
     with open(os.path.join('metadata', 'modelnet_classes.txt'), 'r') as f:
