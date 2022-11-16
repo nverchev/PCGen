@@ -13,6 +13,7 @@ def normalize(cloud):
     cloud /= np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
     return cloud.astype(np.float32)
 
+
 def random_rotation(*clouds):
     theta = 2 * torch.pi * torch.rand(1)
     s = torch.sin(theta)
@@ -140,13 +141,31 @@ class PiercedCoinsDataset(Dataset):
         return [plate, self.neighbours], n_holes
 
 
-class PCDataset(Dataset):
+class AugmentDataset(Dataset):
+    def __init__(self, rotation, translation):
+        self.rotation = rotation
+        self.translation_and_scale = translation
+
+    def __len__(self):
+        return NotImplementedError
+
+    def __getitem__(self, index):
+        return NotImplementedError
+
+    def augment(self, clouds):
+        if self.rotation:
+            clouds = random_rotation(*clouds)
+        if self.translation_and_scale:
+            clouds = random_scale_translate(*clouds)
+        return clouds
+
+
+class Modelnet40Split(AugmentDataset):
     def __init__(self, pcd, indices, labels, rotation, translation):
+        super().__init__(rotation, translation)
         self.pcd = pcd
         self.indices = indices
         self.labels = labels
-        self.rotation = rotation
-        self.translation_and_scale = translation
 
     def __len__(self):
         return self.pcd.shape[0]
@@ -155,20 +174,17 @@ class PCDataset(Dataset):
         cloud, index, label = self.pcd[index], self.indices[index], self.labels[index]
         cloud = torch.from_numpy(cloud)
         index = torch.from_numpy(index).long()
-        if self.rotation:
-            cloud, = random_rotation(cloud)
-        if self.translation_and_scale:
-            cloud, = random_scale_translate(cloud)
-        return [cloud, index], label
+        clouds = self.augment([cloud])
+        return [*clouds, index], label
 
 
-class PCDatasetResampled(Dataset):
+class ShapenetAtlasSplit(AugmentDataset):
     def __init__(self, paths, num_points, labels, resample, rotation, translation):
+        super().__init__(rotation, translation)
         self.paths = paths
-        self.resample = resample
-        self.rotation = rotation
         self.translation_and_scale = translation
         self.num_points = num_points
+        self.resample = resample
         self.label_index = list(labels.values())
 
     def __len__(self):
@@ -183,48 +199,43 @@ class PCDatasetResampled(Dataset):
         if self.resample:
             sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
             clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
-        if self.rotation:
-            clouds = random_rotation(*clouds)
-        if self.translation_and_scale:
-            clouds = random_scale_translate(*clouds)
         label = os.path.split(os.path.split(path)[0])[1]
         label = self.label_index.index(label)
-        return [*clouds, 0], label
+        index = 0
+        clouds = self.augment(clouds)
+        return [*clouds, index], label
 
-#
-# class PCDatasetResampled(Dataset):
-#     def __init__(self, paths, num_points, labels, resample, rotation, translation):
-#         self.paths = paths
-#         self.pcd = []
-#         self.labels = []
-#         self.resample = resample
-#         self.rotation = rotation
-#         self.translation_and_scale = translation
-#         self.num_points = num_points
-#         self.label_index = list(labels.keys())
-#         for path in paths:
-#             self.pcd.append(np.load(path))
-#             label = os.path.split(os.path.split(os.path.split(path)[0])[0])[1]
-#             self.labels.append(self.label_index.index(label))
-#
-#     def __len__(self):
-#         return len(self.paths)
-#
-#     def __getitem__(self, index):
-#         cloud = self.pcd[index]
-#         label = self.labels[index]
-#         index_pool = np.arange(cloud.shape[0])
-#         sampling_input = np.random.choice(index_pool, size=self.num_points, replace=False)
-#         clouds = [torch.from_numpy(normalize(cloud[sampling_input]))]
-#         if self.resample:
-#             sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
-#             clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
-#         if self.rotation:
-#             clouds = random_rotation(*clouds)
-#         if self.translation_and_scale:
-#             clouds = random_scale_translate(*clouds)
-#         return [*clouds, 0], label
-#
+
+class ShapenetFlowSplit(AugmentDataset):
+    def __init__(self, paths, num_points, labels, resample, rotation, translation):
+        super().__init__(rotation, translation)
+        self.paths = paths
+        self.pcd = []
+        self.labels = []
+        self.resample = resample
+        self.num_points = num_points
+        self.label_index = list(labels.keys())
+        for path in paths:
+            self.pcd.append(np.load(path))
+            label = os.path.split(os.path.split(os.path.split(path)[0])[0])[1]
+            self.labels.append(self.label_index.index(label))
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, index):
+        cloud = self.pcd[index]
+        label = self.labels[index]
+        index_pool = np.arange(cloud.shape[0])
+        sampling_input = np.random.choice(index_pool, size=self.num_points, replace=False)
+        clouds = [torch.from_numpy(normalize(cloud[sampling_input]))]
+        if self.resample:
+            sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
+            clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
+        index = 0
+        clouds = self.augment(clouds)
+        return [*clouds, index], label
+
 
 class Modelnet40Dataset:
     with open(os.path.join('metadata', 'modelnet_classes.txt'), 'r') as f:
@@ -257,8 +268,8 @@ class Modelnet40Dataset:
             split = 'train'
         elif split in ['train', 'val'] and 'val' not in self.pcd.keys():
             self.train_val_to_train_and_val()
-        return PCDataset(pcd=self.pcd[split], indices=self.indices[split],
-                         labels=self.labels[split], **self.augmentation_settings)
+        return Modelnet40Split(pcd=self.pcd[split], indices=self.indices[split],
+                               labels=self.labels[split], **self.augmentation_settings)
 
     def download(self):
         url = 'https://cloud.tsinghua.edu.cn/f/b3d9fe3e2a514def8097/?dl=1'
@@ -302,7 +313,7 @@ class ShapeNetDatasetAtlas:
             self.paths.setdefault('test', []).extend(files[second_split:])
 
     def split(self, split):
-        return PCDatasetResampled(self.paths[split], self.num_points, self.classes, resample=split in ['val', 'test'],
+        return ShapenetAtlasSplit(self.paths[split], self.num_points, self.classes, resample=split in ['val', 'test'],
                                   **self.augmentation_settings)
 
     def to_numpy(self):
@@ -358,8 +369,8 @@ class ShapeNetDatasetFlow:
             self.paths.setdefault('test', []).extend(test_files)
 
     def split(self, split):
-        return PCDatasetResampled(self.paths[split], self.num_points, self.classes, resample=split in ['val', 'test'],
-                                  **self.augmentation_settings)
+        return ShapenetFlowSplit(self.paths[split], self.num_points, self.classes, resample=split in ['val', 'test'],
+                                 **self.augmentation_settings)
 
 
 class DFaustDataset(Dataset):

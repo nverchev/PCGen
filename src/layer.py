@@ -60,7 +60,7 @@ class LinearLayer(nn.Module):
         return nn.BatchNorm1d(self.out_dim)
 
     def forward(self, x):
-        x = self.dense(x) if self.batch_norm is False else self.bn(self.dense(x))
+        x = self.bn(self.dense(x)) if self.batch_norm else self.dense(x)
         return x if self.act is None else self.act(x)
 
 

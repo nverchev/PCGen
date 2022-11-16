@@ -10,14 +10,19 @@ class CWEncoder(nn.Module):
 
     def __init__(self, cw_dim, z_dim):
         super().__init__()
-        self.h_dim = [z_dim * 16, z_dim * 4]
-        modules = [LinearLayer(cw_dim, self.h_dim[0])]
+        self.cw_dim = cw_dim
+        self.conv = nn.Sequential(nn.Conv1d(1, 2, kernel_size=4, stride=4),
+                                  nn.BatchNorm1d(2),
+                                  nn.LeakyReLU(inplace=True))
+        self.h_dim = [z_dim * 4, z_dim * 2]
+        modules = [LinearLayer(cw_dim // 2, self.h_dim[0])]
         for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
             modules.append(LinearLayer(in_dim, out_dim))
-        modules.append(LinearLayer(self.h_dim[-1], 2 * z_dim, act=None))
+        modules.append(LinearLayer(self.h_dim[-1], 2 * z_dim, act=None, batch_norm=False))
         self.encode = nn.Sequential(*modules)
 
     def forward(self, x):
+        x = self.conv(x.unsqueeze(1)).view(-1, self.cw_dim // 2)
         return self.encode(x)
 
 

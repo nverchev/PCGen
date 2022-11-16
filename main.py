@@ -46,7 +46,7 @@ def parse_args():
                         help='Number of neighbours of a point (counting the point itself) in DGCNN]')
     parser.add_argument('--cw_dim', type=int, default=512, help='Dimension of the codeword space')
     parser.add_argument('--z_dim', type=int, default=64, help='Dimension of the second encoding space')
-    parser.add_argument('--book_size', type=int, default=16, help='Dictionary size for vector quantisation')
+    parser.add_argument('--book_size', type=int, default=32, help='Dictionary size for vector quantisation')
     parser.add_argument('--dim_embedding', type=int, default=4, help='Dimension of the vector for vector quantisation')
     parser.add_argument('--c_reg', type=float, default=1, help='Coefficient for regularization')
     parser.add_argument('--no_cuda', action='store_true', default=False, help='Runs on CPU')
@@ -71,7 +71,7 @@ def parse_args():
 
 def main(task='train/eval'):
     assert task in ['train/eval', 'return model for profiling', 'return loaded model for random generation',
-                    'train cw encoder', 'visualise reconstructions']
+                    'train cw encoder', 'visualise reconstructions', 'evaluate random generation']
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
@@ -144,6 +144,7 @@ def main(task='train/eval'):
                           components=components,
                           gf=graph_filtering,
                           cw_dim=cw_dim,
+                          z_dim=z_dim,
                           k=k,
                           m=m,
                           ae=ae,
@@ -160,6 +161,7 @@ def main(task='train/eval'):
         load_path = os.path.join('models', exp_name, f'model_epoch{training_epochs}.pt')
         assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
         model.load_state_dict(torch.load(load_path, map_location=device))
+        model.decoder.m = m
         z = torch.randn(batch_size, z_dim).to(device)
         return model, z
 
@@ -220,6 +222,7 @@ def main(task='train/eval'):
         trainer.load()
     elif load > 0:
         trainer.load(load)
+
     if task == 'visualise reconstructions':
         trainer.test(partition='train' if not model_eval else 'test' if final else 'val', m=m)
         recon = trainer.test_outputs['recon']
@@ -231,6 +234,25 @@ def main(task='train/eval'):
             input_pcs.append(dataset[i][0][0])
             recon_pcs.append(recon[i])
         return input_pcs, recon_pcs
+
+    if task == 'evaluate random generation':
+        assert ae == 'VQVAE', 'Only VQVAE supported'
+        trainer.model.decoder.m = m
+        test_dataset = []
+        genereted_dataset = []
+        for batch_idx, (inputs, targets) in enumerate(trainer.test_loader):
+            test_dataset.extend(inputs[0])
+        for _ in range(batch_idx + 1):
+            samples = trainer.model.cw_decode({'z': torch.randn(batch_size, z_dim).to(device)})['recon']
+            genereted_dataset.extend(samples)
+        l = len(test_dataset)
+        loss_array = np.empty(2 * l, 2 * l, dtype=float)
+        all_shapes = test_dataset + genereted_dataset
+        for i, shapei in enumerate(all_shapes):
+            for j, shapej in enumerate(all_shapes):
+                loss_array[i, j] = trainer.loss({'recon': shapei}, [shapej, None], None)[recon_loss]
+        np.save('loss_array', loss_array)
+        return loss_array
 
     if not model_eval:
         if load == -1 and decoder_name == 'TearingNet':

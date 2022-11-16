@@ -405,7 +405,6 @@ class AETrainer(Trainer):
         input_shape = inputs[0]
         return {'x': input_shape, 'indices': indices}
 
-
 class CWTrainer(Trainer):
 
     def __init__(self, model, exp_name, block_args):

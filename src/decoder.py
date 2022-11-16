@@ -7,21 +7,44 @@ from src.neighbour_op import graph_filtering
 
 OUT_CHAN = 3
 
-
 class CWDecoder(nn.Module):
 
     def __init__(self, cw_dim, z_dim):
         super().__init__()
-        self.h_dim = [z_dim * 4, z_dim * 16]
+        self.cw_dim = cw_dim
+        self.extract = LinearLayer(z_dim, 4, act=None)
+        self.h_dim = [z_dim * 2]
         modules = [LinearLayer(z_dim, self.h_dim[0])]
         for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
             modules.append(LinearLayer(in_dim, out_dim))
-        modules.append(LinearLayer(self.h_dim[-1], cw_dim, act=None))
+        modules.append(LinearLayer(self.h_dim[-1], cw_dim))
         self.decode = nn.Sequential(*modules)
+        self.conv = nn.Conv1d(1, 4, kernel_size=4, stride=4)
+
 
     def forward(self, x):
-        return self.decode(x)
+        x = self.decode(x)
+        x = x.view(-1, 1, self.cw_dim)
+        x = self.conv(x).transpose(2, 1).reshape(-1, self.cw_dim)
+        return x
 
+
+
+#
+# class CWDecoder(nn.Module):
+#
+#     def __init__(self, cw_dim, z_dim):
+#         super().__init__()
+#         self.cw_dim = cw_dim
+#         self.h_dim = [z_dim * 4, z_dim * 16, z_dim * 16]
+#         modules = [LinearLayer(z_dim, self.h_dim[0])]
+#         for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
+#             modules.append(LinearLayer(in_dim, out_dim))
+#         modules.append(LinearLayer(self.h_dim[-1], cw_dim, act=None, batch_norm=False))
+#         self.decode = nn.Sequential(*modules)
+#
+#     def forward(self, x):
+#         return self.decode(x)
 
 class FullyConnected(nn.Module):
 
@@ -184,9 +207,10 @@ class AtlasNetv2(nn.Module):
         device = x.device
         outs = []
         for i in range(self.num_patches):
-            rand_grid = torch.rand(batch, 2, m_patch, device=device)
+            rand_grid = torch.rand(batch, 2, self.m // self.num_patches, device=device)
             rand_grid = self.patchDeformation[i](rand_grid)
-            y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
+            y = x.unsqueeze(2).expand(-1, -1, self.m // self.num_patches
+                                      ).contiguous()
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
         x = torch.cat(outs, 2).contiguous()
@@ -218,7 +242,7 @@ class AtlasNetv2Structures(AtlasNetv2):
     def __init__(self, cw_dim, m, components, gf, **model_settings):
         super().__init__(cw_dim, m, components, gf)
         self.m_patch = self.m // self.num_patches
-        self.grid = nn.Parameter(torch.rand(self.num_patches, 2,  self.m // self.num_patches))
+        self.grid = nn.Parameter(torch.rand(self.num_patches, 2, self.m // self.num_patches))
         self.grid.data = F.pad(self.grid, (0, 0, 0, self.patch_embed_dim - 2))
 
     def forward(self, x):
@@ -309,11 +333,8 @@ class PCGen(nn.Module):
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
         x = self.points_convs(x)
-        #torch.save(x, 'before_filter.pt')
         if self.gf:
             x = graph_filtering(x)
-        #torch.save(x, 'after_filter.pt')
-        #raise
         return x
 
 
@@ -328,7 +349,8 @@ class PCGenComponents(nn.Module):
         self.sample_dim = 16
         self.num_groups = components if components else 8
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.Hardtanh(inplace=True))
+        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
+                                           act=nn.Hardtanh(inplace=True))
         self.group_conv = nn.ModuleList()
         self.group_final = nn.ModuleList()
         for _ in range(self.num_groups):
@@ -337,7 +359,7 @@ class PCGenComponents(nn.Module):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
             self.group_conv.append(nn.Sequential(*modules))
             self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups,  self.num_groups, batch_norm=False, act=None)
+        self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, act=None)
 
     def forward(self, z, s=None):
         batch = z.size()[0]
@@ -360,6 +382,7 @@ class PCGenComponents(nn.Module):
         if self.gf:
             x = graph_filtering(x)
         return x
+
 
 def get_decoder(decoder_name):
     decoder_dict = {
