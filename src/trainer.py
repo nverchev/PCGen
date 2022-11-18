@@ -367,13 +367,13 @@ class AETrainer(Trainer):
         self.model.decoder.m = m_old
         return
 
-    def test_cw_recon(self, partition, m, all_metrics=False, denormalise=False):
+    def test_cw_recon(self, *args, **kwargs):
         try:
             self.model.recon_cw = True
         except AttributeError:
             print('Codeword recontruction is only supported for the VQVAE model')
         else:
-            self.test(partition=partition, m=m, all_metrics=False, denormalise=False)
+            self.test(*args, **kwargs)
             self.model.recon_cw = False
         return
 

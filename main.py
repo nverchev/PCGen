@@ -58,7 +58,6 @@ def parse_args():
                              '-1 for  increasing sequence 128 -> 4096, 0 input number of points ')
     parser.add_argument('--m_test', type=int, default=0, help='Points generated when testing,'
                                                               ' 0 for input number of points')
-    parser.add_argument('--denormalise', action='store_true', default=False,  help='evaluation in original space')
     parser.add_argument('--ind', type=int, default=[0], nargs='+', help='index for reconstruction to visualize')
     parser.add_argument('--load', type=int, default=-1,
                         help='Load a saved model with the same settings. -1 for starting from scratch,'
@@ -112,7 +111,7 @@ def main(task='train/eval'):
     min_decay = args.min_decay
     checkpoint_every = args.checkpoint
     m = args.m_test if args.m_test else num_points
-    denormalise = args.denormalise
+    denormalise = dataset_name in ['ShapenetFlow']
     m_training = args.m_training if args.m_training else num_points
     ind = args.ind
     load = args.load
@@ -241,6 +240,7 @@ def main(task='train/eval'):
         return input_pcs, recon_pcs
 
     if task == 'evaluate random generation':
+
         assert ae == 'VQVAE', 'Only VQVAE supported'
         trainer.model.decoder.m = m
         test_dataset = []

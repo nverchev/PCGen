@@ -195,3 +195,24 @@ class AllMetrics:
             'Sinkhorn': self.sinkhorn(cloud1, cloud2).sum(0),
         }
         return dict_recon_metrics
+
+    #
+    # def pairwise_similarity(self, cloud1, cloud2):
+    #         assert ae == 'VQVAE', 'Only VQVAE supported'
+    #         trainer.model.decoder.m = m
+    #         test_dataset = []
+    #         genereted_dataset = []
+    #         for batch_idx, (inputs, targets) in enumerate(trainer.test_loader):
+    #             test_dataset.extend(inputs[0])
+    #         for _ in range(batch_idx + 1):
+    #             samples = trainer.model.cw_decode({'z': torch.randn(batch_size, z_dim).to(device)})['recon']
+    #             genereted_dataset.extend(samples)
+    #         l = len(test_dataset)
+    #         loss_array = np.empty(2 * l, 2 * l, dtype=float)
+    #         all_shapes = test_dataset + genereted_dataset
+    #         for i, shapei in enumerate(all_shapes):
+    #             for j, shapej in enumerate(all_shapes):
+    #                 loss_array[i, j] = trainer.loss({'recon': shapei}, [shapej, None], None)[recon_loss]
+    #         np.save('loss_array', loss_array)
+    #         return loss_array
+    #     return dict_recon_metrics
