@@ -58,6 +58,7 @@ def parse_args():
                              '-1 for  increasing sequence 128 -> 4096, 0 input number of points ')
     parser.add_argument('--m_test', type=int, default=0, help='Points generated when testing,'
                                                               ' 0 for input number of points')
+    parser.add_argument('--denormalise', action='store_true', default=False,  help='evaluation in original space')
     parser.add_argument('--ind', type=int, default=[0], nargs='+', help='index for reconstruction to visualize')
     parser.add_argument('--load', type=int, default=-1,
                         help='Load a saved model with the same settings. -1 for starting from scratch,'
@@ -111,6 +112,7 @@ def main(task='train/eval'):
     min_decay = args.min_decay
     checkpoint_every = args.checkpoint
     m = args.m_test if args.m_test else num_points
+    denormalise = args.denormalise
     m_training = args.m_training if args.m_training else num_points
     ind = args.ind
     load = args.load
@@ -214,7 +216,7 @@ def main(task='train/eval'):
                 trainer.test_cw_recon(partition='test' if final else 'val', m=m)
         else:
             cw_trainer.test(partition='test')
-            trainer.test_cw_recon(partition='test' if final else 'val', m=m)
+            trainer.test_cw_recon(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
         return
 
     # loads last model
@@ -224,15 +226,18 @@ def main(task='train/eval'):
         trainer.load(load)
 
     if task == 'visualise reconstructions':
-        trainer.test(partition='train' if not model_eval else 'test' if final else 'val', m=m)
-        recon = trainer.test_outputs['recon']
+        trainer.model.decoder.m = m
+        dataset = (train_loader if not model_eval else test_loader if final else val_loader).dataset
         input_pcs = []
         recon_pcs = []
         for i in ind:
-            assert i < len(recon), 'Index is too large for the selected dataset'
-            dataset = test_loader.dataset if final else val_loader.dataset  # TO DO: fix train input
-            input_pcs.append(dataset[i][0][0])
-            recon_pcs.append(recon[i])
+            assert i < len(dataset), 'Index is too large for the selected dataset'
+            dataset_row = dataset[i]
+            scale = dataset_row[0][0]
+            input_pcs.append(dataset_row[0][1] * scale)
+            torch_input = dataset_row[0][-2].unsqueeze(0).to(device)
+            torch_input.requires_grad = False
+            recon_pcs.append(trainer.model(x=torch_input, indices=None)['recon'][0] * scale)
         return input_pcs, recon_pcs
 
     if task == 'evaluate random generation':
@@ -271,7 +276,9 @@ def main(task='train/eval'):
             trainer.save()
             trainer.test(partition='test' if final else 'val', m=m)
     else:
-        trainer.test(partition='test' if final else 'val', m=m)
+        trainer.test(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
+
+
 
 
 if __name__ == '__main__':

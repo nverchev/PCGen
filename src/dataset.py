@@ -8,10 +8,11 @@ import glob2
 import openmesh
 
 
-def normalize(cloud):
+def normalise(cloud):
     cloud -= cloud.mean(axis=0)
-    cloud /= np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
-    return cloud.astype(np.float32)
+    std = np.max(np.sqrt(np.sum(cloud ** 2, axis=1)))
+    cloud /= std
+    return cloud, std
 
 
 def random_rotation(*clouds):
@@ -48,16 +49,16 @@ def jitter(cloud, sigma=0.01, clip=0.02):
 
 
 class CWDataset(Dataset):
-    def __init__(self, cw_q, cw_e, labels):
-        self.cw_q = torch.stack(cw_q)
+    def __init__(self, cw_e, cw_idx, labels):
         self.cw_e = torch.stack(cw_e)
+        self.cw_idx = torch.stack(cw_idx)
         self.labels = torch.stack(labels)
 
     def __len__(self):
-        return self.cw_q.shape[0]
+        return self.cw_e.shape[0]
 
     def __getitem__(self, index):
-        return [self.cw_q[index], self.cw_e[index]], self.labels[index]
+        return [self.cw_e[index], self.cw_idx[index]], self.labels[index], index
 
 
 class PiercedCoinsDataset(Dataset):
@@ -84,7 +85,6 @@ class PiercedCoinsDataset(Dataset):
         return np.stack([x, y, z], axis=1)
 
     def create_hole(self, coin, pt):
-        global hole1_index, hole1, hole
         hole_index = np.logical_and(abs(coin[:, 0] - pt[0]) < self.width, abs(coin[:, 1] - pt[1]) < self.width)
         hole = coin[hole_index]
         hole1_index = hole[:, 2] == self.half_thickness
@@ -138,7 +138,7 @@ class PiercedCoinsDataset(Dataset):
                 self.create_hole(coin, pt)
                 break
         plate = torch.from_numpy(coin)
-        return [plate, self.neighbours], n_holes
+        return [1, plate, self.neighbours], n_holes, index
 
 
 class AugmentDataset(Dataset):
@@ -163,7 +163,7 @@ class AugmentDataset(Dataset):
 class Modelnet40Split(AugmentDataset):
     def __init__(self, pcd, indices, labels, rotation, translation):
         super().__init__(rotation, translation)
-        self.pcd = pcd
+        self.pcd = pcd.astype(np.float32)
         self.indices = indices
         self.labels = labels
 
@@ -171,11 +171,11 @@ class Modelnet40Split(AugmentDataset):
         return self.pcd.shape[0]
 
     def __getitem__(self, index):
-        cloud, index, label = self.pcd[index], self.indices[index], self.labels[index]
+        cloud, neighbours_indices, label = self.pcd[index], self.indices[index], self.labels[index]
         cloud = torch.from_numpy(cloud)
-        index = torch.from_numpy(index).long()
+        neighbours_indices = torch.from_numpy(neighbours_indices).long()
         clouds = self.augment([cloud])
-        return [*clouds, index], label
+        return [1., *clouds, neighbours_indices], label, index
 
 
 class ShapenetAtlasSplit(AugmentDataset):
@@ -184,7 +184,7 @@ class ShapenetAtlasSplit(AugmentDataset):
         self.paths = paths
         self.translation_and_scale = translation
         self.num_points = num_points
-        self.resample = resample
+        self.resample = False
         self.label_index = list(labels.values())
 
     def __len__(self):
@@ -192,18 +192,17 @@ class ShapenetAtlasSplit(AugmentDataset):
 
     def __getitem__(self, index):
         path = self.paths[index]
-        cloud = np.load(path)
+        cloud = np.load(path).astype(np.float32)
         index_pool = np.arange(cloud.shape[0])
-        sampling_input = np.random.choice(index_pool, size=self.num_points, replace=False)
-        clouds = [normalize(cloud[sampling_input])]
+        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.num_points, replace=False)
+        ref_cloud, scale = normalise(cloud[sampling[:self.num_points]])
+        clouds = [ref_cloud]
         if self.resample:
-            sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
-            clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
-        label = os.path.split(os.path.split(path)[0])[1]
+            clouds.append(torch.from_numpy(normalise(cloud[sampling[self.num_points:]])[0]))
+        label = path.split(os.sep)[-2]
         label = self.label_index.index(label)
-        index = 0
         clouds = self.augment(clouds)
-        return [*clouds, index], label
+        return [scale, *clouds, 0], label, index
 
 
 class ShapenetFlowSplit(AugmentDataset):
@@ -215,26 +214,28 @@ class ShapenetFlowSplit(AugmentDataset):
         self.resample = resample
         self.num_points = num_points
         self.label_index = list(labels.keys())
+        self.scales = []
         for path in paths:
-            self.pcd.append(np.load(path))
-            label = os.path.split(os.path.split(os.path.split(path)[0])[0])[1]
+            pc, scale = normalise(np.load(path))
+            self.pcd.append(pc.astype(np.float32))
+            self.scales.append(scale)
+            label = path.split(os.sep)[-3]
             self.labels.append(self.label_index.index(label))
 
     def __len__(self):
-        return len(self.paths)
+        return len(self.pcd)
 
     def __getitem__(self, index):
         cloud = self.pcd[index]
         label = self.labels[index]
+        scale = self.scales[index]
         index_pool = np.arange(cloud.shape[0])
-        sampling_input = np.random.choice(index_pool, size=self.num_points, replace=False)
-        clouds = [torch.from_numpy(normalize(cloud[sampling_input]))]
+        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.num_points, replace=False)
+        clouds = [torch.from_numpy(cloud[sampling[:self.num_points]])]
         if self.resample:
-            sampling_recon = np.random.choice(index_pool, size=self.num_points, replace=False)
-            clouds.append(torch.from_numpy(normalize(cloud[sampling_recon])))
-        index = 0
+            clouds.append(torch.from_numpy(cloud[sampling[self.num_points:]]))
         clouds = self.augment(clouds)
-        return [*clouds, index], label
+        return [scale, *clouds, 0], label, index
 
 
 class Modelnet40Dataset:
@@ -389,13 +390,14 @@ class DFaustDataset(Dataset):
 
     def __getitem__(self, index):
         cloud, index = self.pcd[index], self.indices[index]
-        cloud = torch.from_numpy(normalize(cloud))
-        index = torch.from_numpy(index).long()
+        cloud, scale = normalise(cloud)
+        cloud = torch.from_numpy(cloud)
+        neighbours_indices = torch.from_numpy(index).long()
         if self.rotation:
             cloud, = random_rotation(cloud)
         if self.translation_and_scale:
             cloud, = random_scale_translate(cloud)
-        return [cloud, index], 0
+        return [scale, cloud, neighbours_indices], 0, index
 
 
 class MPIFaustDataset(Dataset):
@@ -413,7 +415,7 @@ class MPIFaustDataset(Dataset):
     def __getitem__(self, index):
         mesh = openmesh.read_trimesh(self.files[index])
         cloud = mesh.points().astype(np.float32)
-        cloud = torch.from_numpy(normalize(cloud))
+        cloud = torch.from_numpy(normalise(cloud))
         if self.rotation:
             cloud, = random_rotation(cloud)
         if self.translation_and_scale:
@@ -486,10 +488,10 @@ def get_cw_loaders(t, m, final):
     pin_memory = torch.cuda.is_available()
     batch_size = t.train_loader.batch_size
     t.train_loader.dataset.rotation = False
-    t.test(partition='train', m=m)
+    t.test(partition='train', m=m, save_outputs=True)
     t.train_loader.dataset.rotation = True
     cw_train_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets)
-    t.test(partition='test' if final else 'val', m=m)
+    t.test(partition='test' if final else 'val', m=m, save_outputs=True)
     cw_test_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets)
     cw_train_loader = torch.utils.data.DataLoader(
         cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)

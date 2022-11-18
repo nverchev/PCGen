@@ -9,7 +9,7 @@ from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from collections import UserDict
-from src.loss import get_ae_loss, CWEncoderLoss
+from src.loss_and_metrics import get_ae_loss, CWEncoderLoss, AllMetrics
 from src.plot_PC import pc_show
 
 
@@ -109,7 +109,8 @@ class Trainer(metaclass=ABCMeta):
         self.minio = minio_client
         self.models_path = models_path
         self.minio_path = staticmethod(lambda path: path[len(models_path) + 1:]).__func__  # removes model path
-        self.test_targets, self.test_outputs = None, None
+        self.test_indices, self.test_targets, self.test_outputs = None, None, None  # store last test evaluation
+        self.saved_metrics = {}  # saves metrics of last evaluation
         settings_path = self.paths()['settings']
         json.dump(self.settings, open(settings_path, 'w'), default=vars, indent=4)
 
@@ -158,16 +159,17 @@ class Trainer(metaclass=ABCMeta):
                 print('====> Epoch:{:3d}'.format(self.epoch))
             self._run_session(partition='train')
             if self.val_loader and val_after_train:  # check losses on val
-                self._run_session(partition='val', inference=True)  # best to test instead if interested in metrics
+                self._run_session(partition='val', inference=True)
         return
 
-    def test(self, partition):  # runs and stores evaluated test samples
+    def test(self, partition, save_outputs=0, **kwargs):  # runs and stores evaluated test samples
+        save_outputs = self.max_output if save_outputs else 0
         if not self.quiet_mode:
             print('Version ', self.exp_name)
-        self._run_session(partition=partition, inference=True, save_outputs=True)
+        self._run_session(partition=partition, inference=True, save_outputs=save_outputs)
         return
 
-    def _run_session(self, partition='train', inference=False, save_outputs=False):
+    def _run_session(self, partition='train', inference=False, save_outputs=0):
         if inference:
             self.model.eval()
             torch.set_grad_enabled(False)
@@ -186,53 +188,70 @@ class Trainer(metaclass=ABCMeta):
         else:
             raise ValueError('partition options are: "train", "val", "test" ')
         if save_outputs:
-            self.test_targets, self.test_outputs = [], TorchDictList()
+            self.test_indices, self.test_targets, self.test_outputs = [], [], TorchDictList()
 
         epoch_loss = {}
+        epoch_metrics = {}
         num_batch = len(loader)
         iterable = tqdm(enumerate(loader), total=num_batch, disable=self.quiet_mode)
-        for batch_idx, (inputs, targets) in iterable:
+        epoch_seen = 0
+        for batch_idx, (inputs, targets, indices) in iterable:
             if self.converge == 0:
                 return
+            epoch_seen += indices.shape[0]
             inputs, targets = self.recursive_to([inputs, targets], self.device)
             inputs_aux = self.helper_inputs(inputs, targets)
             outputs = self.model(**inputs_aux)
-            batch_loss = self.loss(outputs, inputs, targets)
-            criterion = batch_loss['Criterion']
-            assert not torch.isnan(criterion), print('NANs found:', outputs)
-            for loss, value in batch_loss.items():
-                epoch_loss[loss] = epoch_loss.get(loss, 0) + value.item()
-            if not inference:
+            if inference:
+                batch_metrics = self.metrics(outputs, inputs, targets)
+                for metric, value in batch_metrics.items():
+                    epoch_metrics[metric] = epoch_metrics.get(metric, 0) + value.item()
+            else:
+                batch_loss = self.loss(outputs, inputs, targets)
+                criterion = batch_loss['Criterion']
+                assert not torch.isnan(criterion), print('NANs found:', outputs)
+                for loss, value in batch_loss.items():
+                    epoch_loss[loss] = epoch_loss.get(loss, 0) + value.item()
                 if torch.isinf(criterion) or torch.isnan(criterion):
                     self.converge = 0
                 criterion.backward()
                 self.optimizer.step()
                 self.optimizer.zero_grad()
-            if save_outputs and \
-                    self.max_output > (batch_idx + 1) * loader.batch_size:
+                if not self.quiet_mode:
+                    if batch_idx % (num_batch // 10 or 1) == 0:
+                        iterable.set_postfix({'Seen': epoch_seen,
+                                              'Loss': criterion.item()})
+                    if batch_idx == num_batch - 1:  # clear after last
+                        iterable.set_description('')
+            if save_outputs > (batch_idx + 1) * loader.batch_size:
                 self.test_outputs.extend_dict(self.recursive_to(outputs, 'detach_cpu'))
+                self.test_indices.extend(indices)
                 self.test_targets.extend(self.recursive_to(targets, 'detach_cpu'))
-            if not self.quiet_mode and partition == 'train':
-                if batch_idx % (num_batch // 10 or 1) == 0:
-                    iterable.set_postfix({'Seen': batch_idx * loader.batch_size,
-                                          'Loss': criterion.item()})
-                if batch_idx == num_batch - 1:  # clear after last
-                    iterable.set_description('')
-
-        epoch_loss = {loss: value / num_batch for loss, value in epoch_loss.items()}
-        if not save_outputs:
+        if inference:  # not averaged in batch
+            self.saved_metrics = {metric: value / num_batch if metric == 'Criterion' else value / epoch_seen
+                                  for metric, value in epoch_metrics.items()}
+            print('Metrics:')
+            for metric, value in self.saved_metrics.items():
+                print('{}: {:.4e}'.format(metric, value), end='\t')
+            print()
+        else:
+            epoch_loss = {loss: value / num_batch if loss == 'Criterion' else value / epoch_seen
+                          for loss, value in epoch_loss.items()}
             for loss, value in epoch_loss.items():
                 dict_losses.setdefault(loss, []).append(value)
-        if not self.quiet_mode:
-            print('Average {} losses :'.format(partition))
-            for loss, value in epoch_loss.items():
-                print('{}: {:.4f}'.format(loss, value), end='\t')
-            print()
+            if not self.quiet_mode:
+                print('Average {} losses :'.format(partition))
+                for loss, value in epoch_loss.items():
+                    print('{}: {:.4f}'.format(loss, value), end='\t')
+                print()
         return
 
     @abstractmethod
     def loss(self, output, inputs, targets):
         pass
+
+    def metrics(self, output, inputs, targets):
+        return self.loss(output, inputs, targets)
 
     def helper_inputs(self, inputs, labels):
         return {'x': inputs}
@@ -301,8 +320,8 @@ class Trainer(metaclass=ABCMeta):
                     self.minio.fget_object(self.bin, self.minio_path(file), file)
         self.model.load_state_dict(torch.load(paths['model'],
                                               map_location=torch.device(self.device)))
-        self.optimizer.load_state_dict(torch.load(paths['optim'],
-                                                  map_location=torch.device(self.device)))
+#        self.optimizer.load_state_dict(torch.load(paths['optim'],
+ #                                                 map_location=torch.device(self.device)))
         self.train_losses = json.load(open(paths['train_hist']))
         self.val_losses = json.load(open(paths['val_hist']))
         print('Loaded: ', paths['model'])
@@ -334,24 +353,27 @@ class AETrainer(Trainer):
     def __init__(self, model, exp_name, block_args):
         super().__init__(model, exp_name, **block_args)
         self.acc = None
-        self.cf = None
+        self.cf = None  # confusion matrix
         self._loss = get_ae_loss(block_args)
+        self._metrics = self._loss
         return
 
-    def test(self, partition, m):
+    def test(self, partition, all_metrics=False, denormalise=False, save_outputs=0, **kwargs):
         m_old = self.model.decoder.m
-        self.model.decoder.m = m
-        super().test(partition=partition)
+        self.model.decoder.m = kwargs['m']
+        if all_metrics:
+            self._metrics = lambda x, y, z: AllMetrics(denormalise)(x, y)
+        super().test(partition=partition, save_outputs=save_outputs)
         self.model.decoder.m = m_old
         return
 
-    def test_cw_recon(self, partition, m):
+    def test_cw_recon(self, partition, m, all_metrics=False, denormalise=False):
         try:
             self.model.recon_cw = True
         except AttributeError:
             print('Codeword recontruction is only supported for the VQVAE model')
         else:
-            self.test(partition=partition, m=m)
+            self.test(partition=partition, m=m, all_metrics=False, denormalise=False)
             self.model.recon_cw = False
         return
 
@@ -361,7 +383,7 @@ class AETrainer(Trainer):
     def clas_metric(self, final=False):
         # No rotation here
         self.train_loader.dataset.rotation = False
-        self.test(partition='train')
+        self.test(partition='train', save_outputs=self.test_outputs)
         self.train_loader.dataset.rotation = True
         x_train = np.array([cw.numpy() for cw in self.test_outputs['cw']])
         y_train = np.array([cw.numpy() for cw in self.test_targets])
@@ -402,8 +424,12 @@ class AETrainer(Trainer):
         indices = inputs[-1]
         if torch.all(indices == 0):
             indices = None
-        input_shape = inputs[0]
+        input_shape = inputs[1]
         return {'x': input_shape, 'indices': indices}
+
+    def metrics(self, output, inputs, targets):
+        return self._metrics(output, inputs, targets)
+
 
 class CWTrainer(Trainer):
 

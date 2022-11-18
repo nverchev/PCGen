@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.autograd import Function
 from src.encoder import get_encoder, CWEncoder
 from src.decoder import get_decoder, CWDecoder
-from src.loss import square_distance
+from src.loss_and_metrics import square_distance
 from src.layer import TransferGrad
 
 class VAECW(nn.Module):
@@ -67,8 +67,8 @@ class VAECW(nn.Module):
         self.decoder = CWDecoder(cw_dim, z_dim)
         self.codebook = nn.Parameter(codebook, requires_grad=False)
         self.dim_codes, self.book_size, self.dim_embedding = codebook.size()
-        self.codebook = torch.nn.Parameter(
-            torch.randn(self.dim_codes, self.book_size, self.dim_embedding))
+        # self.codebook = torch.nn.Parameter(
+        #     torch.randn(self.dim_codes, self.book_size, self.dim_embedding))
         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
 
     def forward(self, x):
@@ -198,7 +198,8 @@ class VQVAE(AE):
         #data['cw'] = data['cw_e']
         # data['cw'] = TransferGrad().apply(data['cw_recon'], data['cw_e'])
         idx = data['idx']
-        data['cw_recon'] = self.codebook.gather(1, idx).view(-1,self.dim_codes * self.dim_embedding)
+        book = self.codebook.repeat(idx.shape[0], 1, 1)
+        data['cw_recon'] = book.gather(1, idx).view(-1, self.dim_codes * self.dim_embedding)
         data['cw'] = data['cw_e'] = data['cw_recon']
         return super().decode(data)
 

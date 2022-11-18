@@ -79,9 +79,18 @@ def graph_filtering(x, k=4):
     diff = x.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours
     dist = torch.sqrt((diff ** 2).sum(1))
     sigma = torch.clamp(dist[..., 0:1].mean(1, keepdim=True), min=0.005)
-    weights = torch.exp(-dist/(3*sigma)) - 1/3
+    norm_dist = dist / sigma
+    weights = torch.exp(-norm_dist)
     x_weight = weights.sum(2).unsqueeze(1).expand(-1, 3, -1)
     weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours
     x = (1 + x_weight) * x - weighted_neighbours.sum(-1)
+    # diff = x.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours
+    # dist = torch.sqrt((diff ** 2).sum(1))
+    # sigma = torch.clamp(dist[..., 0:1].mean(1, keepdim=True), min=0.005)
+    # norm_dist = dist / sigma
+    # weights = 0.5*torch.exp(-norm_dist)
+    # x_weight = weights.sum(2).unsqueeze(1).expand(-1, 3, -1)
+    # weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours
+    # x = (1 + x_weight) * x - weighted_neighbours.sum(-1)
     #x = x + (x * x_weight - weighted_neighbours.sum(-1)).detach()
     return x
