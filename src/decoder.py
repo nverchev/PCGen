@@ -9,17 +9,12 @@ OUT_CHAN = 3
 
 class CWDecoder(nn.Module):
 
-    def __init__(self, cw_dim, z_dim):
+    def __init__(self, cw_dim, z_dim, dim_embedding):
         super().__init__()
         self.cw_dim = cw_dim
-        self.extract = LinearLayer(z_dim, 4, act=None)
-        self.h_dim = [z_dim * 2]
-        modules = [LinearLayer(z_dim, self.h_dim[0])]
-        for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
-            modules.append(LinearLayer(in_dim, out_dim))
-        modules.append(LinearLayer(self.h_dim[-1], cw_dim))
-        self.decode = nn.Sequential(*modules)
-        self.conv = nn.Conv1d(1, 4, kernel_size=4, stride=4)
+        self.h_dim = [2 * cw_dim]
+        self.decode = LinearLayer(3 * z_dim // 4, 4 * cw_dim)
+        self.conv = nn.Conv1d(1, dim_embedding, kernel_size=16, stride=16)
 
 
     def forward(self, x):

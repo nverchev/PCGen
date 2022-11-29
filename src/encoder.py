@@ -8,22 +8,19 @@ IN_CHAN = 3
 
 class CWEncoder(nn.Module):
 
-    def __init__(self, cw_dim, z_dim):
+    def __init__(self, cw_dim, z_dim, dim_embedding):
         super().__init__()
         self.cw_dim = cw_dim
-        self.conv = nn.Sequential(nn.Conv1d(1, 2, kernel_size=4, stride=4),
+        self.conv = nn.Sequential(nn.Conv1d(1, 2, kernel_size=dim_embedding, stride=dim_embedding, bias=False),
                                   nn.BatchNorm1d(2),
-                                  nn.LeakyReLU(inplace=True))
-        self.h_dim = [z_dim * 4, z_dim * 2]
-        modules = [LinearLayer(cw_dim // 2, self.h_dim[0])]
-        for in_dim, out_dim in zip(self.h_dim[:-1], self.h_dim[1:]):
-            modules.append(LinearLayer(in_dim, out_dim))
-        modules.append(LinearLayer(self.h_dim[-1], 2 * z_dim, act=None, batch_norm=False))
-        self.encode = nn.Sequential(*modules)
+                                  nn.LeakyReLU(negative_slope=0.2, inplace=True))
+        self.h_dim = [cw_dim // 2]
+        self.encode = LinearLayer(cw_dim // 2, 2 * z_dim)
 
     def forward(self, x):
         x = self.conv(x.unsqueeze(1)).view(-1, self.cw_dim // 2)
-        return self.encode(x)
+        x = self.encode(x)
+        return x
 
 
 class LDGCNN(nn.Module):

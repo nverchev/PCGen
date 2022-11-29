@@ -39,18 +39,18 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--optim', type=str, default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum has momentum = 0.9')
-    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate, 100x when for the second encoder')
     parser.add_argument('--wd', type=float, default=0.000001, help='Weight decay')
     parser.add_argument('--min_decay', type=float, default=0.01, help='fraction of the initial lr at the end of train')
     parser.add_argument('--k', type=int, default=20,
                         help='Number of neighbours of a point (counting the point itself) in DGCNN]')
-    parser.add_argument('--cw_dim', type=int, default=512, help='Dimension of the codeword space')
+    parser.add_argument('--cw_dim', type=int, default=1024, help='Dimension of the codeword space')
     parser.add_argument('--z_dim', type=int, default=64, help='Dimension of the second encoding space')
     parser.add_argument('--book_size', type=int, default=32, help='Dictionary size for vector quantisation')
     parser.add_argument('--dim_embedding', type=int, default=4, help='Dimension of the vector for vector quantisation')
     parser.add_argument('--c_reg', type=float, default=1, help='Coefficient for regularization')
     parser.add_argument('--no_cuda', action='store_true', default=False, help='Runs on CPU')
-    parser.add_argument('--epochs', type=int, default=250, help='Number of total training epochs')
+    parser.add_argument('--epochs', type=int, default=350, help='Number of total training epochs')
     parser.add_argument('--decay_period', type=int, default=250, help='Number of epochs before lr decays stops')
     parser.add_argument('--checkpoint', type=int, default=10, help='Number of epochs between checkpoints')
     parser.add_argument('--m_training', type=int, default=0,
@@ -155,7 +155,9 @@ def main(task='train/eval'):
     model = get_model(**model_settings).to(device).eval()  # set to train by the trainer class later
     if task == 'return model for profiling':
         dummy_input = [torch.ones(batch_size, num_points, 3, device=device),
-                       torch.ones(batch_size, num_points, k, device=device, dtype=torch.long)]
+                       torch.zeros(batch_size, num_points, k, device=device, dtype=torch.long)]
+        if ae == 'VQVAE':
+            model.recon_cw = True  # profile both encodings
         return model, dummy_input
     elif task == 'return loaded model for random generation':
         assert ae == 'VQVAE', 'Autoencoder does not support realistic cloud generation'
@@ -163,8 +165,7 @@ def main(task='train/eval'):
         assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
         model.load_state_dict(torch.load(load_path, map_location=device))
         model.decoder.m = m
-        z = torch.randn(batch_size, z_dim).to(device)
-        return model, z
+        return model
 
     train_loader, val_loader, test_loader = get_loaders(**data_loader_settings)
     optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
@@ -203,7 +204,8 @@ def main(task='train/eval'):
         trainer.model.load_state_dict(model_state, strict=False)
 
         cw_train_loader, cw_test_loader = get_cw_loaders(trainer, m, final)
-        block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader))
+        block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader,
+                               lr=100 * initial_learning_rate))
         cw_trainer = CWTrainer(model, exp_name, block_args)
         if not model_eval:
             while training_epochs > cw_trainer.epoch:
@@ -214,10 +216,28 @@ def main(task='train/eval'):
                 trainer.model.load_state_dict(torch.load(load_path, map_location=device))
                 trainer.test_cw_recon(partition='test' if final else 'val', m=m)
         else:
-            cw_trainer.test(partition='test')
+            cw_trainer.test(partition='test', save_outputs=True)
             trainer.test_cw_recon(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
+            from sklearn.decomposition import PCA
+            mu = torch.stack(cw_trainer.test_outputs['mu'])
+            torch.save(mu, 'mu.pt')
+            d_mu = torch.stack(cw_trainer.test_outputs['d_mu'][0])
+            torch.save(d_mu, 'd_mu.pt')
+            pca = PCA(3)
+            cw_pca = pca.fit_transform(mu.numpy())
+            from src.plot_PC import pc_show
+            pc_show(torch.FloatTensor(cw_pca), colors='blue')
         return
-
+    if task == 'evaluate random generation':
+        assert ae == 'VQVAE', 'Only VQVAE supported'
+        load_path = os.path.join('models', exp_name, f'model_epoch{training_epochs}.pt')
+        assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
+        model_state = torch.load(load_path, map_location=device)
+        assert load < 1, 'Only loading the last saved version is supported'
+        trainer.model.load_state_dict(model_state)
+        trainer.test_cw_recon(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
+        trainer.evaluate_generated_set(m, metric='chamfer')
+        return
     # loads last model
     if load == 0:
         trainer.load()
@@ -237,27 +257,11 @@ def main(task='train/eval'):
             torch_input = dataset_row[0][-2].unsqueeze(0).to(device)
             torch_input.requires_grad = False
             recon_pcs.append(trainer.model(x=torch_input, indices=None)['recon'][0] * scale)
-        return input_pcs, recon_pcs
+        return ind, input_pcs, recon_pcs
 
-    if task == 'evaluate random generation':
-
-        assert ae == 'VQVAE', 'Only VQVAE supported'
-        trainer.model.decoder.m = m
-        test_dataset = []
-        genereted_dataset = []
-        for batch_idx, (inputs, targets) in enumerate(trainer.test_loader):
-            test_dataset.extend(inputs[0])
-        for _ in range(batch_idx + 1):
-            samples = trainer.model.cw_decode({'z': torch.randn(batch_size, z_dim).to(device)})['recon']
-            genereted_dataset.extend(samples)
-        l = len(test_dataset)
-        loss_array = np.empty(2 * l, 2 * l, dtype=float)
-        all_shapes = test_dataset + genereted_dataset
-        for i, shapei in enumerate(all_shapes):
-            for j, shapej in enumerate(all_shapes):
-                loss_array[i, j] = trainer.loss({'recon': shapei}, [shapej, None], None)[recon_loss]
-        np.save('loss_array', loss_array)
-        return loss_array
+    # if task == 'evaluate random generation':
+    #     trainer.evaluate_generated_set(m, metric='chamfer')
+    #     return
 
     if not model_eval:
         if load == -1 and decoder_name == 'TearingNet':

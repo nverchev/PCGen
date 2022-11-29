@@ -49,7 +49,7 @@ class TorchDictList(UserDict):
     def extend_dict(self, new_dict):
         for key, value in new_dict.items():
             if isinstance(value, list):
-                for elem, new_elem in zip(self.setdefault(key, [[]] * len(value)), value):
+                for elem, new_elem in zip(self.setdefault(key, [[] for _ in value]), value):
                     assert torch.is_tensor(new_elem)
                     elem.extend(new_elem)
             else:
@@ -320,8 +320,8 @@ class Trainer(metaclass=ABCMeta):
                     self.minio.fget_object(self.bin, self.minio_path(file), file)
         self.model.load_state_dict(torch.load(paths['model'],
                                               map_location=torch.device(self.device)))
-#        self.optimizer.load_state_dict(torch.load(paths['optim'],
- #                                                 map_location=torch.device(self.device)))
+        self.optimizer.load_state_dict(torch.load(paths['optim'],
+                                                  map_location=torch.device(self.device)))
         self.train_losses = json.load(open(paths['train_hist']))
         self.val_losses = json.load(open(paths['val_hist']))
         print('Loaded: ', paths['model'])
@@ -430,15 +430,60 @@ class AETrainer(Trainer):
     def metrics(self, output, inputs, targets):
         return self._metrics(output, inputs, targets)
 
+    def evaluate_generated_set(self, m, metric='Chamfer'):
+        self.model.decoder.m = m
+        test_dataset = []
+        generated_dataset = []
+        for batch_idx, (inputs, targets, index) in enumerate(self.val_loader):
+            test_clouds = inputs[1]
+            test_dataset.extend(test_clouds.cpu())
+            # (samples, targets, index) = next(iter(self.train_loader))
+            # samples = samples[1]
+            self.model.eval()
+            with torch.no_grad():
+                samples = self.model.random_sampling(test_clouds.shape[0])['recon'].detach().cpu()
+            generated_dataset.extend(samples)
+        test_l = len(test_dataset)
+        dist_array = np.zeros((2 * test_l, 2 * test_l), dtype=float)
+        all_shapes = test_dataset + generated_dataset[:test_l]
+        for i, shapei in enumerate(all_shapes):
+            for j, shapej in enumerate(all_shapes):
+                if i == j:
+                    dist_array[i, j] = np.inf  # safe way of ignoring this entry
+                elif i > j:  # distance is symmetric
+                    from src.neighbour_op import square_distance
+                    from src.loss_and_metrics import chamfer
+                    cloud1 = shapei.unsqueeze(0).to(self.device)
+                    cloud2 = shapej.unsqueeze(0).to(self.device)
+                    pairwise_dist = square_distance(cloud1, cloud2)
+                    ch = chamfer(cloud1, cloud2, pairwise_dist)[0].sum(0) / cloud1.shape[1]
+                    dist_array[i, j] = ch.item()
+                    dist_array[j, i] = ch.item()
+        np.save('dist_array', dist_array)
+        closest = dist_array.argmin(axis=1)  # np.inf on the diagonal so argmin != index
+        test_closest = closest[:test_l]
+        generated_closest = closest[test_l:]
+        nna = ((test_closest < test_l).sum() + (generated_closest >= test_l).sum()) / (2 * test_l)
+        coverage_array = dist_array[test_l:, :test_l]
+        coverage_closest = coverage_array.argmin(axis=1)
+        coverage = np.unique(coverage_closest).shape[0] / test_l
+        mmd_array = dist_array[:test_l, test_l:]
+        mmd = mmd_array.min(axis=1).mean()
+        print(f'Coverage score ({metric}): {coverage:.4e}')
+        print(f'Minimum Matching Distance score ({metric}): {mmd:.4e}')
+        print(f'1-NNA score ({metric}): {nna:.4e}')
+        return dist_array
+
+
 
 class CWTrainer(Trainer):
 
     def __init__(self, model, exp_name, block_args):
         self.vqvae_model = model
         self.vqvae_epoch = block_args['training_epochs']
-        model.cw_encoder.codebook.data = model.codebook.detach()
         super().__init__(model.cw_encoder, exp_name, **block_args)
         self._loss = CWEncoderLoss(block_args['c_reg'])
+        self.model.codebook = torch.nn.Parameter(self.vqvae_model.codebook.detach().clone(), requires_grad=False)
         return
 
     def loss(self, output, inputs, targets):
@@ -458,6 +503,8 @@ class CWTrainer(Trainer):
 
     def helper_inputs(self, inputs, labels):
         return {'x': inputs[0]}
+
+
 
 
 def get_ae_trainer(model, exp_name, block_args):

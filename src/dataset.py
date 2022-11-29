@@ -14,7 +14,6 @@ def normalise(cloud):
     cloud /= std
     return cloud, std
 
-
 def random_rotation(*clouds):
     theta = 2 * torch.pi * torch.rand(1)
     s = torch.sin(theta)
@@ -195,8 +194,8 @@ class ShapenetAtlasSplit(AugmentDataset):
         cloud = np.load(path).astype(np.float32)
         index_pool = np.arange(cloud.shape[0])
         sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.num_points, replace=False)
-        ref_cloud, scale = normalise(cloud[sampling[:self.num_points]])
-        clouds = [ref_cloud]
+        ref_cloud, scale =normalise(cloud[sampling[:self.num_points]])
+        clouds = [torch.from_numpy(ref_cloud)]
         if self.resample:
             clouds.append(torch.from_numpy(normalise(cloud[sampling[self.num_points:]])[0]))
         label = path.split(os.sep)[-2]
@@ -211,7 +210,7 @@ class ShapenetFlowSplit(AugmentDataset):
         self.paths = paths
         self.pcd = []
         self.labels = []
-        self.resample = resample
+        self.resample = True
         self.num_points = num_points
         self.label_index = list(labels.keys())
         self.scales = []
@@ -472,7 +471,7 @@ def get_loaders(dataset_name, batch_size, final, dir_path, **dataset_settings):
         val_dataset = dataset.split('val')
 
         train_loader = torch.utils.data.DataLoader(
-            train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+            train_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
 
         val_loader = torch.utils.data.DataLoader(
             val_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
@@ -487,12 +486,10 @@ def get_loaders(dataset_name, batch_size, final, dir_path, **dataset_settings):
 def get_cw_loaders(t, m, final):
     pin_memory = torch.cuda.is_available()
     batch_size = t.train_loader.batch_size
-    t.train_loader.dataset.rotation = False
     t.test(partition='train', m=m, save_outputs=True)
-    t.train_loader.dataset.rotation = True
-    cw_train_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets)
+    cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_idx'], t.test_targets)
     t.test(partition='test' if final else 'val', m=m, save_outputs=True)
-    cw_test_dataset = CWDataset(t.test_outputs['cw_e'], t.test_outputs['cw_idx'], t.test_targets)
+    cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_idx'], t.test_targets)
     cw_train_loader = torch.utils.data.DataLoader(
         cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
     cw_test_loader = torch.utils.data.DataLoader(

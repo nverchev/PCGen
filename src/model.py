@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Function
@@ -9,109 +10,79 @@ from src.layer import TransferGrad
 class VAECW(nn.Module):
     settings = {}
 
-    def __init__(self, cw_dim, z_dim=64, book_size=16):
-        super().__init__()
-        self.z_dim = z_dim
-        self.book_size = 16
-        self.encoder = CWEncoder(cw_dim, z_dim)
-        self.decoder = CWDecoder(cw_dim, z_dim)
-        self.codebook = torch.nn.Parameter(torch.randn(1, self.book_size, z_dim))
-        self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim,
-                         'book_size': self.book_size}
-
-    def forward(self, x):
-        data = self.encode(x)
-        return self.decode(data)
-
-    def sample(self, mu, log_var):
-        std = torch.exp(0.5 * log_var)
-        eps = torch.randn_like(std)
-        return eps.mul(std).add_(mu) if self.training else mu
-
-    def quantise(self, x):
-        batch, embed = x.size()
-        x = x.unsqueeze(1)
-        book = self.codebook.repeat(batch, 1, 1)
-        dist = square_distance(x, book)
-        idx = dist.argmin(axis=2)
-        cw_embed = book.gather(1, idx.expand(-1, -1, self.z_dim)).squeeze(1)
-        one_hot_idx = torch.zeros(batch, self.book_size, device=x.device)
-        one_hot_idx = one_hot_idx.scatter_(1, idx.squeeze(-1), 1)
-        return cw_embed, one_hot_idx
-
-    def encode(self, x):
-        data = {}
-        x = self.encoder(x)
-        data['t'], data['log_var'] = x.chunk(2, 1)
-        data['t_quantised'], data['idx_t'] = self.quantise(data['t'])
-        data['mu'] = data['t'] - data['t_quantised']
-        data['z'] = self.sample(data['mu'], data['log_var'])
-        return data
-
-    def decode(self, data):
-        data['t_recon'] = data['z'] + data['t_quantised']
-        data['cw_recon'] = self.decoder(data['t_recon'])
-        return data
-
-    def reset_parameters(self):
-        self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
-
-
-class VAECW(nn.Module):
-    settings = {}
-
     def __init__(self, cw_dim, z_dim, codebook):
         super().__init__()
         self.z_dim = z_dim
-        self.encoder = CWEncoder(cw_dim, z_dim)
-        self.decoder = CWDecoder(cw_dim, z_dim)
         self.codebook = nn.Parameter(codebook, requires_grad=False)
         self.dim_codes, self.book_size, self.dim_embedding = codebook.size()
-        # self.codebook = torch.nn.Parameter(
-        #     torch.randn(self.dim_codes, self.book_size, self.dim_embedding))
+        self.encoder = CWEncoder(cw_dim, z_dim, dim_embedding=self.dim_embedding)
+        self.decoder = CWDecoder(cw_dim, z_dim, dim_embedding=self.dim_embedding)
+        self.inference1 = nn.Linear(2 * z_dim, z_dim // 2)
+        self.inference2 = nn.Sequential(nn.Linear(9 * z_dim // 4, 2 * z_dim),
+                                        nn.LeakyReLU(negative_slope=0.2, inplace=True),
+                                        nn.Linear(2 * z_dim, 3 * z_dim // 2),
+                                        )
+        self.prior = nn.Linear(z_dim // 4, 3 * z_dim // 2)
         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
 
     def forward(self, x):
         data = self.encode(x)
         return self.decode(data)
 
-    def sample(self, mu, log_var):
+    def gaussian_sample(self, mu, log_var):
         std = torch.exp(0.5 * log_var)
         eps = torch.randn_like(std)
         return eps.mul(std).add_(mu) if self.training else mu
 
     def encode(self, x):
         data = {}
-        x = self.encoder(x)
-        data['mu'], data['log_var'] = x.chunk(2, 1)
-        data['z'] = self.sample(data['mu'], data['log_var'])
+        data['h'] = self.encoder(x)
+        mu, log_var = self.inference1(data['h']).chunk(2, 1)
+        #mu, log_var = self.encoder(x)[0].chunk(2, 1)
+        data['mu'], data['log_var'] = mu, log_var
+        data['z'] = [self.gaussian_sample(data['mu'], data['log_var'])]
         return data
 
     def decode(self, data):
-        data['cw_recon'] = self.decoder(data['z'])
+        z1 = data['z'][0]
+        p_mu, p_logvar = self.prior(z1).chunk(2, 1)
+        data['prior_log_var'] = [p_logvar]
+        if 'h' in data.keys():  # we have to inference the upper latent variable group
+            d_mu, d_log_var = self.inference2(torch.cat([z1, data['h']], dim=1)).chunk(2, 1)
+            z2 = self.gaussian_sample(d_mu + p_mu, d_log_var + p_logvar)
+            data['d_mu'] = [d_mu]
+            data['d_log_var'] = [d_log_var]
+        else:
+            z2 = self.gaussian_sample(p_mu, p_logvar)
+        # data['prior_log_var'] = []
+        data['cw_recon'] = self.decoder(z2)
         data['cw_dist'], data['idx'] = self.dist(data['cw_recon'])
         return data
+
 
     def reset_parameters(self):
         self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
 
     def dist(self, x):
         batch, embed = x.size()
-        x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
+        x = x.view(batch * self.dim_codes, 1, self.dim_embedding)
         book = self.codebook.repeat(batch, 1, 1)
-        dist = square_distance(x2, book)
-        idx = dist.argmin(axis=2).expand(-1, -1, self.dim_embedding)
+        dist = square_distance(x, book)  # Lazy vector need aggregation like sum(1) to yield tensor (|dim 1| = 1)
+        idx = dist.argmin(axis=2)
         return dist.sum(1).view(batch, self.dim_codes, self.book_size), idx
 
 
 class Oracle(nn.Module):
     settings = {}
+
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.decoder = nn.Module()
-        self.decoder.m = 0
+        self.decoder.m = np.Inf
+
     def forward(self, x, indices):
         return {'recon': x[:, :self.decoder.m, :]}
+
 
 class AE(nn.Module):
     settings = {}
@@ -142,38 +113,47 @@ class VQVAE(AE):
     recon_cw = False
     transfer_grad = TransferGrad()
 
-    def __init__(self, book_size, cw_dim, z_dim,  dim_embedding, **model_settings):
+    def __init__(self, book_size, cw_dim, z_dim, dim_embedding, **model_settings):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
         super().__init__(cw_dim=cw_dim, **model_settings)
         self.dim_codes = cw_dim // dim_embedding
         self.book_size = book_size
         self.dim_embedding = dim_embedding
+        # self.decay = .99
+        # self.gain = 1 - self.decay
         self.codebook = torch.nn.Parameter(
-            torch.randn(self.dim_codes, self.book_size, self.dim_embedding))
+            torch.randn(self.dim_codes, self.book_size, self.dim_embedding))  # , requires_grad=False))
+        # self.ema_counts = torch.nn.Parameter(
+        #     torch.ones(self.dim_codes, self.book_size, dtype=torch.float, requires_grad=False))
         self.cw_encoder = VAECW(cw_dim, z_dim, self.codebook)
         self.settings['book_size'] = self.book_size
         self.settings['dim_embedding'] = self.dim_embedding
         self.settings['cw_encoder'] = self.cw_encoder.settings
 
-
     def quantise(self, x):
         batch, embed = x.size()
-        x2 = x.view(batch * self.dim_codes, 1, self.dim_embedding)
+        x = x.view(batch * self.dim_codes, 1, self.dim_embedding)
         book = self.codebook.repeat(batch, 1, 1)
-        dist = square_distance(x2, book)
+        dist = square_distance(x, book)
         idx = dist.argmin(axis=2)
-        cw_embed = book.gather(1, idx.expand(-1, -1, self.dim_embedding))
-        cw_embed = cw_embed.view(batch, self.dim_codes * self.dim_embedding)
+        cw_embed = self.get_quantised_code(idx, book)
         one_hot_idx = torch.zeros(batch, self.dim_codes, self.book_size, device=x.device)
         one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)
+        # # EMA update
+        # if self.training:
+        #     x = x.view(batch, self.dim_codes, self.dim_embedding).transpose(0, 1)
+        #     idx = idx.view(batch, self.dim_codes, 1).transpose(0, 1).expand(-1, -1, self.dim_embedding)
+        #     update_dict = torch.zeros_like(self.codebook).scatter_(index=idx, src=x, dim=1, reduce='add')
+        #     normalize = self.ema_counts.unsqueeze(2).expand(-1, -1, self.dim_embedding)
+        #     self.codebook.data = self.codebook * self.decay + self.gain * update_dict / (normalize + 1e-6)
+        #     self.ema_counts.data = self.decay * self.ema_counts + self.gain * one_hot_idx.sum(0)
+
         return cw_embed, one_hot_idx
 
     def encode(self, x, indices):
         data = {}
         x = self.encoder(x, indices)
         data['cw_q'] = x
-        # data['cw_e'], data['idx_cw'] = self.quantise(x)
-        # data['cw'] = TransferGrad().apply(x, data['cw_e'])
         return data
 
     def decode(self, data):
@@ -189,25 +169,34 @@ class VQVAE(AE):
 
     def cw_encode(self, x, indices):
         data = self.encode(x, indices)
+        # data['cw_e'], _ = self.quantise(data['cw_q'])
+        # data.update(self.cw_encoder.encode(data['cw_e']))
+        data['cw_e'] = data['cw_q']
         data.update(self.cw_encoder.encode(data['cw_q']))
         return data
 
     def cw_decode(self, data):
         self.cw_encoder.decode(data)
-        #data['cw_e'], data['idx_cw'] = self.quantise(data['cw_recon'])
-        #data['cw'] = data['cw_e']
-        # data['cw'] = TransferGrad().apply(data['cw_recon'], data['cw_e'])
         idx = data['idx']
-        book = self.codebook.repeat(idx.shape[0], 1, 1)
-        data['cw_recon'] = book.gather(1, idx).view(-1, self.dim_codes * self.dim_embedding)
-        data['cw'] = data['cw_e'] = data['cw_recon']
+        data['cw'] = self.get_quantised_code(idx, self.codebook.repeat(idx.shape[0] // self.dim_codes, 1, 1))
         return super().decode(data)
+
+    def random_sampling(self, batch_size):
+        torch.random.seed()
+        data = {'z': [3*torch.randn(batch_size, self.cw_encoder.z_dim // 4).to(self.codebook.device)]}
+        return self.cw_decode(data=data)
+
+    def get_quantised_code(self, idx, book):
+        idx = idx.expand(-1, -1, self.dim_embedding)
+        return book.gather(1, idx).view(-1, self.dim_codes * self.dim_embedding)
 
 
 def get_model(ae, **model_settings):
     model_map = dict(
-                    Oracle=Oracle,
-                    AE=AE,
-                    VQVAE=VQVAE,
-                    )
+        Oracle=Oracle,
+        AE=AE,
+        VQVAE=VQVAE,
+    )
     return model_map[ae](**model_settings)
+
+

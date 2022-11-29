@@ -5,6 +5,7 @@ from torch import nn
 import torch.nn.functional as F
 import geomloss
 from src.neighbour_op import square_distance
+from external.emd.emd_module import emdModule
 
 
 # Chamfer Distance
@@ -50,12 +51,15 @@ def chamfer_smooth(inputs, recon, pairwise_dist):
     return (loss1 + loss2).sum(1)
 
 
-def kld_loss(q_mu, q_logvar, freebits=1):
-    KLD_matrix = -1 - q_logvar + q_mu ** 2 + q_logvar.exp()
-    KLD_free_bits = F.softplus(KLD_matrix - 2 * freebits) + 2 * freebits
-    KLD = 0.5 * KLD_matrix.sum(1)
-    KLD_free = 0.5 * KLD_free_bits.sum(1)
-    return KLD, KLD_free
+def kld_loss(q_mu, q_log_var, d_mu=(), d_log_var=(), p_log_var=()):
+    kld_matrix = -1 - q_log_var + q_mu ** 2 + q_log_var.exp()
+    kld = 0.5 * kld_matrix.sum(1)
+    for d_mu, d_log_var, p_log_var in zip(d_mu, d_log_var, p_log_var):
+        # d_mu = q_mu - p_mu
+        # d_logvar = q_logvar - p_logvar
+        kld_matrix = -1 - d_log_var + d_log_var.exp() + (d_mu ** 2) / p_log_var.exp()
+        kld += 0.5 * kld_matrix.sum(1)
+    return kld
 
 
 class VAELoss(nn.Module):
@@ -89,21 +93,22 @@ class AELoss:
 
 
 class KLDVAELoss:
+    c_kld = 1
 
     def __call__(self, inputs, outputs):
-        KLD, KLD_free = kld_loss(outputs['mu'], outputs['log_var'])
-        return {'reg': self.c_kld * KLD_free.mean(0),
-                'KLD': KLD.sum(0),
+        kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'd_mu', 'd_log_var', 'prior_log_var']])
+        return {'reg': self.c_kld * kld.mean(0),
+                'KLD': kld.sum(0),
                 }
 
 
 class VQVAELoss:
-    c_vq = 10
+    c_vq = .5
 
     def __call__(self, inputs, outputs):
         embed_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
         return {'reg': self.c_vq * embed_loss,
-                'Embed Loss': embed_loss,
+                'Embed Loss': embed_loss * outputs['cw_q'].shape[0],
                 }
 
 
@@ -143,11 +148,11 @@ class CWEncoderLoss(nn.Module):
         self.c_reg = c_reg
 
     def forward(self, outputs, inputs, targets):
-        kld, kld_free = kld_loss(outputs['mu'], outputs['log_var'])
+        kld = kld_loss(outputs['mu'], outputs['log_var'], outputs['prior_log_var'])
         cw_idx = inputs[1]
         cw_neg_dist = -outputs['cw_dist']
         nll = -(cw_neg_dist.log_softmax(dim=2) * cw_idx).sum((1, 2))
-        criterion = nll.mean(0) + self.c_reg * kld_free.mean(0)
+        criterion = nll.mean(0) + self.c_reg * kld.mean(0)
         return {
             'Criterion': criterion,
             'KLD': kld.sum(0),
@@ -171,6 +176,7 @@ class AllMetrics:
         self.denormalise = denormalise
         self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.01,
                                              diameter=2, scaling=.6, backend='online')
+        self.emd = emdModule()
 
     def __call__(self, outputs, inputs):
         scale = inputs[0]
@@ -180,39 +186,18 @@ class AllMetrics:
             scale = scale.view(-1, 1, 1).expand_as(recon)
             recon *= scale
             ref_cloud *= scale
-        return self.pairwise_similarity(ref_cloud, recon)
+        return self.batched_pairwise_similarity(ref_cloud, recon)
 
-
-    def pairwise_similarity(self, cloud1, cloud2):
-        pairwise_dist = square_distance(cloud1, cloud2)
-        squared, augmented = chamfer(cloud1, cloud2, pairwise_dist)
-        if cloud1.shape == cloud2.shape:
-            squared /= cloud1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
+    def batched_pairwise_similarity(self, clouds1, clouds2):
+        pairwise_dist = square_distance(clouds1, clouds2)
+        squared, augmented = chamfer(clouds1, clouds2, pairwise_dist)
+        if clouds1.shape == clouds2.shape:
+            squared /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
         dict_recon_metrics = {
             'Chamfer': squared.sum(0),
             'Chamfer Augmented': augmented.sum(0),
-            'Chamfer Smooth': chamfer_smooth(cloud1, cloud2, pairwise_dist).sum(0),
-            'Sinkhorn': self.sinkhorn(cloud1, cloud2).sum(0),
+            'Chamfer Smooth': chamfer_smooth(clouds1, clouds2, pairwise_dist).sum(0),
+            'Sinkhorn': self.sinkhorn(clouds1, clouds2).sum(0),
+            # 'EMD': self.emd(clouds1, clouds2, 0.05, 3000)[0].mean(1).sum(0),
         }
         return dict_recon_metrics
-
-    #
-    # def pairwise_similarity(self, cloud1, cloud2):
-    #         assert ae == 'VQVAE', 'Only VQVAE supported'
-    #         trainer.model.decoder.m = m
-    #         test_dataset = []
-    #         genereted_dataset = []
-    #         for batch_idx, (inputs, targets) in enumerate(trainer.test_loader):
-    #             test_dataset.extend(inputs[0])
-    #         for _ in range(batch_idx + 1):
-    #             samples = trainer.model.cw_decode({'z': torch.randn(batch_size, z_dim).to(device)})['recon']
-    #             genereted_dataset.extend(samples)
-    #         l = len(test_dataset)
-    #         loss_array = np.empty(2 * l, 2 * l, dtype=float)
-    #         all_shapes = test_dataset + genereted_dataset
-    #         for i, shapei in enumerate(all_shapes):
-    #             for j, shapej in enumerate(all_shapes):
-    #                 loss_array[i, j] = trainer.loss({'recon': shapei}, [shapej, None], None)[recon_loss]
-    #         np.save('loss_array', loss_array)
-    #         return loss_array
-    #     return dict_recon_metrics
