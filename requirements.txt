@@ -1,4 +1,4 @@
-torch~=1.11.0
+torch~=1.13.0+cu117
 pykeops~=2.1
 numpy~=1.22.3
 plotly~=5.9.0

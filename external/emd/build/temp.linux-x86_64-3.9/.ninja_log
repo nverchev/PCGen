@@ -1,0 +1,5 @@
+# ninja log v5
+0	7278	1669384235324156895	/home/nverchev/PycharmProjects/PCGen/src/external/emd/build/temp.linux-x86_64-3.9/emd.o	4d497a261170eb4a
+1	7837	1669384235888157859	/home/nverchev/PycharmProjects/PCGen/src/external/emd/build/temp.linux-x86_64-3.9/emd_cuda.o	3b87719e76e81176
+0	9538	1669638348750335677	/home/nverchev/PycharmProjects/PCGen/external/emd/build/temp.linux-x86_64-3.9/emd_cuda.o	b57aa0214fa0c219
+0	10360	1669638349566332805	/home/nverchev/PycharmProjects/PCGen/external/emd/build/temp.linux-x86_64-3.9/emd.o	1e69817bb2b9d363
