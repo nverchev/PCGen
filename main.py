@@ -235,7 +235,7 @@ def main(task='train/eval'):
         assert load < 1, 'Only loading the last saved version is supported'
         trainer.model.load_state_dict(model_state)
         trainer.test_cw_recon(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
-        trainer.evaluate_generated_set(m, metric='hamfer')
+        trainer.evaluate_generated_set(m, metric='Chamfer')
         return
     # loads last model
     if load == 0:

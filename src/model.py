@@ -36,9 +36,8 @@ class VAECW(nn.Module):
 
     def encode(self, x):
         data = {}
-        data['h'] = self.encoder(x)
+        data['h'] = self.encoder(x.view(-1, self.dim_codes, self.dim_embedding).transpose(2, 1))
         mu, log_var = self.inference1(data['h']).chunk(2, 1)
-        #mu, log_var = self.encoder(x)[0].chunk(2, 1)
         data['mu'], data['log_var'] = mu, log_var
         data['z'] = [self.gaussian_sample(data['mu'], data['log_var'])]
         return data
@@ -54,7 +53,6 @@ class VAECW(nn.Module):
             data['d_log_var'] = [d_log_var]
         else:
             z2 = self.gaussian_sample(p_mu, p_logvar)
-        # data['prior_log_var'] = []
         data['cw_recon'] = self.decoder(z2)
         data['cw_dist'], data['idx'] = self.dist(data['cw_recon'])
         return data

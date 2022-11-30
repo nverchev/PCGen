@@ -103,7 +103,7 @@ class KLDVAELoss:
 
 
 class VQVAELoss:
-    c_vq = .5
+    c_vq = 1
 
     def __call__(self, inputs, outputs):
         embed_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
