@@ -185,7 +185,6 @@ def main(task='train/eval'):
         ae=ae,
         c_reg=c_reg,
     )
-
     block_args = {**data_loader_settings, **model_settings, **trainer_settings}
     trainer = get_ae_trainer(model, exp_name, block_args)
 
@@ -236,7 +235,7 @@ def main(task='train/eval'):
         assert load < 1, 'Only loading the last saved version is supported'
         trainer.model.load_state_dict(model_state)
         trainer.test_cw_recon(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
-        trainer.evaluate_generated_set(m, metric='chamfer')
+        trainer.evaluate_generated_set(m, metric='hamfer')
         return
     # loads last model
     if load == 0:

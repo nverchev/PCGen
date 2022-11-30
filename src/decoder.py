@@ -12,14 +12,15 @@ class CWDecoder(nn.Module):
     def __init__(self, cw_dim, z_dim, dim_embedding):
         super().__init__()
         self.cw_dim = cw_dim
-        self.h_dim = [2 * cw_dim]
-        self.decode = LinearLayer(3 * z_dim // 4, 4 * cw_dim)
-        self.conv = nn.Conv1d(1, dim_embedding, kernel_size=16, stride=16)
+        expand = 4
+        self.h_dim = [expand * cw_dim]
+        self.decode = LinearLayer(3 * z_dim // 4, self.h_dim[0])
+        self.conv = nn.Conv1d(1, dim_embedding, kernel_size=expand * dim_embedding, stride=expand * dim_embedding)
 
 
     def forward(self, x):
         x = self.decode(x)
-        x = x.view(-1, 1, self.cw_dim)
+        x = x.view(-1, 1, self.h_dim[0])
         x = self.conv(x).transpose(2, 1).reshape(-1, self.cw_dim)
         return x
 
@@ -308,6 +309,11 @@ class PCGen(nn.Module):
         self.m_training = m
         self.gf = gf
         self.sample_dim = 16
+        self.gmm_logits = torch.nn.Parameter(torch.ones(1, 1, 1, self.sample_dim))
+        self.tau = 0.2
+        self.gmm_components = 16
+        self.gmm_centre = torch.nn.Parameter(torch.rand(self.sample_dim, 1, self.gmm_components))
+        self.gmm_sigmas = torch.nn.Parameter(torch.rand(self.sample_dim, 1, self.gmm_components))
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
@@ -322,8 +328,9 @@ class PCGen(nn.Module):
         batch = z.size()[0]
         device = z.device
         m = self.m_training if self.training else self.m
-        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
-        x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
+        gmm_component = F.gumbel_softmax(self.gmm_logits.expand(batch, 1, m, -1), tau=self.tau, hard=True)
+        gmm_component = gmm_component * self.gmm_centre + torch.randn(batch, self.sample_dim, m, self.gmm_components, device=device) * self.gmm_sigmas
+        x = gmm_component.sum(3)
         x = self.map_sample1(x)
         x = self.map_sample2(x)
         x = z.unsqueeze(2) * x
@@ -331,6 +338,39 @@ class PCGen(nn.Module):
         if self.gf:
             x = graph_filtering(x)
         return x
+
+# class PCGen(nn.Module):
+#
+#     def __init__(self, cw_dim, m, gf=True, **model_settings):
+#         super().__init__()
+#         self.h_dim = [256, cw_dim, 512, 512, 512, 64]
+#         self.m = m
+#         self.m_training = m
+#         self.gf = gf
+#         self.sample_dim = 16
+#         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+#         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
+#                                            act=nn.Hardtanh(inplace=True))
+#         modules = []
+#         for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
+#             modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+#
+#         modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+#         self.points_convs = nn.Sequential(*modules)
+#
+#     def forward(self, z, s=None):
+#         batch = z.size()[0]
+#         device = z.device
+#         m = self.m_training if self.training else self.m
+#         x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
+#         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
+#         x = self.map_sample1(x)
+#         x = self.map_sample2(x)
+#         x = z.unsqueeze(2) * x
+#         x = self.points_convs(x)
+#         if self.gf:
+#             x = graph_filtering(x)
+#         return x
 
 
 class PCGenComponents(nn.Module):

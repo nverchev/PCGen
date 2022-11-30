@@ -471,7 +471,7 @@ def get_loaders(dataset_name, batch_size, final, dir_path, **dataset_settings):
         val_dataset = dataset.split('val')
 
         train_loader = torch.utils.data.DataLoader(
-            train_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
+            train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
 
         val_loader = torch.utils.data.DataLoader(
             val_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)

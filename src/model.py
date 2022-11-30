@@ -183,7 +183,7 @@ class VQVAE(AE):
 
     def random_sampling(self, batch_size):
         torch.random.seed()
-        data = {'z': [3*torch.randn(batch_size, self.cw_encoder.z_dim // 4).to(self.codebook.device)]}
+        data = {'z': [2 * torch.randn(batch_size, self.cw_encoder.z_dim // 4).to(self.codebook.device)]}
         return self.cw_decode(data=data)
 
     def get_quantised_code(self, idx, book):

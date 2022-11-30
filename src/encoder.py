@@ -11,14 +11,14 @@ class CWEncoder(nn.Module):
     def __init__(self, cw_dim, z_dim, dim_embedding):
         super().__init__()
         self.cw_dim = cw_dim
+        self.h_dim = [2 * cw_dim // dim_embedding]
         self.conv = nn.Sequential(nn.Conv1d(1, 2, kernel_size=dim_embedding, stride=dim_embedding, bias=False),
                                   nn.BatchNorm1d(2),
                                   nn.LeakyReLU(negative_slope=0.2, inplace=True))
-        self.h_dim = [cw_dim // 2]
-        self.encode = LinearLayer(cw_dim // 2, 2 * z_dim)
+        self.encode = LinearLayer(self.h_dim[0], 2 * z_dim)
 
     def forward(self, x):
-        x = self.conv(x.unsqueeze(1)).view(-1, self.cw_dim // 2)
+        x = self.conv(x.unsqueeze(1)).view(-1, self.h_dim[0])
         x = self.encode(x)
         return x
 

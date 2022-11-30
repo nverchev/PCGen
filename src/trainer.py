@@ -11,6 +11,9 @@ from abc import ABCMeta, abstractmethod
 from collections import UserDict
 from src.loss_and_metrics import get_ae_loss, CWEncoderLoss, AllMetrics
 from src.plot_PC import pc_show
+from src.neighbour_op import square_distance
+from src.loss_and_metrics import chamfer
+from src.loss_and_metrics import emdModule
 
 
 # Apply recursively lists or dictionaries until check
@@ -446,19 +449,24 @@ class AETrainer(Trainer):
         test_l = len(test_dataset)
         dist_array = np.zeros((2 * test_l, 2 * test_l), dtype=float)
         all_shapes = test_dataset + generated_dataset[:test_l]
+        emd = emdModule()
         for i, shapei in enumerate(all_shapes):
             for j, shapej in enumerate(all_shapes):
                 if i == j:
                     dist_array[i, j] = np.inf  # safe way of ignoring this entry
                 elif i > j:  # distance is symmetric
-                    from src.neighbour_op import square_distance
-                    from src.loss_and_metrics import chamfer
+
                     cloud1 = shapei.unsqueeze(0).to(self.device)
                     cloud2 = shapej.unsqueeze(0).to(self.device)
-                    pairwise_dist = square_distance(cloud1, cloud2)
-                    ch = chamfer(cloud1, cloud2, pairwise_dist)[0].sum(0) / cloud1.shape[1]
-                    dist_array[i, j] = ch.item()
-                    dist_array[j, i] = ch.item()
+                    if metric == 'Chamfer':
+                        pairwise_dist = square_distance(cloud1, cloud2)
+                        ch = chamfer(cloud1, cloud2, pairwise_dist)[0].sum(0) / cloud1.shape[1]
+                        dist = ch.item()
+                    else:
+                        assert metric == 'Emd'
+                        dist = emd(cloud1, cloud2, 0.05, 3000)[0].mean()
+                    dist_array[i, j] = dist
+                    dist_array[j, i] = dist
         np.save('dist_array', dist_array)
         closest = dist_array.argmin(axis=1)  # np.inf on the diagonal so argmin != index
         test_closest = closest[:test_l]

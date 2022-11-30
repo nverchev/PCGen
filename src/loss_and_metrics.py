@@ -57,7 +57,7 @@ def kld_loss(q_mu, q_log_var, d_mu=(), d_log_var=(), p_log_var=()):
     for d_mu, d_log_var, p_log_var in zip(d_mu, d_log_var, p_log_var):
         # d_mu = q_mu - p_mu
         # d_logvar = q_logvar - p_logvar
-        kld_matrix = -1 - d_log_var + d_log_var.exp() + (d_mu ** 2) / p_log_var.exp()
+        kld_matrix = -1 - d_log_var + (d_mu ** 2) / p_log_var.exp() + d_log_var.exp()
         kld += 0.5 * kld_matrix.sum(1)
     return kld
 
@@ -96,7 +96,7 @@ class KLDVAELoss:
     c_kld = 1
 
     def __call__(self, inputs, outputs):
-        kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'd_mu', 'd_log_var', 'prior_log_var']])
+        kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var']])
         return {'reg': self.c_kld * kld.mean(0),
                 'KLD': kld.sum(0),
                 }
@@ -148,7 +148,7 @@ class CWEncoderLoss(nn.Module):
         self.c_reg = c_reg
 
     def forward(self, outputs, inputs, targets):
-        kld = kld_loss(outputs['mu'], outputs['log_var'], outputs['prior_log_var'])
+        kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'd_mu', 'd_log_var', 'prior_log_var']])
         cw_idx = inputs[1]
         cw_neg_dist = -outputs['cw_dist']
         nll = -(cw_neg_dist.log_softmax(dim=2) * cw_idx).sum((1, 2))
