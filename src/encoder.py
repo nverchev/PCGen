@@ -11,14 +11,18 @@ class CWEncoder(nn.Module):
     def __init__(self, cw_dim, z_dim, dim_embedding):
         super().__init__()
         self.cw_dim = cw_dim
-        self.h_dim = [2 * cw_dim // dim_embedding]
-        self.conv = PointsConvLayer(dim_embedding, 2)
+        self.project_dim = 2
+        self.h_dim = [cw_dim * self.project_dim // dim_embedding]
+        self.conv = PointsConvLayer(dim_embedding,  self.project_dim)
         self.encode = LinearLayer(self.h_dim[0], 2 * z_dim)
 
     def forward(self, x):
         x = self.conv(x).view(-1, self.h_dim[0])
         x = self.encode(x)
         return x
+
+
+
 
 
 class LDGCNN(nn.Module):

@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--optim', type=str, default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum has momentum = 0.9')
-    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate, 100x when for the second encoder')
+    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate, 10x when for the second encoder')
     parser.add_argument('--wd', type=float, default=0.000001, help='Weight decay')
     parser.add_argument('--min_decay', type=float, default=0.01, help='fraction of the initial lr at the end of train')
     parser.add_argument('--k', type=int, default=20,
@@ -168,7 +168,12 @@ def main(task='train/eval'):
         return model
 
     train_loader, val_loader, test_loader = get_loaders(**data_loader_settings)
-    optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
+
+    lr = {'encoder': initial_learning_rate, 'decoder': initial_learning_rate}
+    if ae == 'VQVAE' :
+        lr['cw_encoder'] = 10 * initial_learning_rate
+    optimizer, optim_args = get_opt(opt_name, lr, weight_decay)
+
     trainer_settings = dict(
         opt_name=opt_name,
         optimizer=optimizer,
@@ -203,8 +208,11 @@ def main(task='train/eval'):
         trainer.model.load_state_dict(model_state, strict=False)
 
         cw_train_loader, cw_test_loader = get_cw_loaders(trainer, m, final)
+        optimizer, optim_args = get_opt(opt_name, 10 * initial_learning_rate, weight_decay)
         block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader,
-                               lr=100 * initial_learning_rate))
+                               optimizer=optimizer,
+                               optim_args=optim_args,
+                               lr=10 * initial_learning_rate))
         cw_trainer = CWTrainer(model, exp_name, block_args)
         if not model_eval:
             while training_epochs > cw_trainer.epoch:
@@ -213,7 +221,8 @@ def main(task='train/eval'):
                 assert torch.all(torch.isclose(cw_trainer.model.codebook, trainer.model.cw_encoder.codebook))
                 cw_trainer.test(partition='test')  # tests on val when not final because val has been saved as test
                 trainer.model.load_state_dict(torch.load(load_path, map_location=device))
-                trainer.test_cw_recon(partition='test' if final else 'val', m=m)
+                with trainer.model.from_z:
+                    trainer.test(partition='test' if final else 'val', m=m)
         else:
             cw_trainer.test(partition='test', save_outputs=True)
             trainer.test_cw_recon(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
@@ -234,8 +243,9 @@ def main(task='train/eval'):
         model_state = torch.load(load_path, map_location=device)
         assert load < 1, 'Only loading the last saved version is supported'
         trainer.model.load_state_dict(model_state)
-        trainer.test_cw_recon(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
-        trainer.evaluate_generated_set(m, metric='Chamfer')
+        with trainer.model.from_z:
+            trainer.test(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
+        trainer.evaluate_generated_set(m, metric='Emd')
         return
     # loads last model
     if load == 0:
@@ -280,8 +290,6 @@ def main(task='train/eval'):
             trainer.test(partition='test' if final else 'val', m=m)
     else:
         trainer.test(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
-
-
 
 
 if __name__ == '__main__':

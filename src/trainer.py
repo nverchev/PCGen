@@ -16,6 +16,20 @@ from src.loss_and_metrics import chamfer
 from src.loss_and_metrics import emdModule
 
 
+# Allows a temporary change using the with statement
+class UsuallyFalse:
+    value = False
+
+    def __bool__(self):
+        return self.value
+
+    def __enter__(self):
+        self.value = True
+
+    def __exit__(self, *_):
+        self.value = False
+
+
 # Apply recursively lists or dictionaries until check
 def apply(obj, check, f):  # changes device in dictionary and lists
     if check(obj):
@@ -90,7 +104,7 @@ minioClient = Minio(*Your storage name*,
 
 class Trainer(metaclass=ABCMeta):
     bin = ''
-    quiet_mode = False  # less output
+    quiet_mode = UsuallyFalse()  # less output
     max_output = np.inf  # maximum amount of stored evaluated test samples
 
     def __init__(self, model, exp_name, device, optimizer, train_loader, val_loader=None,
@@ -323,6 +337,12 @@ class Trainer(metaclass=ABCMeta):
                     self.minio.fget_object(self.bin, self.minio_path(file), file)
         self.model.load_state_dict(torch.load(paths['model'],
                                               map_location=torch.device(self.device)))
+        for group1, group2  in zip(self.optimizer.param_groups, torch.load(paths['optim'], map_location=torch.device(self.device))['param_groups']):
+            for param1, param2 in zip(group1['params'], group2['params']):
+                if isinstance(param1, int):
+                    if not isinstance(param2, int):
+                        print(param2.size())
+
         self.optimizer.load_state_dict(torch.load(paths['optim'],
                                                   map_location=torch.device(self.device)))
         self.train_losses = json.load(open(paths['train_hist']))
@@ -370,20 +390,10 @@ class AETrainer(Trainer):
         self.model.decoder.m = m_old
         return
 
-    def test_cw_recon(self, *args, **kwargs):
-        try:
-            self.model.recon_cw = True
-        except AttributeError:
-            print('Codeword recontruction is only supported for the VQVAE model')
-        else:
-            self.test(*args, **kwargs)
-            self.model.recon_cw = False
-        return
-
     def update_m_training(self, m):
         self.model.decoder.m_training = m
 
-    def clas_metric(self, final=False):
+    def class_metric(self, final=False):
         # No rotation here
         self.train_loader.dataset.rotation = False
         self.test(partition='train', save_outputs=self.test_outputs)
@@ -433,7 +443,7 @@ class AETrainer(Trainer):
     def metrics(self, output, inputs, targets):
         return self._metrics(output, inputs, targets)
 
-    def evaluate_generated_set(self, m, metric='Chamfer'):
+    def evaluate_generated_set(self, m, metric='Chamfer', batch=64):
         self.model.decoder.m = m
         test_dataset = []
         generated_dataset = []
@@ -446,27 +456,25 @@ class AETrainer(Trainer):
             with torch.no_grad():
                 samples = self.model.random_sampling(test_clouds.shape[0])['recon'].detach().cpu()
             generated_dataset.extend(samples)
+        print("Random Dataset has been generated.")
         test_l = len(test_dataset)
         dist_array = np.zeros((2 * test_l, 2 * test_l), dtype=float)
         all_shapes = test_dataset + generated_dataset[:test_l]
         emd = emdModule()
-        for i, shapei in enumerate(all_shapes):
-            for j, shapej in enumerate(all_shapes):
-                if i == j:
-                    dist_array[i, j] = np.inf  # safe way of ignoring this entry
-                elif i > j:  # distance is symmetric
+        for i, cloud in enumerate(all_shapes):
+            dist_array[i, i] = np.inf  # safe way of ignoring this entry
+            for j in range(i + 1, len(all_shapes), batch):
+                clouds1 = torch.stack(all_shapes[j:j + batch]).to(self.device)
+                clouds2 = cloud.unsqueeze(0).expand_as(clouds1).to(self.device)
+                if metric == 'Chamfer':
+                    pairwise_dist = square_distance(clouds1, clouds2)
+                    dist = chamfer(clouds1, clouds2, pairwise_dist)[0] / cloud.shape[0]
+                else:
+                    assert metric == 'Emd'
+                    dist = emd(clouds1, clouds2, 0.05, 3000)[0].mean(1)
+                dist_array[i, j:j + len(clouds1)] = dist.cpu()
+                dist_array[j:j + len(clouds1), i] = dist.cpu()
 
-                    cloud1 = shapei.unsqueeze(0).to(self.device)
-                    cloud2 = shapej.unsqueeze(0).to(self.device)
-                    if metric == 'Chamfer':
-                        pairwise_dist = square_distance(cloud1, cloud2)
-                        ch = chamfer(cloud1, cloud2, pairwise_dist)[0].sum(0) / cloud1.shape[1]
-                        dist = ch.item()
-                    else:
-                        assert metric == 'Emd'
-                        dist = emd(cloud1, cloud2, 0.05, 3000)[0].mean()
-                    dist_array[i, j] = dist
-                    dist_array[j, i] = dist
         np.save('dist_array', dist_array)
         closest = dist_array.argmin(axis=1)  # np.inf on the diagonal so argmin != index
         test_closest = closest[:test_l]
@@ -481,7 +489,6 @@ class AETrainer(Trainer):
         print(f'Minimum Matching Distance score ({metric}): {mmd:.4e}')
         print(f'1-NNA score ({metric}): {nna:.4e}')
         return dist_array
-
 
 
 class CWTrainer(Trainer):
@@ -511,8 +518,6 @@ class CWTrainer(Trainer):
 
     def helper_inputs(self, inputs, labels):
         return {'x': inputs[0]}
-
-
 
 
 def get_ae_trainer(model, exp_name, block_args):

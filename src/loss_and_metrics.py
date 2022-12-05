@@ -72,9 +72,6 @@ class VAELoss(nn.Module):
     def forward(self, outputs, inputs, targets):
         ref_cloud = inputs[-2]  # get input shape (resampled depending on the dataset)
         recon = outputs['recon']
-        # if recon.dim == 4:
-        #     n_samples = recon.size()[1]
-        #     inputs = inputs.unsqueeze(1).expand(-1, n_samples, -1, -1)
         reg_loss_dict = self.get_reg_loss(ref_cloud, outputs)
         reg_loss = reg_loss_dict.pop('reg')
         recon_loss_dict = self.get_recon_loss(ref_cloud, recon)
@@ -103,7 +100,7 @@ class KLDVAELoss:
 
 
 class VQVAELoss:
-    c_vq = 1
+    c_vq = 10
 
     def __call__(self, inputs, outputs):
         embed_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
@@ -150,22 +147,37 @@ class CWEncoderLoss(nn.Module):
     def forward(self, outputs, inputs, targets):
         kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'd_mu', 'd_log_var', 'prior_log_var']])
         cw_idx = inputs[1]
-        cw_neg_dist = -outputs['cw_dist']
+        cw_neg_dist = -torch.sqrt(outputs['cw_dist'])
         nll = -(cw_neg_dist.log_softmax(dim=2) * cw_idx).sum((1, 2))
         criterion = nll.mean(0) + self.c_reg * kld.mean(0)
         return {
             'Criterion': criterion,
             'KLD': kld.sum(0),
             'NLL': nll.sum(0),
+            'Accuracy': (cw_idx * F.one_hot(outputs['cw_dist'].argmin(2), num_classes=cw_idx.shape[2])).mean(1).sum()
         }
+
+
+class DoubleEncoding(VAELoss):
+    cw_loss = CWEncoderLoss(1)  # fixing the reg
+
+    def forward(self, outputs, inputs, targets):
+        dict_loss = super().forward(outputs, inputs, targets)
+        second_dict_loss = self.cw_loss.forward(outputs, [None, outputs['cw_idx']], targets)
+        criterion = dict_loss.pop('Criterion') + second_dict_loss.pop('Criterion')
+        return {'Criterion': criterion,
+                **dict_loss,
+                **second_dict_loss}
 
 
 def get_ae_loss(block_args):
     get_recon_loss = ReconLoss(block_args['recon_loss'])
     if block_args['ae'] in ('AE', 'Oracle'):
         get_reg_loss = AELoss()
+
     elif block_args['ae'] == 'VQVAE':
         get_reg_loss = VQVAELoss()
+        return DoubleEncoding(get_reg_loss, get_recon_loss, block_args['c_reg'])  # Remove this to train only VQVAE
     else:
         get_reg_loss = KLDVAELoss()
     return VAELoss(get_reg_loss, get_recon_loss, block_args['c_reg'])
@@ -175,7 +187,7 @@ class AllMetrics:
     def __init__(self, denormalise):
         self.denormalise = denormalise
         self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.01,
-                                             diameter=2, scaling=.6, backend='online')
+                                             diameter=2, scaling=.9, backend='online')
         self.emd = emdModule()
 
     def __call__(self, outputs, inputs):
@@ -197,7 +209,9 @@ class AllMetrics:
             'Chamfer': squared.sum(0),
             'Chamfer Augmented': augmented.sum(0),
             'Chamfer Smooth': chamfer_smooth(clouds1, clouds2, pairwise_dist).sum(0),
-            'Sinkhorn': self.sinkhorn(clouds1, clouds2).sum(0),
-            # 'EMD': self.emd(clouds1, clouds2, 0.05, 3000)[0].mean(1).sum(0),
         }
+        if clouds1.shape == 2048:
+            dict_recon_metrics.update({'EMD': self.emd(clouds1, clouds2, 0.05, 3000)[0].mean(1).sum(0)})
+        else:
+            dict_recon_metrics.update({'Sinkhorn': self.sinkhorn(clouds1, clouds2).sum(0)})
         return dict_recon_metrics
