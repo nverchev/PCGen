@@ -18,16 +18,16 @@ from src.loss_and_metrics import emdModule
 
 # Allows a temporary change using the with statement
 class UsuallyFalse:
-    value = False
+    _value = False
 
     def __bool__(self):
-        return self.value
+        return self._value
 
     def __enter__(self):
-        self.value = True
+        self._value = True
 
     def __exit__(self, *_):
-        self.value = False
+        self._value = False
 
 
 # Apply recursively lists or dictionaries until check
@@ -450,14 +450,16 @@ class AETrainer(Trainer):
         for batch_idx, (inputs, targets, index) in enumerate(self.val_loader):
             test_clouds = inputs[1]
             test_dataset.extend(test_clouds.cpu())
-            # (samples, targets, index) = next(iter(self.train_loader))
-            # samples = samples[1]
             self.model.eval()
             with torch.no_grad():
                 samples = self.model.random_sampling(test_clouds.shape[0])['recon'].detach().cpu()
             generated_dataset.extend(samples)
         print("Random Dataset has been generated.")
         test_l = len(test_dataset)
+        # Uncomment to test the Oracle
+        # train_ds = self.train_loader.dataset
+        # sample_train = np.random.choice(range(len(train_ds)), size=test_l, replace=False)
+        # generated_dataset = [train_ds[i][0][1] for i in sample_train]
         dist_array = np.zeros((2 * test_l, 2 * test_l), dtype=float)
         all_shapes = test_dataset + generated_dataset[:test_l]
         emd = emdModule()

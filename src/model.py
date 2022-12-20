@@ -82,7 +82,7 @@ class Oracle(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.decoder = nn.Module()
-        self.decoder.m = np.Inf
+        self.decoder.m = -1
 
     def forward(self, x, indices):
         return {'recon': x[:, :self.decoder.m, :]}

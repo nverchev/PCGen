@@ -170,8 +170,9 @@ def main(task='train/eval'):
     train_loader, val_loader, test_loader = get_loaders(**data_loader_settings)
 
     lr = {'encoder': initial_learning_rate, 'decoder': initial_learning_rate}
-    if ae == 'VQVAE' :
+    if ae == 'VQVAE':
         lr['cw_encoder'] = 10 * initial_learning_rate
+    lr = initial_learning_rate
     optimizer, optim_args = get_opt(opt_name, lr, weight_decay)
 
     trainer_settings = dict(
@@ -212,7 +213,8 @@ def main(task='train/eval'):
         block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader,
                                optimizer=optimizer,
                                optim_args=optim_args,
-                               lr=10 * initial_learning_rate))
+                               lr=10 * initial_learning_rate,
+                               batch_size=batch_size * 8))
         cw_trainer = CWTrainer(model, exp_name, block_args)
         if not model_eval:
             while training_epochs > cw_trainer.epoch:
@@ -225,7 +227,8 @@ def main(task='train/eval'):
                     trainer.test(partition='test' if final else 'val', m=m)
         else:
             cw_trainer.test(partition='test', save_outputs=True)
-            trainer.test_cw_recon(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
+            with trainer.model.from_z:
+                trainer.test(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
             from sklearn.decomposition import PCA
             mu = torch.stack(cw_trainer.test_outputs['mu'])
             torch.save(mu, 'mu.pt')
@@ -245,7 +248,7 @@ def main(task='train/eval'):
         trainer.model.load_state_dict(model_state)
         with trainer.model.from_z:
             trainer.test(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
-        trainer.evaluate_generated_set(m, metric='Emd')
+        trainer.evaluate_generated_set(m, metric='Chamfer')
         return
     # loads last model
     if load == 0:

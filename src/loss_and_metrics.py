@@ -6,7 +6,8 @@ import torch.nn.functional as F
 import geomloss
 from src.neighbour_op import square_distance
 from external.emd.emd_module import emdModule
-
+from external.metrics.StructuralLosses.match_cost import match_cost
+from external.metrics.StructuralLosses.nn_distance import nn_distance
 
 # Chamfer Distance
 
@@ -41,6 +42,9 @@ def chamfer_smooth(inputs, recon, pairwise_dist):
     m = recon.size()[1]
     # variance of the components (model assumption)
     sigma2 = 0.001
+    idx2 = pairwise_dist.argmin(axis=2).expand(-1, -1, 3)
+    m2 = recon.gather(1, idx2)
+    sigma2 = ((inputs - m2) ** 2).mean().detach().item()
     pairwise_dist /= - 2 * sigma2
     lse1 = pairwise_dist.logsumexp(axis=2)
     normalize1 = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(m)
@@ -76,7 +80,7 @@ class VAELoss(nn.Module):
         reg_loss = reg_loss_dict.pop('reg')
         recon_loss_dict = self.get_recon_loss(ref_cloud, recon)
         recon_loss = recon_loss_dict.pop('recon')
-        criterion = recon_loss + self.c_reg * reg_loss
+        criterion =  recon_loss + self.c_reg * reg_loss
         return {
             'Criterion': criterion,
             **reg_loss_dict,
@@ -122,6 +126,7 @@ class ReconLoss:
         squared, augmented = chamfer(inputs, recon, pairwise_dist)
         dict_recon = {'Chamfer': squared.sum(0), 'Chamfer Augmented': augmented.sum(0)}
         if self.recon_loss == 'Chamfer':
+            #recon = match_cost(inputs.contiguous(), recon.contiguous()).mean(0) / 2048 + squared.mean(0)
             recon = squared.mean(0)
         elif self.recon_loss == 'ChamferA':
             recon = augmented.mean(0)
@@ -210,8 +215,9 @@ class AllMetrics:
             'Chamfer Augmented': augmented.sum(0),
             'Chamfer Smooth': chamfer_smooth(clouds1, clouds2, pairwise_dist).sum(0),
         }
-        if clouds1.shape == 2048:
-            dict_recon_metrics.update({'EMD': self.emd(clouds1, clouds2, 0.05, 3000)[0].mean(1).sum(0)})
+        if clouds1.shape[1] == 2048:
+            #dict_recon_metrics.update({'EMD': self.emd(clouds1, clouds2, 0.005, 50)[0].mean(1).sum(0)})
+            dict_recon_metrics.update({'EMD': match_cost(clouds1.contiguous(), clouds2.contiguous()).sum(0) / 2048})
         else:
             dict_recon_metrics.update({'Sinkhorn': self.sinkhorn(clouds1, clouds2).sum(0)})
         return dict_recon_metrics
