@@ -14,10 +14,13 @@ class CWDecoder(nn.Module):
         self.cw_dim = cw_dim
         self.dim_embedding = dim_embedding
         self.book_size = book_size
-        self.expand = 4
+        self.expand = 16
         self.h_dim = [self.expand * cw_dim]
-        self.decode = LinearLayer(3 * z_dim // 4, self.expand * cw_dim)
-        self.conv = nn.Conv1d(self.expand * self.dim_embedding, self.dim_embedding, kernel_size=1)
+        self.decode = nn.Sequential(LinearLayer(z_dim,  256),
+                                    LinearLayer(256, self.expand * cw_dim),)
+        self.conv = nn.Sequential(
+            PointsConvLayer(self.expand * self.dim_embedding, self.expand * self.dim_embedding),
+            nn.Conv1d(self.expand * self.dim_embedding, self.dim_embedding, kernel_size=1))
 
 
 

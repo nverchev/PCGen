@@ -443,23 +443,25 @@ class AETrainer(Trainer):
     def metrics(self, output, inputs, targets):
         return self._metrics(output, inputs, targets)
 
-    def evaluate_generated_set(self, m, metric='Chamfer', batch=64):
+    def evaluate_generated_set(self, m, metric='Chamfer', batch=64, oracle=False):
         self.model.decoder.m = m
         test_dataset = []
         generated_dataset = []
         for batch_idx, (inputs, targets, index) in enumerate(self.val_loader):
             test_clouds = inputs[1]
             test_dataset.extend(test_clouds.cpu())
-            self.model.eval()
-            with torch.no_grad():
-                samples = self.model.random_sampling(test_clouds.shape[0])['recon'].detach().cpu()
-            generated_dataset.extend(samples)
+            if not oracle:
+                self.model.eval()
+                with torch.no_grad():
+                    samples = self.model.random_sampling(test_clouds.shape[0])['recon'].detach().cpu()
+                generated_dataset.extend(samples)
         print("Random Dataset has been generated.")
         test_l = len(test_dataset)
         # Uncomment to test the Oracle
-        # train_ds = self.train_loader.dataset
-        # sample_train = np.random.choice(range(len(train_ds)), size=test_l, replace=False)
-        # generated_dataset = [train_ds[i][0][1] for i in sample_train]
+        if oracle:
+            train_ds = self.train_loader.dataset
+            sample_train = np.random.choice(range(len(train_ds)), size=test_l, replace=True)
+            generated_dataset = [train_ds[i][0][1] for i in sample_train]
         dist_array = np.zeros((2 * test_l, 2 * test_l), dtype=float)
         all_shapes = test_dataset + generated_dataset[:test_l]
         emd = emdModule()

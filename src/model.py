@@ -19,12 +19,16 @@ class VAECW(nn.Module):
         self.dim_codes, self.book_size, self.dim_embedding = codebook.data.size()
         self.encoder = CWEncoder(cw_dim, z_dim, dim_embedding=self.dim_embedding)
         self.decoder = CWDecoder(cw_dim, z_dim, dim_embedding=self.dim_embedding, book_size=self.book_size)
+        self.n_pseudo_input = 400
+        self.pseudo_inputs = nn.Parameter(torch.randn(self.n_pseudo_input, self.dim_embedding, self.dim_codes))
         self.inference1 = nn.Linear(2 * z_dim, z_dim // 2)
         self.inference2 = nn.Sequential(nn.Linear(9 * z_dim // 4, 2 * z_dim),
+                                        nn.BatchNorm1d(2 * z_dim),
                                         nn.LeakyReLU(negative_slope=0.2, inplace=True),
                                         nn.Linear(2 * z_dim, 3 * z_dim // 2),
                                         )
         self.prior = nn.Sequential(nn.Linear(z_dim // 4, 2 * z_dim),
+                                   nn.BatchNorm1d(2 * z_dim),
                                    nn.LeakyReLU(negative_slope=0.2, inplace=True),
                                    nn.Linear(2 * z_dim, 3 * z_dim // 2),
                                    )
@@ -37,32 +41,42 @@ class VAECW(nn.Module):
     def gaussian_sample(self, mu, log_var):
         std = torch.exp(0.5 * log_var)
         eps = torch.randn_like(std)
-        return eps.mul(std).add_(mu) if self.training else mu
+        return eps.mul(std).add_(mu)
 
     def encode(self, x):
+        if x is not None:
+            x = x.view(-1, self.dim_codes, self.dim_embedding).transpose(2, 1)
+            x = torch.cat([x, self.pseudo_inputs], dim=0)
+        else:
+            x = self.pseudo_inputs
         data = {}
-        data['h'] = self.encoder(x.view(-1, self.dim_codes, self.dim_embedding).transpose(2, 1))
-        mu, log_var = self.inference1(data['h']).chunk(2, 1)
-        data['mu'], data['log_var'] = mu, log_var
-        data['z'] = [self.gaussian_sample(data['mu'], data['log_var'])]
+        x = self.encoder(x)
+        data['h'] = x[:-self.n_pseudo_input]
+        #x = self.inference1(x)
+        data['mu'], data['log_var'] = x[:-self.n_pseudo_input].chunk(2, 1)
+        data['pseudo_mu'], data['pseudo_log_var'] = x[-self.n_pseudo_input:].chunk(2, 1)
+        data['z'] = self.gaussian_sample(data['mu'], data['log_var'])
+
         return data
 
     def decode(self, data):
-        z1 = data['z'][0]
-        p_mu, p_logvar = self.prior(z1).chunk(2, 1)
-        data['prior_log_var'] = [p_logvar]
-        if 'h' in data.keys():  # we have to inference the upper latent variable group
-            d_mu, d_log_var = self.inference2(torch.cat([z1, data['h']], dim=1)).chunk(2, 1)
-            z2 = self.gaussian_sample(d_mu + p_mu, d_log_var + p_logvar)
-            data['d_mu'] = [d_mu]
-            data['d_log_var'] = [d_log_var]
-        else:
-            z2 = self.gaussian_sample(p_mu, p_logvar)
-        data['cw_recon'] = self.decoder(z2)
+        z1 = data['z']
+        #p_mu, p_logvar = self.prior(z1).chunk(2, 1)
+        data['prior_log_var'] = []
+        data['d_mu'] = []
+        data['d_log_var'] = []
+        # if 'h' in data.keys():  # we have to inference the upper latent variable group
+        #     d_mu, d_log_var = self.inference2(torch.cat([z1, data['h']], dim=1)).chunk(2, 1)
+        #     z2 = self.gaussian_sample(d_mu + p_mu, d_log_var + p_logvar)
+        #     data['d_mu'] = [d_mu]
+        #     data['d_log_var'] = [d_log_var]
+        # else:
+        #     z2 = p_mu#self.gaussian_sample(p_mu, p_logvar)
+        data['cw_recon'] = self.decoder(z1)
         data['cw_dist'], data['idx'] = self.dist(data['cw_recon'])
         return data
 
-    #
+
     # def reset_parameters(self):
     #     self.apply(lambda x: x.reset_parameters() if isinstance(x, nn.Linear) else x)
 
@@ -183,8 +197,17 @@ class VQVAE(AE):
         return super().decode(data)
 
     def random_sampling(self, batch_size):
-        torch.random.seed()
-        data = {'z': [torch.randn(batch_size, self.cw_encoder.z_dim // 4).to(self.codebook.device)]}
+        #torch.random.seed()
+        # data = {'z': [torch.randn(batch_size, self.cw_encoder.z_dim).to(self.codebook.device)]}
+        pseudo_data = self.cw_encoder.encode(None)
+        pseudo_z = []
+        for _ in range(batch_size):
+            i = np.random.randint(self.cw_encoder.n_pseudo_input)
+            pseudo_z.append(self.cw_encoder.gaussian_sample(pseudo_data['pseudo_mu'][i],  pseudo_data['pseudo_log_var'][i]))
+        pseudo_z = torch.stack(pseudo_z)
+        data = {'z': pseudo_z}
+        torch.save(pseudo_data['pseudo_mu'], 'pseudo_mu.pt')
+        torch.save(pseudo_data['pseudo_log_var'], 'pseudo_log_var.pt')
         with self.from_z:
             out = self.decode(data=data)
         return out

@@ -37,10 +37,10 @@ def parse_args():
     parser.add_argument('--num_points', type=int, default=0,
                         help='Number of (maximum) points of the training dataset, 0 is default for dataset')
     parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--optim', type=str, default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
+    parser.add_argument('--optim', type=str, default='Adam', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                         help='SGD_momentum has momentum = 0.9')
-    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate, 10x when for the second encoder')
-    parser.add_argument('--wd', type=float, default=0.000001, help='Weight decay')
+    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate, 10x when for the second encoder')
+    parser.add_argument('--wd', type=float, default=0.0, help='Weight decay')
     parser.add_argument('--min_decay', type=float, default=0.01, help='fraction of the initial lr at the end of train')
     parser.add_argument('--k', type=int, default=20,
                         help='Number of neighbours of a point (counting the point itself) in DGCNN]')
@@ -71,7 +71,7 @@ def parse_args():
 
 def main(task='train/eval'):
     assert task in ['train/eval', 'return model for profiling', 'return loaded model for random generation',
-                    'train cw encoder', 'visualise reconstructions', 'evaluate random generation']
+                    'train cw encoder', 'visualise reconstructions', 'evaluate random generation', 'model_insight']
     args = parse_args()
     encoder_name = args.encoder
     decoder_name = args.decoder
@@ -232,23 +232,30 @@ def main(task='train/eval'):
             from sklearn.decomposition import PCA
             mu = torch.stack(cw_trainer.test_outputs['mu'])
             torch.save(mu, 'mu.pt')
-            d_mu = torch.stack(cw_trainer.test_outputs['d_mu'][0])
-            torch.save(d_mu, 'd_mu.pt')
             pca = PCA(3)
             cw_pca = pca.fit_transform(mu.numpy())
             from src.plot_PC import pc_show
-            pc_show(torch.FloatTensor(cw_pca), colors='blue')
+            #pc_show(torch.FloatTensor(cw_pca), colors='blue')
+            pseudo_mu = torch.load('/home/nverchev/PycharmProjects/PCGen/pseudo_mu.pt')
+            pseudo_mu_pca = pca.transform(pseudo_mu.cpu().numpy())
+            pc_show([torch.FloatTensor(cw_pca), torch.FloatTensor(pseudo_mu_pca)], colors=['blue', 'red'])
+
+
         return
     if task == 'evaluate random generation':
-        assert ae == 'VQVAE', 'Only VQVAE supported'
-        load_path = os.path.join('models', exp_name, f'model_epoch{training_epochs}.pt')
-        assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
-        model_state = torch.load(load_path, map_location=device)
-        assert load < 1, 'Only loading the last saved version is supported'
-        trainer.model.load_state_dict(model_state)
-        with trainer.model.from_z:
-            trainer.test(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
-        trainer.evaluate_generated_set(m, metric='Chamfer')
+        assert ae == 'VQVAE' or "Oracle", 'Only VQVAE supported'
+        oracle = True
+        if ae == 'VQVAE':
+            oracle = False
+            load_path = os.path.join('models', exp_name, f'model_epoch{training_epochs}.pt')
+            assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
+            model_state = torch.load(load_path, map_location=device)
+            assert load < 1, 'Only loading the last saved version is supported'
+            trainer.model.load_state_dict(model_state)
+            with trainer.model.from_z:
+                trainer.test(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
+        trainer.evaluate_generated_set(m, metric='Chamfer', oracle=oracle)
+        #trainer.evaluate_generated_set(m, metric='Emd', oracle=oracle)
         return
     # loads last model
     if load == 0:
@@ -271,9 +278,21 @@ def main(task='train/eval'):
             recon_pcs.append(trainer.model(x=torch_input, indices=None)['recon'][0] * scale)
         return ind, input_pcs, recon_pcs
 
-    # if task == 'evaluate random generation':
-    #     trainer.evaluate_generated_set(m, metric='chamfer')
-    #     return
+    if task == 'model_insight':
+        if ae == 'VQVAE':
+            trainer.test('train', m=m, save_outputs=True)
+            idx = trainer.test_outputs['cw_idx']
+            idx = torch.stack(idx)
+            print(idx.shape)
+            idx = idx.mean(0)
+            print(idx)
+            print(idx.min())
+            print(idx.max())
+
+            print(torch.histc(idx))
+        return
+
+
 
     if not model_eval:
         if load == -1 and decoder_name == 'TearingNet':

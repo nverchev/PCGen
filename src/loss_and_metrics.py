@@ -9,6 +9,7 @@ from external.emd.emd_module import emdModule
 from external.metrics.StructuralLosses.match_cost import match_cost
 from external.metrics.StructuralLosses.nn_distance import nn_distance
 
+
 # Chamfer Distance
 
 def chamfer(t1, t2, dist):
@@ -16,11 +17,11 @@ def chamfer(t1, t2, dist):
     # return dist.min(axis = 2).mean(0).sum()\
     #      + dist.min(axis = 1).mean(0).sum()
     # We use the retrieved index on torch
-    idx1 = dist.argmin(axis=1).expand(-1, -1, 3)
+    idx1 = dist.argmin(axis=1).expand(-1, -1, t1.shape[2])
     m1 = t1.gather(1, idx1)
     squared1 = ((t2 - m1) ** 2).sum(axis=(1, 2))
     augmented1 = torch.sqrt(((t2 - m1) ** 2).sum(-1)).mean(1)
-    idx2 = dist.argmin(axis=2).expand(-1, -1, 3)
+    idx2 = dist.argmin(axis=2).expand(-1, -1, t1.shape[2])
     m2 = t2.gather(1, idx2)
     squared2 = ((t1 - m2) ** 2).sum(axis=(1, 2))
     augmented2 = torch.sqrt(((t1 - m2) ** 2).sum(-1)).mean(1)
@@ -54,17 +55,47 @@ def chamfer_smooth(inputs, recon, pairwise_dist):
     loss2 = -lse2.sum(2) + n * normalize2
     return (loss1 + loss2).sum(1)
 
+def gaussian_ll(x, mean, log_var):
+    return -0.5 * (log_var + torch.pow(x - mean, 2) / torch.exp(log_var))
 
-def kld_loss(q_mu, q_log_var, d_mu=(), d_log_var=(), p_log_var=()):
-    kld_matrix = -1 - q_log_var + q_mu ** 2 + q_log_var.exp()
-    kld = 0.5 * kld_matrix.sum(1)
+
+
+def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var, d_mu=(), d_log_var=(), p_log_var=()):
+    posterior_ll = gaussian_ll(z, mu, log_var).sum(1)  # sum dimensions
+    k = pseudo_mu.shape[0]
+    b = mu.shape[0]
+    z = z.unsqueeze(1).expand(-1, k, -1)  # expand to each component
+    pseudo_mu = pseudo_mu.unsqueeze(0).expand(b, -1, -1)  # expand to each sample
+    pseudo_log_var = pseudo_log_var.unsqueeze(0).expand(b, -1, -1)  # expand to each sample
+    prior_ll = torch.logsumexp(gaussian_ll(z, pseudo_mu, pseudo_log_var).sum(2), dim=1)
+    kld = posterior_ll - prior_ll + np.log(k)
     for d_mu, d_log_var, p_log_var in zip(d_mu, d_log_var, p_log_var):
         # d_mu = q_mu - p_mu
         # d_logvar = q_logvar - p_logvar
-        kld_matrix = -1 - d_log_var + (d_mu ** 2) / p_log_var.exp() + d_log_var.exp()
+        assert (d_log_var > - 1000).prod()
+        assert (d_log_var < 1000).prod()
+        assert (p_log_var > - 1000).prod()
+        assert (p_log_var < 1000).prod()
+        kld_matrix = -1 - d_log_var + (d_mu ** 2) / (p_log_var.exp() + 0.00001) + d_log_var.exp()
         kld += 0.5 * kld_matrix.sum(1)
     return kld
 
+
+sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.01,
+                                diameter=2, scaling=.4, backend='online')
+
+
+#
+#
+# def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var):
+#     posterior_ll = gaussian_ll(z, mu, log_var).sum(1)  #sum dimensions
+#     k = pseudo_mu.shape[0]
+#     b = mu.shape[0]
+#     z = z.unsqueeze(1).expand(-1, k, -1)  # expand to each component
+#     pseudo_mu = pseudo_mu.unsqueeze(0).expand(b, -1, -1)  # expand to each sample
+#     pseudo_log_var = pseudo_log_var.unsqueeze(0).expand(b, -1, -1)  # expand to each sample
+#     prior_ll = torch.logsumexp(gaussian_ll(z, pseudo_mu, pseudo_log_var).sum(2), dim=1)
+#     return posterior_ll - prior_ll + np.log(k)
 
 class VAELoss(nn.Module):
     def __init__(self, get_reg_loss, get_recon_loss, c_reg):
@@ -80,7 +111,7 @@ class VAELoss(nn.Module):
         reg_loss = reg_loss_dict.pop('reg')
         recon_loss_dict = self.get_recon_loss(ref_cloud, recon)
         recon_loss = recon_loss_dict.pop('recon')
-        criterion =  recon_loss + self.c_reg * reg_loss
+        criterion = recon_loss + self.c_reg * reg_loss
         return {
             'Criterion': criterion,
             **reg_loss_dict,
@@ -126,8 +157,10 @@ class ReconLoss:
         squared, augmented = chamfer(inputs, recon, pairwise_dist)
         dict_recon = {'Chamfer': squared.sum(0), 'Chamfer Augmented': augmented.sum(0)}
         if self.recon_loss == 'Chamfer':
-            #recon = match_cost(inputs.contiguous(), recon.contiguous()).mean(0) / 2048 + squared.mean(0)
-            recon = squared.mean(0)
+            emd = match_cost(inputs.contiguous(), recon.contiguous())
+            recon = emd.mean(0) + squared.mean(0)
+            dict_recon['EMD'] = emd.sum(0)
+            # recon = squared.mean(0)
         elif self.recon_loss == 'ChamferA':
             recon = augmented.mean(0)
         elif self.recon_loss == 'ChamferS':
@@ -150,11 +183,15 @@ class CWEncoderLoss(nn.Module):
         self.c_reg = c_reg
 
     def forward(self, outputs, inputs, targets):
-        kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'd_mu', 'd_log_var', 'prior_log_var']])
+        #kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'd_mu', 'd_log_var', 'prior_log_var']])
+        kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'z', 'pseudo_mu', 'pseudo_log_var','d_mu', 'd_log_var', 'prior_log_var']])
+
         cw_idx = inputs[1]
-        cw_neg_dist = -torch.sqrt(outputs['cw_dist'])
+        cw_neg_dist = -outputs['cw_dist'] + outputs['cw_dist'].min(2, keepdim=True)[0]
         nll = -(cw_neg_dist.log_softmax(dim=2) * cw_idx).sum((1, 2))
+
         criterion = nll.mean(0) + self.c_reg * kld.mean(0)
+
         return {
             'Criterion': criterion,
             'KLD': kld.sum(0),
@@ -163,16 +200,16 @@ class CWEncoderLoss(nn.Module):
         }
 
 
-class DoubleEncoding(VAELoss):
-    cw_loss = CWEncoderLoss(1)  # fixing the reg
-
-    def forward(self, outputs, inputs, targets):
-        dict_loss = super().forward(outputs, inputs, targets)
-        second_dict_loss = self.cw_loss.forward(outputs, [None, outputs['cw_idx']], targets)
-        criterion = dict_loss.pop('Criterion') + second_dict_loss.pop('Criterion')
-        return {'Criterion': criterion,
-                **dict_loss,
-                **second_dict_loss}
+# class DoubleEncoding(VAELoss):
+#     cw_loss = CWEncoderLoss(1)  # fixing the reg
+#
+#     def forward(self, outputs, inputs, targets):
+#         dict_loss = super().forward(outputs, inputs, targets)
+#         second_dict_loss = self.cw_loss.forward(outputs, [None, outputs['cw_idx']], targets)
+#         criterion = dict_loss.pop('Criterion') + second_dict_loss.pop('Criterion')
+#         return {'Criterion': criterion,
+#                 **dict_loss,
+#                 **second_dict_loss}
 
 
 def get_ae_loss(block_args):
@@ -182,7 +219,7 @@ def get_ae_loss(block_args):
 
     elif block_args['ae'] == 'VQVAE':
         get_reg_loss = VQVAELoss()
-        return DoubleEncoding(get_reg_loss, get_recon_loss, block_args['c_reg'])  # Remove this to train only VQVAE
+        #return DoubleEncoding(get_reg_loss, get_recon_loss, block_args['c_reg'])  # Remove this to train only VQVAE
     else:
         get_reg_loss = KLDVAELoss()
     return VAELoss(get_reg_loss, get_recon_loss, block_args['c_reg'])
@@ -216,7 +253,7 @@ class AllMetrics:
             'Chamfer Smooth': chamfer_smooth(clouds1, clouds2, pairwise_dist).sum(0),
         }
         if clouds1.shape[1] == 2048:
-            #dict_recon_metrics.update({'EMD': self.emd(clouds1, clouds2, 0.005, 50)[0].mean(1).sum(0)})
+            # dict_recon_metrics.update({'EMD': self.emd(clouds1, clouds2, 0.005, 50)[0].mean(1).sum(0)})
             dict_recon_metrics.update({'EMD': match_cost(clouds1.contiguous(), clouds2.contiguous()).sum(0) / 2048})
         else:
             dict_recon_metrics.update({'Sinkhorn': self.sinkhorn(clouds1, clouds2).sum(0)})
