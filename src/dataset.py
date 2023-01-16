@@ -491,7 +491,7 @@ def get_cw_loaders(t, m, final):
     t.test(partition='test' if final else 'val', m=m, save_outputs=True)
     cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_idx'], t.test_targets)
     cw_train_loader = torch.utils.data.DataLoader(
-        cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
+        cw_train_dataset, drop_last=True, batch_size=batch_size * 8, shuffle=True, pin_memory=pin_memory)
     cw_test_loader = torch.utils.data.DataLoader(
-        cw_test_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
+        cw_test_dataset, drop_last=False, batch_size=batch_size * 8, shuffle=False, pin_memory=pin_memory)
     return cw_train_loader, cw_test_loader

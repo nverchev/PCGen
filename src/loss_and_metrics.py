@@ -69,6 +69,7 @@ def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var, d_mu=(), d_log_var=(), p
     pseudo_log_var = pseudo_log_var.unsqueeze(0).expand(b, -1, -1)  # expand to each sample
     prior_ll = torch.logsumexp(gaussian_ll(z, pseudo_mu, pseudo_log_var).sum(2), dim=1)
     kld = posterior_ll - prior_ll + np.log(k)
+    kld = F.softplus(kld - 1, threshold=5) + 1
     for d_mu, d_log_var, p_log_var in zip(d_mu, d_log_var, p_log_var):
         # d_mu = q_mu - p_mu
         # d_logvar = q_logvar - p_logvar
@@ -183,11 +184,11 @@ class CWEncoderLoss(nn.Module):
         self.c_reg = c_reg
 
     def forward(self, outputs, inputs, targets):
-        #kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'd_mu', 'd_log_var', 'prior_log_var']])
         kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'z', 'pseudo_mu', 'pseudo_log_var','d_mu', 'd_log_var', 'prior_log_var']])
 
         cw_idx = inputs[1]
-        cw_neg_dist = -outputs['cw_dist'] + outputs['cw_dist'].min(2, keepdim=True)[0]
+        sqrt_dist = torch.sqrt(outputs['cw_dist'])
+        cw_neg_dist = -sqrt_dist + sqrt_dist.min(2, keepdim=True)[0]
         nll = -(cw_neg_dist.log_softmax(dim=2) * cw_idx).sum((1, 2))
 
         criterion = nll.mean(0) + self.c_reg * kld.mean(0)

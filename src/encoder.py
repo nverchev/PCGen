@@ -11,10 +11,11 @@ class CWEncoder(nn.Module):
     def __init__(self, cw_dim, z_dim, dim_embedding):
         super().__init__()
         self.cw_dim = cw_dim
-        self.project_dim = 4
+        self.project_dim = 16 * dim_embedding
         self.h_dim = [cw_dim * self.project_dim // dim_embedding]
         self.conv = PointsConvLayer(dim_embedding,  self.project_dim)
-        self.encode = LinearLayer(self.h_dim[0], 2 * z_dim)
+        self.encode = nn.Sequential(LinearLayer(self.h_dim[0], self.cw_dim),
+                                    nn.Dropout(0.3),)
 
     def forward(self, x):
         x = self.conv(x).view(-1, self.h_dim[0])
@@ -22,8 +23,47 @@ class CWEncoder(nn.Module):
         return x
 
 
+class CWEncoder(nn.Module):
 
+    def __init__(self, cw_dim, z_dim, dim_embedding):
+        super().__init__()
+        self.cw_dim = cw_dim
+        self.project_dim = 16 * dim_embedding
+        self.h_dim = [cw_dim * self.project_dim // dim_embedding]
+        self.conv = PointsConvLayer(dim_embedding,  self.project_dim)
+        self.encode = nn.Sequential(LinearLayer(self.h_dim[0], self.h_dim[0]),
+                                    nn.Dropout(0.3),
+                                    LinearLayer(self.h_dim[0], 2 * z_dim, batch_norm=False, act=None))
 
+    def forward(self, x):
+        x = self.conv(x).view(-1, self.h_dim[0])
+        x = self.encode(x)
+        return x
+#
+# class CWEncoder(nn.Module):
+#
+#     def __init__(self, cw_dim, z_dim, dim_embedding):
+#         super().__init__()
+#         self.cw_dim = cw_dim
+#         self.dim_embedding = dim_embedding
+#         self.project_dim = 32
+#         self.h_dim = [cw_dim * self.project_dim // dim_embedding]
+#         self.conv = PointsConvLayer(dim_embedding, self.project_dim)
+#         self.att1 = nn.MultiheadAttention(self.project_dim, num_heads=4, batch_first=True, dropout=0.3)
+#         self.att2 = nn.MultiheadAttention(self.project_dim, num_heads=4, batch_first=True, dropout=0.3)
+#
+#         self.encode = nn.Sequential(nn.ReLU(),
+#                                     nn.BatchNorm1d(self.project_dim),
+#                                     PointsConvLayer(self.project_dim, 2, batch_norm=False, act=None),)
+#                                     #LinearLayer(self.h_dim[0], 2 * z_dim, batch_norm=False, act=None))
+#
+#     def forward(self, x):
+#         b = x.shape[0]
+#         x = self.conv(x).transpose(2, 1)
+#         x = self.att1(x, x, x, need_weights=False)[0] + x
+#         x = self.att2(x, x, x, need_weights=False)[0].transpose(2, 1)
+#         x = self.encode(x).reshape(b, 2 * self.cw_dim // self.dim_embedding)
+#         return x
 
 class LDGCNN(nn.Module):
     def __init__(self, cw_dim, k, **model_settings):

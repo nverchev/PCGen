@@ -1,4 +1,6 @@
 import os
+
+import numpy
 import torch
 import numpy as np
 import argparse
@@ -209,11 +211,11 @@ def main(task='train/eval'):
         trainer.model.load_state_dict(model_state, strict=False)
 
         cw_train_loader, cw_test_loader = get_cw_loaders(trainer, m, final)
-        optimizer, optim_args = get_opt(opt_name, 10 * initial_learning_rate, weight_decay)
+        optimizer, optim_args = get_opt(opt_name, initial_learning_rate, weight_decay)
         block_args.update(dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader,
                                optimizer=optimizer,
                                optim_args=optim_args,
-                               lr=10 * initial_learning_rate,
+                               lr=1 * initial_learning_rate,
                                batch_size=batch_size * 8))
         cw_trainer = CWTrainer(model, exp_name, block_args)
         if not model_eval:
@@ -223,8 +225,8 @@ def main(task='train/eval'):
                 assert torch.all(torch.isclose(cw_trainer.model.codebook, trainer.model.cw_encoder.codebook))
                 cw_trainer.test(partition='test')  # tests on val when not final because val has been saved as test
                 trainer.model.load_state_dict(torch.load(load_path, map_location=device))
-                with trainer.model.from_z:
-                    trainer.test(partition='test' if final else 'val', m=m)
+                # with trainer.model.from_z:
+                #     trainer.test(partition='test' if final else 'val', m=m)
         else:
             cw_trainer.test(partition='test', save_outputs=True)
             with trainer.model.from_z:
@@ -237,7 +239,7 @@ def main(task='train/eval'):
             from src.plot_PC import pc_show
             #pc_show(torch.FloatTensor(cw_pca), colors='blue')
             pseudo_mu = torch.load('/home/nverchev/PycharmProjects/PCGen/pseudo_mu.pt')
-            pseudo_mu_pca = pca.transform(pseudo_mu.cpu().numpy())
+            pseudo_mu_pca = pca.transform(pseudo_mu.detach().cpu().numpy())
             pc_show([torch.FloatTensor(cw_pca), torch.FloatTensor(pseudo_mu_pca)], colors=['blue', 'red'])
 
 
@@ -254,8 +256,8 @@ def main(task='train/eval'):
             trainer.model.load_state_dict(model_state)
             with trainer.model.from_z:
                 trainer.test(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
-        trainer.evaluate_generated_set(m, metric='Chamfer', oracle=oracle)
-        #trainer.evaluate_generated_set(m, metric='Emd', oracle=oracle)
+        trainer.evaluate_generated_set(m, repeat_chamfer=0, repeat_emd=10, oracle=oracle)
+
         return
     # loads last model
     if load == 0:
@@ -307,6 +309,25 @@ def main(task='train/eval'):
             if m_training == -1:
                 m_training = max(512, (4096 * trainer.epoch) // training_epochs)
                 trainer.update_m_training(m_training)
+            if ae == "VQVAE" and trainer.epoch % 100 == 0:
+                trainer.test(partition='train', m=m, save_outputs=True)
+                idx = trainer.test_outputs['cw_idx']
+                idx = torch.stack(idx).sum(0)
+                unused_idx = (idx == 0)
+                opt_state_dict = trainer.optimizer.state_dict()
+                opt_avg = opt_state_dict['state'][0]['exp_avg']
+                opt_avg_sq = opt_state_dict['state'][0]['exp_avg_sq']
+                for i in range(cw_dim // dim_embedding):
+                    p = numpy.array(idx[i])
+                    p = p / p.sum()
+                    for j in range(book_size):
+                        if unused_idx[i, j]:
+                            k = np.random.choice(np.arange(book_size), p=p)
+                            trainer.model.codebook.data[i, j] = trainer.model.codebook.data[i, k]
+                            opt_state_dict['state'][0]['exp_avg'][i, j] = opt_avg[i, k]  # trasfer optim info
+                            opt_state_dict['state'][0]['exp_avg_sq'][i, j] = opt_avg_sq[i, k]
+                trainer.optimizer.load_state_dict(opt_state_dict)
+
             trainer.train(checkpoint_every)
             trainer.save()
             trainer.test(partition='test' if final else 'val', m=m)

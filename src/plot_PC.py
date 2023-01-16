@@ -71,7 +71,7 @@ def render_cloud(clouds, name):
     scene = Scene(background=(.8, .9, 0.9, .9), size=(1024, 1024))
     l = len(clouds)
     for i, cloud in enumerate(clouds):
-        colors = np.ones(cloud.shape[0])[:, None] * np.array([0.3, 0.6, 0.9])[None, :]
+        colors = np.ones(cloud.shape[0])[:, None] * np.array([0.3, 0.6, 0.9, 0.8])[None, :]
         sizes = np.ones(cloud.shape[0]) * 0.02
         s = Spherecloud(cloud + np.array([(1 - l) / 2 + i, 0, 0])[None, :], sizes=sizes, colors=colors)
         scene.add(s)

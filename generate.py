@@ -7,7 +7,7 @@ import torch
 def generate_random_samples():
     model = main(task='return loaded model for random generation')
     with torch.no_grad():
-        samples = model.random_sampling(4)['recon'].cpu()
+        samples = model.random_sampling(16)['recon'].cpu()
     np.save('generated_clouds', samples)
     for i, sample in enumerate(samples):
         #pc_show(sample)

@@ -16,19 +16,41 @@ class CWDecoder(nn.Module):
         self.book_size = book_size
         self.expand = 16
         self.h_dim = [self.expand * cw_dim]
-        self.decode = nn.Sequential(LinearLayer(z_dim,  256),
-                                    LinearLayer(256, self.expand * cw_dim),)
+        self.decode = nn.Sequential(LinearLayer(3 * z_dim // 4,  cw_dim // 2),
+                                    LinearLayer(cw_dim // 2, cw_dim),
+                                    LinearLayer(cw_dim, self.expand * cw_dim),)
         self.conv = nn.Sequential(
             PointsConvLayer(self.expand * self.dim_embedding, self.expand * self.dim_embedding),
+            PointsConvLayer(self.expand * self.dim_embedding, self.expand * self.dim_embedding),
             nn.Conv1d(self.expand * self.dim_embedding, self.dim_embedding, kernel_size=1))
-
-
 
     def forward(self, x):
         x = self.decode(x).view(-1, self.expand * self.dim_embedding, self.cw_dim // self.dim_embedding)
         x = self.conv(x).transpose(2, 1).reshape(-1, self.cw_dim)
         return x
 
+
+class CWDecoder(nn.Module):
+
+    def __init__(self, cw_dim, z_dim, dim_embedding, book_size):
+        super().__init__()
+        self.cw_dim = cw_dim
+        self.dim_embedding = dim_embedding
+        self.book_size = book_size
+        self.expand = 16
+        self.h_dim = [self.expand * cw_dim]
+        self.decode = nn.Sequential(LinearLayer(z_dim, cw_dim // 2),
+                                    LinearLayer(cw_dim // 2, cw_dim),
+                                    LinearLayer(cw_dim, self.expand * cw_dim), )
+        self.conv = nn.Sequential(
+            PointsConvLayer(self.expand * self.dim_embedding, self.expand * self.dim_embedding),
+            PointsConvLayer(self.expand * self.dim_embedding, self.expand * self.dim_embedding),
+            nn.Conv1d(self.expand * self.dim_embedding, self.dim_embedding, kernel_size=1))
+
+    def forward(self, x):
+        x = self.decode(x).view(-1, self.expand * self.dim_embedding, self.cw_dim // self.dim_embedding)
+        x = self.conv(x).transpose(2, 1).reshape(-1, self.cw_dim)
+        return x
 
 
 class FullyConnected(nn.Module):
@@ -343,7 +365,9 @@ class PCGenComponents(nn.Module):
                 modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
             self.group_conv.append(nn.Sequential(*modules))
             self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, act=None)
+        if self.num_groups > 1:
+            self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, act=None)
+
 
     def forward(self, z, s=None):
         batch = z.size()[0]
