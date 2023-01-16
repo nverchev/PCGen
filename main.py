@@ -256,7 +256,7 @@ def main(task='train/eval'):
             trainer.model.load_state_dict(model_state)
             with trainer.model.from_z:
                 trainer.test(partition='test' if final else 'val', m=m, all_metrics=True, denormalise=denormalise)
-        trainer.evaluate_generated_set(m, repeat_chamfer=0, repeat_emd=10, oracle=oracle)
+        trainer.evaluate_generated_set(m, repeat_chamfer=10, repeat_emd=0, oracle=oracle)
 
         return
     # loads last model
@@ -294,8 +294,6 @@ def main(task='train/eval'):
             print(torch.histc(idx))
         return
 
-
-
     if not model_eval:
         if load == -1 and decoder_name == 'TearingNet':
             exp_name_split = exp_name.split('_')
@@ -309,7 +307,7 @@ def main(task='train/eval'):
             if m_training == -1:
                 m_training = max(512, (4096 * trainer.epoch) // training_epochs)
                 trainer.update_m_training(m_training)
-            if ae == "VQVAE" and trainer.epoch % 100 == 0:
+            if ae == "VQVAE" and trainer.epoch % 100 == 0 and trainer.epoch != 0:
                 trainer.test(partition='train', m=m, save_outputs=True)
                 idx = trainer.test_outputs['cw_idx']
                 idx = torch.stack(idx).sum(0)
