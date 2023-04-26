@@ -14,6 +14,7 @@ def normalise(cloud):
     cloud /= std
     return cloud, std
 
+
 def random_rotation(*clouds):
     theta = 2 * torch.pi * torch.rand(1)
     s = torch.sin(theta)
@@ -47,8 +48,17 @@ def jitter(cloud, sigma=0.01, clip=0.02):
     return new_cloud
 
 
+class EmptyDataset(Dataset):
+
+    def __len__(self):
+        return 1
+
+    def __getitem__(self, index):
+        return NotImplementedError
+
+
 class CWDataset(Dataset):
-    def __init__(self, cw_e, cw_idx, labels):
+    def __init__(self, cw_e, cw_idx, labels, **other_settings):
         self.cw_e = torch.stack(cw_e)
         self.cw_idx = torch.stack(cw_idx)
         self.labels = torch.stack(labels)
@@ -141,7 +151,7 @@ class PiercedCoinsDataset(Dataset):
 
 
 class AugmentDataset(Dataset):
-    def __init__(self, rotation, translation):
+    def __init__(self, rotation, translation, **kwargs):
         self.rotation = rotation
         self.translation_and_scale = translation
 
@@ -160,7 +170,7 @@ class AugmentDataset(Dataset):
 
 
 class Modelnet40Split(AugmentDataset):
-    def __init__(self, pcd, indices, labels, rotation, translation):
+    def __init__(self, pcd, indices, labels, rotation, translation, **other_settings):
         super().__init__(rotation, translation)
         self.pcd = pcd.astype(np.float32)
         self.indices = indices
@@ -178,12 +188,12 @@ class Modelnet40Split(AugmentDataset):
 
 
 class ShapenetAtlasSplit(AugmentDataset):
-    def __init__(self, paths, num_points, labels, resample, rotation, translation):
+    def __init__(self, paths, input_points, labels, resample, rotation, translation, **other_settings):
         super().__init__(rotation, translation)
         self.paths = paths
         self.translation_and_scale = translation
-        self.num_points = num_points
-        self.resample = False
+        self.input_points = input_points
+        self.resample = True
         self.label_index = list(labels.values())
 
     def __len__(self):
@@ -193,11 +203,11 @@ class ShapenetAtlasSplit(AugmentDataset):
         path = self.paths[index]
         cloud = np.load(path).astype(np.float32)
         index_pool = np.arange(cloud.shape[0])
-        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.num_points, replace=False)
-        ref_cloud, scale = normalise(cloud[sampling[:self.num_points]])
+        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=self.resample)
+        ref_cloud, scale = normalise(cloud[sampling[:self.input_points]])
         clouds = [torch.from_numpy(ref_cloud)]
         if self.resample:
-            clouds.append(torch.from_numpy(normalise(cloud[sampling[self.num_points:]])[0]))
+            clouds.append(torch.from_numpy(normalise(cloud[sampling[self.input_points:]])[0]))
         label = path.split(os.sep)[-2]
         label = self.label_index.index(label)
         clouds = self.augment(clouds)
@@ -205,13 +215,13 @@ class ShapenetAtlasSplit(AugmentDataset):
 
 
 class ShapenetFlowSplit(AugmentDataset):
-    def __init__(self, paths, num_points, labels, resample, rotation, translation):
+    def __init__(self, paths, input_points, labels, resample, rotation, translation, **other_settings):
         super().__init__(rotation, translation)
         self.paths = paths
         self.pcd = []
         self.labels = []
         self.resample = True
-        self.num_points = num_points
+        self.input_points = input_points
         self.label_index = list(labels.keys())
         self.scales = []
         for path in paths:
@@ -229,10 +239,10 @@ class ShapenetFlowSplit(AugmentDataset):
         label = self.labels[index]
         scale = self.scales[index]
         index_pool = np.arange(cloud.shape[0])
-        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.num_points, replace=False)
-        clouds = [torch.from_numpy(cloud[sampling[:self.num_points]])]
+        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=True)
+        clouds = [torch.from_numpy(cloud[sampling[:self.input_points]])]
         if self.resample:
-            clouds.append(torch.from_numpy(cloud[sampling[self.num_points:]]))
+            clouds.append(torch.from_numpy(cloud[sampling[self.input_points:]]))
         clouds = self.augment(clouds)
         return [scale, *clouds, 0], label, index
 
@@ -241,7 +251,7 @@ class Modelnet40Dataset:
     with open(os.path.join('metadata', 'modelnet_classes.txt'), 'r') as f:
         classes = f.read().splitlines()
 
-    def __init__(self, data_dir, k, num_points, select_classes, **augmentation_settings):
+    def __init__(self, data_dir, k, input_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.modelnet_path = os.path.join(data_dir, 'modelnet40_hdf5_2048')
         self.augmentation_settings = augmentation_settings
@@ -250,7 +260,7 @@ class Modelnet40Dataset:
         self.pcd, self.indices, self.labels = {}, {}, {}
         for split in ['train', 'test']:
             self.pcd[split], self.indices[split], self.labels[split] = \
-                load_h5_modelnet(files_path(split), num_points, k)
+                load_h5_modelnet(files_path(split), input_points, k)
             if select_classes:
                 try:
                     selected_labels = [self.classes.index(selected_class) for selected_class in select_classes]
@@ -288,7 +298,7 @@ class Modelnet40Dataset:
 class ShapeNetDatasetAtlas:
     classes = json.load(open(os.path.join(os.getcwd(), 'metadata', 'shapenet_AtlasNet_classes.json'), 'r'))
 
-    def __init__(self, data_dir, k, num_points, select_classes, **augmentation_settings):
+    def __init__(self, data_dir, k, input_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.shapenet_path = os.path.join(self.data_dir, 'shapenet')
         if not os.path.exists(self.shapenet_path):
@@ -297,7 +307,7 @@ class ShapeNetDatasetAtlas:
         self.val_ratio = 0.2
         self.test_ratio = 0.2
         self.augmentation_settings = augmentation_settings
-        self.num_points = num_points
+        self.input_points = input_points
         folders = glob2.glob(os.path.join(self.shapenet_path, '*'))
         self.paths = {}
         if select_classes:
@@ -313,7 +323,7 @@ class ShapeNetDatasetAtlas:
             self.paths.setdefault('test', []).extend(files[second_split:])
 
     def split(self, split):
-        return ShapenetAtlasSplit(self.paths[split], self.num_points, self.classes, resample=split in ['val', 'test'],
+        return ShapenetAtlasSplit(self.paths[split], self.input_points, self.classes, resample=split in ['val', 'test'],
                                   **self.augmentation_settings)
 
     def to_numpy(self):
@@ -346,13 +356,13 @@ class ShapeNetDatasetAtlas:
 class ShapeNetDatasetFlow:
     classes = json.load(open(os.path.join(os.getcwd(), 'metadata', 'shapenet_PointFlow_classes.json'), 'r'))
 
-    def __init__(self, data_dir, k, num_points, select_classes, **augmentation_settings):
+    def __init__(self, data_dir, k, input_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.shapenet_path = os.path.join(self.data_dir, 'ShapeNetCore.v2.PC15k')
         link = 'https://drive.google.com/drive/folders/1G0rf-6HSHoTll6aH7voh-dXj6hCRhSAQ'
         assert os.path.exists(self.shapenet_path), f'Download and extract dataset from here: {link}'
         self.augmentation_settings = augmentation_settings
-        self.num_points = num_points
+        self.input_points = input_points
         folders = glob2.glob(os.path.join(self.shapenet_path, '*'))
         self.paths = {}
         if select_classes:
@@ -369,13 +379,13 @@ class ShapeNetDatasetFlow:
             self.paths.setdefault('test', []).extend(test_files)
 
     def split(self, split):
-        return ShapenetFlowSplit(self.paths[split], self.num_points, self.classes, resample=split in ['val', 'test'],
+        return ShapenetFlowSplit(self.paths[split], self.input_points, self.classes, resample=split in ['val', 'test'],
                                  **self.augmentation_settings)
 
 
 class DFaustDataset(Dataset):
 
-    def __init__(self, data_dir, k, num_points, rotation, translation):
+    def __init__(self, data_dir, k, input_points, rotation, translation):
         self.data_dir = data_dir
         self.rotation = rotation
         self.translation_and_scale = translation
@@ -401,11 +411,11 @@ class DFaustDataset(Dataset):
 
 class MPIFaustDataset(Dataset):
 
-    def __init__(self, data_dir, k, num_points, rotation, translation):
+    def __init__(self, data_dir, k, input_points, rotation, translation):
         self.data_dir = data_dir
         self.rotation = rotation
         self.translation_and_scale = translation
-        self.num_points = num_points
+        self.input_points = input_points
         self.files = glob2.glob(os.path.join(self.data_dir, 'MPI-FAUST', 'training', 'registrations', '*.ply'))
 
     def __len__(self):
@@ -424,74 +434,66 @@ class MPIFaustDataset(Dataset):
 
 class FaustDataset:
 
-    def __init__(self, data_dir, k, num_points, select_classes, **augmentation_settings):
+    def __init__(self, data_dir, k, input_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.k = k
         self.augmentation_settings = augmentation_settings
-        self.num_points = num_points
+        self.input_points = input_points
 
     def split(self, split):
         assert split in ['train_val', 'test'], 'Dataset only used for testing'
         if split == 'train_val':
-            return DFaustDataset(self.data_dir, self.k, self.num_points, **self.augmentation_settings)
+            return DFaustDataset(self.data_dir, self.k, self.input_points, **self.augmentation_settings)
         if split == 'test':
-            return MPIFaustDataset(self.data_dir, self.k, self.num_points, **self.augmentation_settings)
+            return MPIFaustDataset(self.data_dir, self.k, self.input_points, **self.augmentation_settings)
 
 
-def get_loaders(dataset_name, batch_size, final, dir_path, **dataset_settings):
-    data_dir = os.path.join(dir_path, 'dataset')
+def get_dataset(dataset_name):
+    dataset_dict = {'Coins': PiercedCoinsDataset,
+                    'Modelnet40': Modelnet40Dataset,
+                    'ShapenetAtlas': ShapeNetDatasetAtlas,
+                    'ShapenetFlow': ShapeNetDatasetFlow,
+                    'Faust': FaustDataset}
+    return dataset_dict[dataset_name]
+
+
+def get_loaders(dataset_name, batch_size, final, data_dir, **dataset_settings):
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
     dataset_settings.update(data_dir=data_dir)
     pin_memory = torch.cuda.is_available()
-    if dataset_name == 'Coins':
-        dataset = PiercedCoinsDataset(**dataset_settings)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, pin_memory=pin_memory)
-        return loader, loader, loader
-    if dataset_name == 'Modelnet40':
-        dataset = Modelnet40Dataset(**dataset_settings)
-    elif dataset_name == 'ShapenetAtlas':
-        dataset = ShapeNetDatasetAtlas(**dataset_settings)
-    elif dataset_name == 'ShapenetFlow':
-        dataset = ShapeNetDatasetFlow(**dataset_settings)
-    elif dataset_name == 'Faust':
-        dataset = FaustDataset(**dataset_settings)
-    else:
-        print(dataset_name)
-        raise ValueError()
-
+    dataset = get_dataset(dataset_name)(**dataset_settings)
     if final:
         train_dataset = dataset.split('train_val')
         train_loader = torch.utils.data.DataLoader(
             train_dataset, drop_last=True, batch_size=batch_size,
             shuffle=True, pin_memory=pin_memory)
         val_loader = None
+        test_dataset = dataset.split('test')
+        test_loader = torch.utils.data.DataLoader(
+            test_dataset, batch_size=batch_size, drop_last=False, shuffle=False, pin_memory=pin_memory)
     else:
         train_dataset = dataset.split('train')
         val_dataset = dataset.split('val')
-
         train_loader = torch.utils.data.DataLoader(
             train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
-
         val_loader = torch.utils.data.DataLoader(
             val_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
+        test_loader = None
 
-    test_dataset = dataset.split('test')
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=batch_size, drop_last=False, shuffle=False, pin_memory=pin_memory)
     del dataset
     return train_loader, val_loader, test_loader
 
 
-def get_cw_loaders(t, m, final):
+def get_cw_loaders(t, partition, batch_size):
     pin_memory = torch.cuda.is_available()
-    batch_size = t.train_loader.batch_size
-    t.test(partition='train', m=m, save_outputs=True)
-    cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_idx'], t.test_targets)
-    t.test(partition='test' if final else 'val', m=m, save_outputs=True)
-    cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_idx'], t.test_targets)
+    # m=4 because we don't care about the reconstruction and m < 4 creates problems with the filtering
+    t.test(partition='train', m=4, save_outputs=True)
+    cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_idx'], t.test_metadata['targets'])
+    t.test(partition=partition, m=4, save_outputs=True)
+    cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_idx'], t.test_metadata['targets'])
     cw_train_loader = torch.utils.data.DataLoader(
-        cw_train_dataset, drop_last=True, batch_size=batch_size * 8, shuffle=True, pin_memory=pin_memory)
+        cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
     cw_test_loader = torch.utils.data.DataLoader(
-        cw_test_dataset, drop_last=False, batch_size=batch_size * 8, shuffle=False, pin_memory=pin_memory)
+        cw_test_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
     return cw_train_loader, cw_test_loader

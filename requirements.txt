@@ -17,3 +17,7 @@ openmesh~=1.2.1
 scikit-image~=0.18.3
 argparse~=1.4.0
 deepspeed~=0.7.2
+pyyaml~=6.0
+setuptools~=61.2.0
+emd~=0.0.0
+scipy~=1.8.1

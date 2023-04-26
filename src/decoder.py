@@ -7,66 +7,91 @@ from src.neighbour_op import graph_filtering
 
 OUT_CHAN = 3
 
+
 class CWDecoder(nn.Module):
 
-    def __init__(self, cw_dim, z_dim, dim_embedding, book_size):
+    def __init__(self, cw_dim, z_dim, embedding_dim, book_size):
         super().__init__()
         self.cw_dim = cw_dim
-        self.dim_embedding = dim_embedding
+        self.embedding_dim = embedding_dim
         self.book_size = book_size
         self.expand = 16
         self.h_dim = [self.expand * cw_dim]
-        self.decode = nn.Sequential(LinearLayer(3 * z_dim // 4,  cw_dim // 2),
+        self.decode = nn.Sequential(LinearLayer(3 * z_dim // 4, cw_dim // 2),
                                     LinearLayer(cw_dim // 2, cw_dim),
-                                    LinearLayer(cw_dim, self.expand * cw_dim),)
+                                    LinearLayer(cw_dim, self.expand * cw_dim), )
         self.conv = nn.Sequential(
-            PointsConvLayer(self.expand * self.dim_embedding, self.expand * self.dim_embedding),
-            PointsConvLayer(self.expand * self.dim_embedding, self.expand * self.dim_embedding),
-            nn.Conv1d(self.expand * self.dim_embedding, self.dim_embedding, kernel_size=1))
+            PointsConvLayer(self.expand * self.embedding_dim, self.expand * self.embedding_dim),
+            PointsConvLayer(self.expand * self.embedding_dim, self.expand * self.embedding_dim),
+            nn.Conv1d(self.expand * self.embedding_dim, self.embedding_dim, kernel_size=1))
 
     def forward(self, x):
-        x = self.decode(x).view(-1, self.expand * self.dim_embedding, self.cw_dim // self.dim_embedding)
+        x = self.decode(x).view(-1, self.expand * self.embedding_dim, self.cw_dim // self.embedding_dim)
         x = self.conv(x).transpose(2, 1).reshape(-1, self.cw_dim)
         return x
 
 
 class CWDecoder(nn.Module):
 
-    def __init__(self, cw_dim, z_dim, dim_embedding, book_size):
+    def __init__(self, cw_dim, z_dim, embedding_dim, book_size):
         super().__init__()
         self.cw_dim = cw_dim
-        self.dim_embedding = dim_embedding
+        self.embedding_dim = embedding_dim
+        self.dim_codes = cw_dim // embedding_dim
         self.book_size = book_size
-        self.expand = 16
+        self.expand = 4
+        self.h_dim = [self.expand * cw_dim]
+        self.decode = nn.Sequential(
+            PointsConvLayer(z_dim * self.dim_codes, self.dim_codes * 512, groups=self.dim_codes, batch_norm=False,
+                            act=nn.RReLU()),
+            nn.Dropout1d(0.5),
+            PointsConvLayer(self.dim_codes * 512, self.dim_codes * 64, groups=self.dim_codes, batch_norm=False,
+                            act=nn.RReLU()),
+            nn.Dropout1d(0.3),
+            PointsConvLayer(self.dim_codes * 64, cw_dim, groups=self.dim_codes, batch_norm=False, act=None))
+
+    def forward(self, x):
+        x = self.decode(x.repeat(1, self.dim_codes).unsqueeze(2))
+        return x.squeeze(2)
+
+
+class CWDecoder(nn.Module):
+
+    def __init__(self, cw_dim, z_dim, embedding_dim, book_size):
+        super().__init__()
+        self.cw_dim = cw_dim
+        self.embedding_dim = embedding_dim
+        self.book_size = book_size
+        self.expand = 4
         self.h_dim = [self.expand * cw_dim]
         self.decode = nn.Sequential(LinearLayer(z_dim, cw_dim // 2),
                                     LinearLayer(cw_dim // 2, cw_dim),
                                     LinearLayer(cw_dim, self.expand * cw_dim), )
         self.conv = nn.Sequential(
-            PointsConvLayer(self.expand * self.dim_embedding, self.expand * self.dim_embedding),
-            PointsConvLayer(self.expand * self.dim_embedding, self.expand * self.dim_embedding),
-            nn.Conv1d(self.expand * self.dim_embedding, self.dim_embedding, kernel_size=1))
+            PointsConvLayer(self.expand * self.embedding_dim, self.expand * self.embedding_dim),
+            PointsConvLayer(self.expand * self.embedding_dim, self.expand * self.embedding_dim),
+            nn.Conv1d(self.expand * self.embedding_dim, self.embedding_dim, kernel_size=1))
 
     def forward(self, x):
-        x = self.decode(x).view(-1, self.expand * self.dim_embedding, self.cw_dim // self.dim_embedding)
+        x = self.decode(x).view(-1, self.expand * self.embedding_dim, self.cw_dim // self.embedding_dim)
         x = self.conv(x).transpose(2, 1).reshape(-1, self.cw_dim)
         return x
 
 
 class FullyConnected(nn.Module):
 
-    def __init__(self, cw_dim, m, gf, **model_settings):
+    def __init__(self, cw_dim, m_training, filtering, **model_settings):
         super().__init__()
         self.cw_dim = cw_dim
         self.h_dim = [256] * 2
-        self.gf = gf
-        self.m = m
+        self.filtering = filtering
+        self.m = m_training
         modules = [LinearLayer(cw_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True)),
                    LinearLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.ReLU(inplace=True)),
                    LinearLayer(self.h_dim[1], OUT_CHAN * m, batch_norm=False, act=None)]
         self.mlp = nn.Sequential(*modules)
 
-    def forward(self, z):
+    def forward(self, z, m):  # for this model, m is fixed
         x = self.mlp(z)
         return x.view(-1, OUT_CHAN, self.m)
 
@@ -87,13 +112,13 @@ class FoldingBlock(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self, cw_dim, m, gf, **model_settings):
+    def __init__(self, cw_dim, m_training, filtering, **model_settings):
         super().__init__()
         self.cw_dim = cw_dim
         self.h_dim = [512] * 4
-        self.gf = gf
-        self.m = m
-        self.num_grid = round(np.sqrt(m))
+        self.filtering = filtering
+        self.m = m_training
+        self.num_grid = round(np.sqrt(m_training))
         self.m_grid = self.num_grid ** 2
         xx = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
         yy = torch.linspace(-0.3, 0.3, self.num_grid, dtype=torch.float)
@@ -105,14 +130,14 @@ class FoldingNet(nn.Module):
         self.graph_eps_sqr = self.graph_eps ** 2
         self.graph_lam = 0.5
 
-    def forward(self, z, grid=None):
+    def forward(self, z, m, grid=None):  # for this model, m is fixed
         batch_size = z.shape[0]
         if grid is None:
             grid = self.grid.unsqueeze(0).repeat(batch_size, 1, 1)
         z = z.unsqueeze(2).repeat(1, 1, self.m_grid)
         x = self.fold1(grid, z)
         x = self.fold2(x, z)
-        if self.gf:
+        if self.filtering:
             x = self.graph_filter(x, grid, batch_size)
         return x
 
@@ -148,8 +173,8 @@ class FoldingNet(nn.Module):
 
 
 class TearingNet(FoldingNet):
-    def __init__(self, cw_dim, m, gf, **model_settings):
-        super().__init__(cw_dim, m, gf=gf)
+    def __init__(self, cw_dim, m_training, filtering, **model_settings):
+        super().__init__(cw_dim, m_training, filtering=filtering)
         self.h_dim.extend([512, 512, 64, 512, 512, 2])
         modules = [nn.Conv2d(self.cw_dim + 5, self.h_dim[4], kernel_size=1)]
         for in_dim, out_dim in zip(self.h_dim[4:6], self.h_dim[5:7]):
@@ -163,7 +188,7 @@ class TearingNet(FoldingNet):
             modules.append(nn.Conv2d(in_dim, out_dim, kernel_size=1))
         self.tearing2 = nn.Sequential(*modules)
 
-    def forward(self, z, grid=None):
+    def forward(self, z, m, grid=None):  # for this model, m is fixed
         batch_size = z.shape[0]
         grid = self.grid.to(z.device)
         grid = grid.unsqueeze(0).repeat(batch_size, 1, 1)
@@ -179,7 +204,7 @@ class TearingNet(FoldingNet):
         out2 = out2.reshape(batch_size, 2, self.num_grid * self.num_grid)
         grid = grid + out2
         x = super().forward(z, grid)
-        if self.gf:
+        if self.filtering:
             x = self.graph_filter(x, grid, batch_size)
         return x
 
@@ -189,19 +214,18 @@ class AtlasNetv2(nn.Module):
     '''Atlas net PatchDeformMLPAdj'''
     patch_embed_dim = 2
 
-    def __init__(self, cw_dim, m, components, gf, **model_settings):
+    def __init__(self, cw_dim, m_training, components, filtering, **model_settings):
         super().__init__()
         self.cw_dim = cw_dim
-        self.m = m
-        self.gf = gf
+        self.filtering = filtering
         self.num_patches = components if components else 10
-        self.dim_embedding = self.cw_dim + self.patch_embed_dim
+        self.embedding_dim = self.cw_dim + self.patch_embed_dim
         self.h_dim = [128]
         self.decoder = nn.ModuleList([self.get_mlp_adj() for _ in range(self.num_patches)])
         self.patchDeformation = [lambda x: x for _ in range(self.num_patches)]
 
     def get_mlp_adj(self):
-        dim = self.dim_embedding
+        dim = self.embedding_dim
         dims = [dim, dim // 2, dim // 4]
         modules = [PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True))]
         for in_dim, out_dim in zip(dims[0:-1], dims[1:]):
@@ -209,19 +233,19 @@ class AtlasNetv2(nn.Module):
         modules.append(PointsConvLayer(dims[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
         return nn.Sequential(*modules)
 
-    def forward(self, x):
+    def forward(self, x, m):
         batch = x.size(0)
         device = x.device
         outs = []
         for i in range(self.num_patches):
-            rand_grid = torch.rand(batch, 2, self.m // self.num_patches, device=device)
+            rand_grid = torch.rand(batch, 2, m // self.num_patches, device=device)
             rand_grid = self.patchDeformation[i](rand_grid)
-            y = x.unsqueeze(2).expand(-1, -1, self.m // self.num_patches
+            y = x.unsqueeze(2).expand(-1, -1, m // self.num_patches
                                       ).contiguous()
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
         x = torch.cat(outs, 2).contiguous()
-        if self.gf:
+        if self.filtering:
             x = graph_filtering(x)
         return x
 
@@ -230,8 +254,8 @@ class AtlasNetv2Deformation(AtlasNetv2):
     '''Atlas net PatchDeformMLPAdj'''
     patch_embed_dim = 10
 
-    def __init__(self, cw_dim, m, components, gf, **model_settings):
-        super().__init__(cw_dim, m, components, gf)
+    def __init__(self, cw_dim, m_training, components, filtering, **model_settings):
+        super().__init__(cw_dim, m_training, components, filtering)
         self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
 
     def get_patch_deformation(self):
@@ -246,13 +270,13 @@ class AtlasNetv2Structures(AtlasNetv2):
     '''Atlas net PointTranslationMLPAdj'''
     patch_embed_dim = 10
 
-    def __init__(self, cw_dim, m, components, gf, **model_settings):
-        super().__init__(cw_dim, m, components, gf)
-        self.m_patch = self.m // self.num_patches
+    def __init__(self, cw_dim, m_training, components, filtering, **model_settings):
+        super().__init__(cw_dim, m_training, components, filtering)
+        self.m_patch = m_training // self.num_patches
         self.grid = nn.Parameter(torch.rand(self.num_patches, 2, self.m // self.num_patches))
         self.grid.data = F.pad(self.grid, (0, 0, 0, self.patch_embed_dim - 2))
 
-    def forward(self, x):
+    def forward(self, x, m):  # for this model, m is fixed
         batch = x.size(0)
         outs = []
         for i in range(self.num_patches):
@@ -261,7 +285,7 @@ class AtlasNetv2Structures(AtlasNetv2):
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
         x = torch.cat(outs, 2).contiguous()
-        if self.gf:
+        if self.filtering:
             x = graph_filtering(x)
         return x
 
@@ -272,11 +296,11 @@ class AtlasNetv2Structures(AtlasNetv2):
 # class AtlasNetv2Deformation(nn.Module):
 #     '''Atlas net PatchDeformMLPAdj'''
 #
-#     def __init__(self, cw_dim, m, gf):
+#     def __init__(self, cw_dim, m, filtering):
 #         super().__init__()
 #         self.cw_dim = cw_dim
 #         self.m = m
-#         self.gf = gf
+#         self.filtering = filtering
 #         self.num_patch = 8
 #         self.m_patch = self.m // self.num_patch
 #         self.deform_patch_dim = 8
@@ -306,54 +330,19 @@ class AtlasNetv2Structures(AtlasNetv2):
 #         deformed_grid = self.patchDeformation(rand_grid).view(-1, self.num_patch, self.deform_patch_dim, self.m_patch)
 #         x = torch.cat([deformed_grid, x], dim=2).contiguous().view(batch, -1, self.m_patch)
 #         x = self.mlp_adj(x).view(batch, OUT_CHAN, self.m)
-#         if self.gf:
+#         if self.filtering:
 #             x = graph_filtering(x)
 #         return x
 
+
 class PCGen(nn.Module):
 
-    def __init__(self, cw_dim, m, gf=True, **model_settings):
+    def __init__(self, cw_dim, m_training, components, filtering=True, **model_settings):
         super().__init__()
         self.h_dim = [256, cw_dim, 512, 512, 512, 64]
-        self.m = m
-        self.m_training = m
-        self.gf = gf
+        self.filtering = filtering
         self.sample_dim = 16
-        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
-        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
-        modules = []
-        for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-
-        modules.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        self.points_convs = nn.Sequential(*modules)
-
-    def forward(self, z, s=None):
-        batch = z.size()[0]
-        device = z.device
-        m = self.m_training if self.training else self.m
-        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
-        x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        x = self.map_sample1(x)
-        x = self.map_sample2(x)
-        x = z.unsqueeze(2) * x
-        x = self.points_convs(x)
-        if self.gf:
-            x = graph_filtering(x)
-        return x
-
-
-class PCGenComponents(nn.Module):
-
-    def __init__(self, cw_dim, m, components, gf=True, **model_settings):
-        super().__init__()
-        self.h_dim = [256, cw_dim, 512, 512, 512, 64]
-        self.m = m
-        self.m_training = m
-        self.gf = gf
-        self.sample_dim = 16
-        self.num_groups = components if components else 8
+        self.num_groups = components
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
@@ -368,11 +357,9 @@ class PCGenComponents(nn.Module):
         if self.num_groups > 1:
             self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, act=None)
 
-
-    def forward(self, z, s=None):
+    def forward(self, z, m, s=None):
         batch = z.size()[0]
         device = z.device
-        m = self.m_training if self.training else self.m
         x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
         x = self.map_sample1(x)
@@ -385,11 +372,15 @@ class PCGenComponents(nn.Module):
             group_atts.append(x_group)
             x_group = self.group_final[group](x_group)
             xs.append(x_group)
-        x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), tau=8., dim=1).transpose(2, 1)
-        x = (torch.stack(xs, dim=3) * x_att.unsqueeze(1)).sum(3)
-        if self.gf:
+        if self.num_groups > 1:
+            x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), tau=8., dim=1).transpose(2, 1)
+            x = (torch.stack(xs, dim=3) * x_att.unsqueeze(1)).sum(3)
+        else:
+            x = xs[0]
+        if self.filtering:
             x = graph_filtering(x)
         return x
+
 
 
 def get_decoder(decoder_name):
@@ -400,7 +391,5 @@ def get_decoder(decoder_name):
         'AtlasNetDeformation': AtlasNetv2Deformation,
         'AtlasNetStructures': AtlasNetv2Structures,
         'PCGen': PCGen,
-        'PCGenC': PCGenComponents,
-
     }
     return decoder_dict[decoder_name]

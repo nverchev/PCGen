@@ -1,8 +1,11 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+import pykeops
 from pykeops.torch import LazyTensor
 from src.layer import TransferGrad
+
+pykeops.set_verbose(False)
 
 
 def square_distance(t1, t2):
@@ -34,7 +37,7 @@ def square_distance(t1, t2):
 #     return d_ij.topk(k=k, largest=False, dim=-1)[1]
 
 def knn(x, k):
-    x = x.transpose(2, 1)
+    x = x.transpose(2, 1).contiguous()
     d_ij = square_distance(x, x)
     indices = d_ij.argKmin(k, dim=2)
     return indices
@@ -92,5 +95,5 @@ def graph_filtering(x, k=4):
     # x_weight = weights.sum(2).unsqueeze(1).expand(-1, 3, -1)
     # weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours
     # x = (1 + x_weight) * x - weighted_neighbours.sum(-1)
-    #x = x + (x * x_weight - weighted_neighbours.sum(-1)).detach()
+    # x = x + (x * x_weight - weighted_neighbours.sum(-1)).detach()
     return x

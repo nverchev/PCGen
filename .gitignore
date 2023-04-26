@@ -1,3 +1,6 @@
 /external/emd/build/
 /external/emd/dist/
 /external/emd/emd.egg-info/
+dataset_path.txt
+model_path.txt
+

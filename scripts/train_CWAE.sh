@@ -45,3 +45,31 @@ Coverage score (Emd):
 Number of tests: 10 Min: 3.8765e-01 Max: 4.5926e-01 Mean: 4.1358e-01 Std: 2.0547e-02
 1-NNA score (Emd):
 Number of tests: 10 Min: 7.5926e-01 Max: 8.0617e-01 Mean: 7.7272e-01 Std: 1.4157e-02
+
+
+
+Minimum Matching Distance score (Chamfer):
+Number of tests: 10 Min: 8.1258e-04 Max: 9.1615e-04 Mean: 8.5643e-04 Std: 3.0181e-05
+Coverage score (Chamfer):
+Number of tests: 10 Min: 3.7037e-01 Max: 4.1728e-01 Mean: 3.9432e-01 Std: 1.4013e-02
+1-NNA score (Chamfer):
+Number of tests: 10 Min: 6.1605e-01 Max: 7.0494e-01 Mean: 6.5704e-01 Std: 2.6182e-02
+Minimum Matching Distance score (Chamfer):
+Number of tests: 10 Min: 8.1677e-04 Max: 8.9203e-04 Mean: 8.6556e-04 Std: 2.3084e-05
+Coverage score (Chamfer):
+Number of tests: 10 Min: 3.5309e-01 Max: 3.9506e-01 Mean: 3.7827e-01 Std: 1.3195e-02
+1-NNA score (Chamfer):
+Number of tests: 10 Min: 6.1481e-01 Max: 6.7160e-01 Mean: 6.4728e-01 Std: 1.6407e-02
+Minimum Matching Distance score (Chamfer):
+Number of tests: 10 Min: 8.3664e-04 Max: 8.8888e-04 Mean: 8.5510e-04 Std: 1.7436e-05
+Coverage score (Chamfer):
+Number of tests: 10 Min: 3.6543e-01 Max: 4.0741e-01 Mean: 3.8914e-01 Std: 1.4448e-02
+1-NNA score (Chamfer):
+Number of tests: 10 Min: 6.2099e-01 Max: 6.6667e-01 Mean: 6.4321e-01 Std: 1.5251e-02
+
+Minimum Matching Distance score (Chamfer):
+Number of tests: 10 Min: 8.0609e-04 Max: 8.8388e-04 Mean: 8.6058e-04 Std: 2.1564e-05
+Coverage score (Chamfer):
+Number of tests: 10 Min: 3.6790e-01 Max: 4.1728e-01 Mean: 3.8691e-01 Std: 1.3114e-02
+1-NNA score (Chamfer):
+Number of tests: 10 Min: 6.2469e-01 Max: 6.7778e-01 Mean: 6.4753e-01 Std: 1.8012e-02

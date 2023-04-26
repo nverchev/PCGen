@@ -11,7 +11,6 @@ from external.metrics.StructuralLosses.nn_distance import nn_distance
 
 
 # Chamfer Distance
-
 def chamfer(t1, t2, dist):
     # The following code is currently not supported for backprop
     # return dist.min(axis = 2).mean(0).sum()\
@@ -37,30 +36,28 @@ def chamfer(t1, t2, dist):
 #            +  torch.min(dist, axis=-2)[0].mean()
 
 
-# Nll recontruction
-def chamfer_smooth(inputs, recon, pairwise_dist):
-    n = inputs.size()[1]
-    m = recon.size()[1]
-    # variance of the components (model assumption)
-    sigma2 = 0.001
-    idx2 = pairwise_dist.argmin(axis=2).expand(-1, -1, 3)
-    m2 = recon.gather(1, idx2)
-    sigma2 = ((inputs - m2) ** 2).mean().detach().item()
-    pairwise_dist /= - 2 * sigma2
-    lse1 = pairwise_dist.logsumexp(axis=2)
-    normalize1 = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(m)
-    loss1 = -lse1.sum(1) + n * normalize1
-    lse2 = pairwise_dist.logsumexp(axis=1)
-    normalize2 = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(n)
-    loss2 = -lse2.sum(2) + n * normalize2
-    return (loss1 + loss2).sum(1)
+#  def chamfer_smooth(inputs, recon, pairwise_dist):
+#     n = inputs.size()[1]
+#     m = recon.size()[1]
+#     # variance of the components (model assumption)
+#     sigma2 = 0.001
+#     idx2 = pairwise_dist.argmin(axis=2).expand(-1, -1, 3)
+#     m2 = recon.gather(1, idx2)
+#     sigma2 = ((inputs - m2) ** 2).mean().detach().item()
+#     pairwise_dist /= - 2 * sigma2
+#     lse1 = pairwise_dist.logsumexp(axis=2)
+#     normalize1 = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(m)
+#     loss1 = -lse1.sum(1) + n * normalize1
+#     lse2 = pairwise_dist.logsumexp(axis=1)
+#     normalize2 = 1.5 * np.log(sigma2 * 2 * np.pi) + np.log(n)
+#     loss2 = -lse2.sum(2) + n * normalize2
+#     return (loss1 + loss2).sum(1)
 
 def gaussian_ll(x, mean, log_var):
     return -0.5 * (log_var + torch.pow(x - mean, 2) / torch.exp(log_var))
 
 
-
-def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var, d_mu=(), d_log_var=(), p_log_var=()):
+def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var, d_mu=(), d_log_var=(), prior_log_var=(), **not_used):
     posterior_ll = gaussian_ll(z, mu, log_var).sum(1)  # sum dimensions
     k = pseudo_mu.shape[0]
     b = mu.shape[0]
@@ -70,7 +67,7 @@ def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var, d_mu=(), d_log_var=(), p
     prior_ll = torch.logsumexp(gaussian_ll(z, pseudo_mu, pseudo_log_var).sum(2), dim=1)
     kld = posterior_ll - prior_ll + np.log(k)
     kld = F.softplus(kld - 1, threshold=5) + 1
-    for d_mu, d_log_var, p_log_var in zip(d_mu, d_log_var, p_log_var):
+    for d_mu, d_log_var, p_log_var in zip(d_mu, d_log_var, prior_log_var):
         # d_mu = q_mu - p_mu
         # d_logvar = q_logvar - p_logvar
         assert (d_log_var > - 1000).prod()
@@ -82,69 +79,7 @@ def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var, d_mu=(), d_log_var=(), p
     return kld
 
 
-sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.01,
-                                diameter=2, scaling=.4, backend='online')
-
-
-#
-#
-# def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var):
-#     posterior_ll = gaussian_ll(z, mu, log_var).sum(1)  #sum dimensions
-#     k = pseudo_mu.shape[0]
-#     b = mu.shape[0]
-#     z = z.unsqueeze(1).expand(-1, k, -1)  # expand to each component
-#     pseudo_mu = pseudo_mu.unsqueeze(0).expand(b, -1, -1)  # expand to each sample
-#     pseudo_log_var = pseudo_log_var.unsqueeze(0).expand(b, -1, -1)  # expand to each sample
-#     prior_ll = torch.logsumexp(gaussian_ll(z, pseudo_mu, pseudo_log_var).sum(2), dim=1)
-#     return posterior_ll - prior_ll + np.log(k)
-
-class VAELoss(nn.Module):
-    def __init__(self, get_reg_loss, get_recon_loss, c_reg):
-        super().__init__()
-        self.get_reg_loss = get_reg_loss
-        self.get_recon_loss = get_recon_loss
-        self.c_reg = c_reg
-
-    def forward(self, outputs, inputs, targets):
-        ref_cloud = inputs[-2]  # get input shape (resampled depending on the dataset)
-        recon = outputs['recon']
-        reg_loss_dict = self.get_reg_loss(ref_cloud, outputs)
-        reg_loss = reg_loss_dict.pop('reg')
-        recon_loss_dict = self.get_recon_loss(ref_cloud, recon)
-        recon_loss = recon_loss_dict.pop('recon')
-        criterion = recon_loss + self.c_reg * reg_loss
-        return {
-            'Criterion': criterion,
-            **reg_loss_dict,
-            **recon_loss_dict
-        }
-
-
-class AELoss:
-    def __call__(self, inputs, outputs):
-        return {'reg': torch.tensor(0)}
-
-
-class KLDVAELoss:
-    c_kld = 1
-
-    def __call__(self, inputs, outputs):
-        kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var']])
-        return {'reg': self.c_kld * kld.mean(0),
-                'KLD': kld.sum(0),
-                }
-
-
-class VQVAELoss:
-    c_vq = 10
-
-    def __call__(self, inputs, outputs):
-        embed_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
-        return {'reg': self.c_vq * embed_loss,
-                'Embed Loss': embed_loss * outputs['cw_q'].shape[0],
-                }
-
-
+# as a class because of the sinkhorn loss init
 class ReconLoss:
     c_rec = 1
 
@@ -158,16 +93,11 @@ class ReconLoss:
         squared, augmented = chamfer(inputs, recon, pairwise_dist)
         dict_recon = {'Chamfer': squared.sum(0), 'Chamfer Augmented': augmented.sum(0)}
         if self.recon_loss == 'Chamfer':
+            recon = squared.mean(0)
+        elif self.recon_loss == 'ChamferEMD':
             emd = match_cost(inputs.contiguous(), recon.contiguous())
             recon = emd.mean(0) + squared.mean(0)
             dict_recon['EMD'] = emd.sum(0)
-            # recon = squared.mean(0)
-        elif self.recon_loss == 'ChamferA':
-            recon = augmented.mean(0)
-        elif self.recon_loss == 'ChamferS':
-            smooth = chamfer_smooth(inputs, recon, pairwise_dist)
-            recon = smooth.mean(0)
-            dict_recon['Chamfer Smooth'] = smooth.sum(0)
         else:
             assert self.recon_loss == 'Sinkhorn', f'Loss {self.recon_loss} not known'
             sk_loss = self.sinkhorn(inputs, recon)
@@ -178,20 +108,68 @@ class ReconLoss:
         return dict_recon
 
 
-class CWEncoderLoss(nn.Module):
-    def __init__(self, c_reg):
+class AELoss(nn.Module):
+    def __init__(self, recon_loss, **not_used):
         super().__init__()
-        self.c_reg = c_reg
+        self.recon_loss = recon_loss
 
     def forward(self, outputs, inputs, targets):
-        kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var', 'z', 'pseudo_mu', 'pseudo_log_var','d_mu', 'd_log_var', 'prior_log_var']])
+        ref_cloud = inputs[-2]  # get input shape (resampled depending on the dataset)
+        recon = outputs['recon']
+        recon_loss_dict = self.recon_loss(ref_cloud, recon)
+        return {
+            'Criterion': recon_loss_dict.pop('recon'),
+            **recon_loss_dict
+        }
 
+# VAE is only for the second encoding
+# class VAELoss(AELoss):
+#     def __init__(self, get_recon_loss, get_reg_loss, c_reg):
+#         super().__init__(get_recon_loss)
+#         self.get_reg_loss = get_reg_loss
+#         self.c_kld = c_reg
+#
+#     def forward(self, outputs, inputs, targets):
+#         recon_loss_dict = super().forward(outputs, inputs, targets)
+#         kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var']])
+#         reg = self.c_kld * kld.mean(0)
+#         criterion = recon_loss_dict.pop('Criterion') + reg
+#         return {'Criterion': criterion,
+#                 **recon_loss_dict,
+#                 'reg': reg,
+#                 'KLD': kld.sum(0),
+#                 }
+
+
+class VQVAELoss(AELoss):
+    def __init__(self, recon_loss, c_commitment, **not_used):
+        super().__init__(recon_loss)
+        self.c_commitment = c_commitment
+
+    def forward(self, outputs, inputs, targets):
+        recon_loss_dict = super().forward(outputs, inputs, targets)
+        embed_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
+        reg = self.c_commitment * embed_loss
+        criterion = recon_loss_dict.pop('Criterion') + reg
+        return {'Criterion': criterion,
+                **recon_loss_dict,
+                'reg': reg,
+                'Embed Loss': embed_loss * outputs['cw_q'].shape[0]
+                }
+
+
+class CWEncoderLoss(nn.Module):
+    def __init__(self, c_kld, **not_used):
+        super().__init__()
+        self.c_kld = c_kld
+
+    def forward(self, outputs, inputs, targets):
+        kld = kld_loss(**outputs)
         cw_idx = inputs[1]
         sqrt_dist = torch.sqrt(outputs['cw_dist'])
         cw_neg_dist = -sqrt_dist + sqrt_dist.min(2, keepdim=True)[0]
         nll = -(cw_neg_dist.log_softmax(dim=2) * cw_idx).sum((1, 2))
-
-        criterion = nll.mean(0) + self.c_reg * kld.mean(0)
+        criterion = nll.mean(0) + self.c_kld * kld.mean(0)
 
         return {
             'Criterion': criterion,
@@ -201,36 +179,30 @@ class CWEncoderLoss(nn.Module):
         }
 
 
-# class DoubleEncoding(VAELoss):
-#     cw_loss = CWEncoderLoss(1)  # fixing the reg
-#
-#     def forward(self, outputs, inputs, targets):
-#         dict_loss = super().forward(outputs, inputs, targets)
-#         second_dict_loss = self.cw_loss.forward(outputs, [None, outputs['cw_idx']], targets)
-#         criterion = dict_loss.pop('Criterion') + second_dict_loss.pop('Criterion')
-#         return {'Criterion': criterion,
-#                 **dict_loss,
-#                 **second_dict_loss}
+# Currently not used, replace VQVAE loo in get_ae_loss to use it
+class DoubleEncoding(VQVAELoss):
+    def __init__(self, recon_loss, c_commitment, c_kld, **not_used):
+        super().__init__(recon_loss, c_commitment)
+        cw_loss = CWEncoderLoss(c_kld)
+
+    def forward(self, outputs, inputs, targets):
+        dict_loss = super().forward(outputs, inputs, targets)
+        second_dict_loss = self.cw_loss.forward(outputs, [None, outputs['cw_idx']], targets)
+        criterion = dict_loss.pop('Criterion') + second_dict_loss.pop('Criterion')
+        return {'Criterion': criterion,
+                **dict_loss,
+                **second_dict_loss}
 
 
-def get_ae_loss(block_args):
-    get_recon_loss = ReconLoss(block_args['recon_loss'])
-    if block_args['ae'] in ('AE', 'Oracle'):
-        get_reg_loss = AELoss()
-
-    elif block_args['ae'] == 'VQVAE':
-        get_reg_loss = VQVAELoss()
-        #return DoubleEncoding(get_reg_loss, get_recon_loss, block_args['c_reg'])  # Remove this to train only VQVAE
-    else:
-        get_reg_loss = KLDVAELoss()
-    return VAELoss(get_reg_loss, get_recon_loss, block_args['c_reg'])
+def get_ae_loss(model_head, recon_loss, **other_args):
+    recon_loss = ReconLoss(recon_loss)
+    return (AELoss if model_head in ('AE', 'Oracle') else VQVAELoss)(recon_loss, **other_args)
 
 
 class AllMetrics:
     def __init__(self, denormalise):
         self.denormalise = denormalise
-        self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.01,
-                                             diameter=2, scaling=.9, backend='online')
+        self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.01, diameter=2, scaling=.9, backend='online')
         self.emd = emdModule()
 
     def __call__(self, outputs, inputs):
@@ -243,19 +215,17 @@ class AllMetrics:
             ref_cloud *= scale
         return self.batched_pairwise_similarity(ref_cloud, recon)
 
-    def batched_pairwise_similarity(self, clouds1, clouds2):
+    @staticmethod
+    def batched_pairwise_similarity(clouds1, clouds2):
         pairwise_dist = square_distance(clouds1, clouds2)
         squared, augmented = chamfer(clouds1, clouds2, pairwise_dist)
+        emd = match_cost(clouds1.contiguous(), clouds2.contiguous()).sum(0)
         if clouds1.shape == clouds2.shape:
             squared /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
+            emd /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
         dict_recon_metrics = {
             'Chamfer': squared.sum(0),
             'Chamfer Augmented': augmented.sum(0),
-            'Chamfer Smooth': chamfer_smooth(clouds1, clouds2, pairwise_dist).sum(0),
+            'EMD': emd
         }
-        if clouds1.shape[1] == 2048:
-            # dict_recon_metrics.update({'EMD': self.emd(clouds1, clouds2, 0.005, 50)[0].mean(1).sum(0)})
-            dict_recon_metrics.update({'EMD': match_cost(clouds1.contiguous(), clouds2.contiguous()).sum(0) / 2048})
-        else:
-            dict_recon_metrics.update({'Sinkhorn': self.sinkhorn(clouds1, clouds2).sum(0)})
         return dict_recon_metrics
