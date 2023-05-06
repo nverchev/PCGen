@@ -1,6 +1,7 @@
+import os
+import sys
 import numpy as np
 import torch
-import os
 import json
 from sklearn import svm, metrics
 from sklearn.decomposition import PCA
@@ -8,11 +9,12 @@ from src.trainer_base import Trainer
 from src.dataset import get_cw_loaders
 from src.optim import get_opt, CosineSchedule
 from src.loss_and_metrics import get_ae_loss, CWEncoderLoss, AllMetrics
-from src.plot_PC import pc_show
+from src.viz_pc import show_pc
 from src.neighbour_op import square_distance
 from src.loss_and_metrics import chamfer
-from src.loss_and_metrics import match_cost
 
+# match cost is the emd version used in other works as a baseline
+from structural_losses import match_cost
 
 class AETrainer(Trainer):
     clf = svm.SVC(kernel='linear')
@@ -26,9 +28,9 @@ class AETrainer(Trainer):
         self._metrics = self._loss
         return
 
-    def test(self, partition, all_metrics=False, denormalise=False, save_outputs=False, **kwargs):
+    def test(self, partition, all_metrics=False, de_normalise=False, save_outputs=False, **kwargs):
         if all_metrics:
-            self._metrics = lambda x, y, z: AllMetrics(denormalise)(x, y)
+            self._metrics = lambda x, y, z: AllMetrics(de_normalise)(x, y)
         super().test(partition=partition, save_outputs=save_outputs)
         return
 
@@ -56,7 +58,7 @@ class AETrainer(Trainer):
         print('Accuracy: ', self.acc)
         self.cf = metrics.confusion_matrix(y_hat, y_test, normalize='true')
         print('Mean Accuracy;', np.diag(self.cf).astype(float).mean())
-        directory = os.path.join(self.model_dir, self.exp_name)
+        directory = os.path.join(self.model_pardir, self.exp_name)
         accuracy_path = os.path.join(directory, 'svm_accuracies.json')
         self.saved_accuracies[self.epoch] = self.acc
         json.dump(self.saved_accuracies, open(accuracy_path, 'w'))
@@ -69,13 +71,13 @@ class AETrainer(Trainer):
         cw_pca = pca.fit_transform(cw.numpy())
         labels = torch.stack(self.test_metadata['test_targets']).cpu().numpy()
         highlight_cw = cw_pca[(highlight_label == labels)]
-        pc_show([torch.FloatTensor(cw_pca), highlight_cw], colors=['blue', 'red'])
+        show_pc([torch.FloatTensor(cw_pca), highlight_cw], colors=['blue', 'red'])
 
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)
 
     def helper_inputs(self, inputs, labels):
-        # inputs length vary on the dataset, when resampling two different resamplings of the shape are given
+        # inputs length vary on the dataset, when resampling two different re-samplings of the shape are given
         indices = inputs[-1]
         if torch.all(indices == 0):
             indices = None
@@ -88,8 +90,8 @@ class AETrainer(Trainer):
 
 class VQVAETrainer(AETrainer):
 
-    def test(self, partition, all_metrics=False, denormalise=False, save_outputs=True, **kwargs):
-        super().test(partition, all_metrics, denormalise, save_outputs, **kwargs)
+    def test(self, partition, all_metrics=False, de_normalise=False, save_outputs=True, **kwargs):
+        super().test(partition, all_metrics, de_normalise, save_outputs, **kwargs)
         idx = torch.stack(self.test_outputs['cw_idx'])
         idx = idx.mean(0)  # average dataset values
         self.print_statistics('Index Usage', idx)
@@ -97,7 +99,7 @@ class VQVAETrainer(AETrainer):
         return
 
     def evaluate_generated_set(self, partition, repeat_chamfer=10, repeat_emd=0, batch_size=64, oracle=False):
-        loader = self.test_loader if partition=='test' else self.val_loader
+        loader = self.test_loader if partition == 'test' else self.val_loader
         test_dataset = []
         for batch_idx, (inputs, targets, index) in enumerate(loader):
             test_clouds = inputs[1]
@@ -125,7 +127,6 @@ class VQVAETrainer(AETrainer):
                 print('Random Dataset has been generated.')
             assert len(test_dataset) == len(generated_dataset)
             all_shapes = test_dataset + generated_dataset
-            dist_array = np.zeros((2 * test_l, 2 * test_l), dtype=float)
             if repeat_chamfer:
                 mmd, coverage, nna = self.gen_metrics(all_shapes, 'Chamfer', batch_size, self.device)
                 mmd_chamfer.append(mmd)
@@ -150,7 +151,7 @@ class VQVAETrainer(AETrainer):
 
     @staticmethod
     def gen_metrics(all_shapes, metric, batch_size, device):
-        l = len(all_shapes)
+        l: int = len(all_shapes)
         test_l = l // 2
         dist_array = np.zeros((l, l), dtype=float)
         for i, cloud in enumerate(all_shapes):
@@ -162,7 +163,7 @@ class VQVAETrainer(AETrainer):
                     pairwise_dist = square_distance(clouds1, clouds2)
                     dist = chamfer(clouds1, clouds2, pairwise_dist)[0] / cloud.shape[0]
                 else:
-                    dist = match_cost(clouds1.contiguous(), clouds2.contiguous()) / cloud.shape[0]
+                    dist = match_cost(clouds1.continuous(), clouds2.continuous()) / cloud.shape[0]
                 dist_array[i, j:j + len(clouds1)] = dist.cpu()
                 dist_array[j:j + len(clouds1), i] = dist.cpu()
         closest = dist_array.argmin(axis=1)  # np.inf on the diagonal so argmin != index
@@ -184,7 +185,7 @@ class VQVAETrainer(AETrainer):
         assert len(test_outcomes), 'No test performed'
         to = np.array(test_outcomes)
         print(name)
-        print(f'Number of tests: {len(to):} Min: {to.min():.4e} Max: {to.max():.4e} '
+        print(f'Number of tests: {len(to):} Min: {to.min(initial=None):.4e} Max: {to.max(initial=None):.4e} '
               f'Mean: {to.mean():.4e} Std: {to.std():.4e}')
 
 
@@ -229,7 +230,7 @@ class CWTrainer(Trainer):
         cw_pca = pca.fit_transform(mu.numpy())
         pseudo_mu = self.model.pseudo_mu
         pseudo_mu_pca = pca.transform(pseudo_mu.detach().cpu().numpy())
-        pc_show([torch.FloatTensor(cw_pca), torch.FloatTensor(pseudo_mu_pca)], colors=['blue', 'red'])
+        show_pc([torch.FloatTensor(cw_pca), torch.FloatTensor(pseudo_mu_pca)], colors=['blue', 'red'])
 
 
 def get_trainer(model, loaders, args):
@@ -241,8 +242,10 @@ def get_trainer(model, loaders, args):
     trainer_args = dict(
         optimizer=optimizer,
         optim_args=optim_args,
+        scheduler=CosineSchedule(decay_steps=args.decay_steps, min_decay=args.min_decay),
         **loaders,
         **vars(args)
+
     )
 
     return (AETrainer if args.model_head == 'AE' else VQVAETrainer)(model, trainer_args)
@@ -250,8 +253,8 @@ def get_trainer(model, loaders, args):
 
 def get_cw_trainer(model, loaders, args):
     test_partition = 'test' if args.final else 'val'
-
     # TODO: load the model normally from trainer when fixing the architecture (careful with self.epoch)
+    # trainer.load(args.load_checkpoint if args.load_checkpoint else None)
     load_path = os.path.join('models', args.exp_name, f'model_epoch{args.epochs}.pt')
     assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
     model_state = torch.load(load_path, map_location=args.device)

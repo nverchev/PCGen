@@ -4,10 +4,11 @@ from torch.cuda.amp import GradScaler
 from torch import autocast
 import os
 import json
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
-from collections import UserDict
+from collections import UserDict, defaultdict
+import sys
 
 
 # Apply recursively lists or dictionaries until check
@@ -74,12 +75,12 @@ class Trainer(metaclass=ABCMeta):
     max_stored_output = np.inf  # maximum amount of stored evaluated test samples
 
     def __init__(self, model, exp_name, device, optimizer, optim_args, train_loader, val_loader=None, test_loader=None,
-                 model_dir='./models', amp=False, schedule=None, **block_args):
-
+                 model_pardir='./models', amp=False, scheduler=None, **block_args):
+        self.epoch = 0
         self.device = device  # to cuda or not to cuda?
         self.model = model.to(device)
         self.exp_name = exp_name  # name used for saving and loading
-        self.schedule = schedule
+        self.scheduler = scheduler
         self.settings = {**model.settings, **block_args}
         self.optimizer_settings = optim_args.copy()  # may be overwritten by scheduling
         self.optimizer = optimizer(**self.optimizer_settings)
@@ -88,16 +89,17 @@ class Trainer(metaclass=ABCMeta):
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.epoch = 0
-        self.train_losses, self.val_losses, self.test_losses = {}, {}, {}
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111)
+        self.train_log, self.val_log = defaultdict(dict), defaultdict(dict)
         self.test_metadata, self.test_outputs = None, None  # store last test evaluation
-        self.saved_metrics = {}  # saves metrics of last evaluation
-        self.model_dir = model_dir
+        self.saved_test_metrics = {}  # saves metrics of last evaluation
+        self.model_pardir = model_pardir
         json.dump(self.settings, open(self.paths()['settings'], 'w'), default=vars, indent=4)
 
     @property
     def optimizer_settings(self):  # settings shown depend on epoch
-        if self.schedule is None:
+        if self.scheduler is None:
             return {'params': self._optimizer_settings[0],
                     **self._optimizer_settings[1]}
         else:  # the scheduler modifies the learning rate(s)
@@ -106,7 +108,7 @@ class Trainer(metaclass=ABCMeta):
             for group in init_learning:
                 scheduled_learning.append({
                     'params': group['params'],
-                    'lr': self.schedule(group['lr'], self.epoch)
+                    'lr': self.scheduler(group['lr'], self.epoch)
                 })
             return {'params': scheduled_learning,
                     **self._optimizer_settings[1]}
@@ -114,7 +116,7 @@ class Trainer(metaclass=ABCMeta):
     @optimizer_settings.setter
     def optimizer_settings(self, optim_args):
         lr = optim_args.pop('lr')
-        if isinstance(lr, dict):  # support individual lr for each parameter (for finetuning for example)
+        if isinstance(lr, dict):  # support individual lr for each parameter (for fine-tuning for example)
             self._optimizer_settings = \
                 [{'params': getattr(self.model, k).parameters(), 'lr': v} for k, v in lr.items()], optim_args
         else:
@@ -130,14 +132,14 @@ class Trainer(metaclass=ABCMeta):
 
     def train(self, num_epoch, val_after_train=False):
         if not self.quiet_mode:
-            print('Experiment name ', self.exp_name)
+            print('Experiment name: ', self.exp_name)
         for _ in range(num_epoch):
             self.update_learning_rate(self.optimizer_settings['params'])
             self.epoch += 1
             if self.quiet_mode:
-                print('\r====> Epoch:{:3d}'.format(self.epoch), end='')
+                print('\r====> Epoch:{:4d}'.format(self.epoch), end='')
             else:
-                print('====> Epoch:{:3d}'.format(self.epoch))
+                print('====> Epoch:{:4d}'.format(self.epoch))
             self.model.train()
             self._run_session(partition='train')
             if self.val_loader and val_after_train:  # check losses on val
@@ -157,79 +159,62 @@ class Trainer(metaclass=ABCMeta):
     def _run_session(self, partition='train', save_outputs=False):
         if partition == 'train':
             loader = self.train_loader
-            dict_losses = self.train_losses
+            dict_log = self.train_log[str(self.epoch)]
         elif partition == 'val':
             loader = self.val_loader
-            dict_losses = self.val_losses
+            dict_log = self.val_log[str(self.epoch)]
         elif partition == 'test':
             loader = self.test_loader
-            dict_losses = self.test_losses
+            dict_log = self.saved_test_metrics
         else:
             raise ValueError('partition options are: "train", "val", "test" ')
         if save_outputs:
             self.test_metadata, self.test_outputs = TorchDictList(), TorchDictList()
             self.test_metadata.info = dict(partition=partition, max_ouputs=self.max_stored_output)
 
-        epoch_loss = {}
-        epoch_metrics = {}
+        epoch_log = defaultdict(float)
         num_batch = len(loader)
-        iterable = tqdm(enumerate(loader), total=num_batch, disable=self.quiet_mode)
-        epoch_seen = 0
-        for batch_idx, (inputs, targets, indices) in iterable:
-            epoch_seen += indices.shape[0]
-            inputs, targets = self.recursive_to([inputs, targets], self.device)
-            inputs_aux = self.helper_inputs(inputs, targets)
-            with autocast(device_type=self.device.type, dtype=torch.float16, enabled=self.amp):
-                outputs = self.model(**inputs_aux)
-            if torch.is_inference_mode_enabled():
+        with tqdm(enumerate(loader), total=num_batch, disable=self.quiet_mode, file=sys.stderr) as tqdm_loader:
+            epoch_seen = 0
+            for batch_idx, (inputs, targets, indices) in tqdm_loader:
+                epoch_seen += indices.shape[0]
+                inputs, targets = self.recursive_to([inputs, targets], self.device)
+                inputs_aux = self.helper_inputs(inputs, targets)
                 with autocast(device_type=self.device.type, dtype=torch.float16, enabled=self.amp):
-                    batch_metrics = self.metrics(outputs, inputs, targets)
-                for metric, value in batch_metrics.items():
-                    epoch_metrics[metric] = epoch_metrics.get(metric, 0) + value.item()
+                    outputs = self.model(**inputs_aux)
+                    if torch.is_inference_mode_enabled():
+                        batch_log = self.metrics(outputs, inputs, targets)
+                    else:
+                        batch_log = self.loss(outputs, inputs, targets)
+                        criterion = batch_log['Criterion']
+                    for loss_metric, value in batch_log.items():
+                        epoch_log[loss_metric] += value.item()
+                if not torch.is_inference_mode_enabled():
+                    if torch.isnan(criterion):
+                        raise ValueError('Criterion is nan')
+                    if torch.isinf(criterion):
+                        raise ValueError('Criterion is inf')
+                    self.scaler.scale(criterion).backward()
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                    self.optimizer.zero_grad()
+                    if not self.quiet_mode:
+                        if batch_idx % (num_batch // 10 or 1) == 0:
+                            tqdm_loader.set_postfix({'Seen': epoch_seen,
+                                                     'Loss': criterion.item()})
+                # if you get memory error, limit max_stored_output
+                if save_outputs and self.max_stored_output > (batch_idx + 1) * loader.batch_size:
+                    self.test_outputs.extend_dict(self.recursive_to(outputs, 'detach_cpu'))
+                    self.test_metadata.extend_dict(dict(indices=indices))
+                    self.test_metadata.extend_dict(dict(targets=targets.cpu()))
 
-            else:
-                with autocast(device_type=self.device.type, dtype=torch.float16, enabled=self.amp):
-                    batch_loss = self.loss(outputs, inputs, targets)
-                criterion = batch_loss['Criterion']
-                if torch.isnan(criterion):
-                    raise ValueError('Criterion is nan')
-                if torch.isinf(criterion):
-                    raise ValueError('Criterion is inf')
-                for loss, value in batch_loss.items():
-                    epoch_loss[loss] = epoch_loss.get(loss, 0) + value.item()
-                self.scaler.scale(criterion).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-                self.optimizer.zero_grad()
-
-                if not self.quiet_mode:
-                    if batch_idx % (num_batch // 10 or 1) == 0:
-                        iterable.set_postfix({'Seen': epoch_seen,
-                                              'Loss': criterion.item()})
-                    if batch_idx == num_batch - 1:  # clear after last
-                        iterable.set_description('')
-            # if you get memory error, limit max_stored_output
-            if save_outputs and self.max_stored_output > (batch_idx + 1) * loader.batch_size:
-                self.test_outputs.extend_dict(self.recursive_to(outputs, 'detach_cpu'))
-                self.test_metadata.extend_dict(dict(indices=indices))
-                self.test_metadata.extend_dict(dict(targets=targets.cpu()))
-        if torch.is_inference_mode_enabled():  # not averaged in batch
-            self.saved_metrics = {metric: value / num_batch if metric == 'Criterion' else value / epoch_seen
-                                  for metric, value in epoch_metrics.items()}
-            print('Metrics:')
-            for metric, value in self.saved_metrics.items():
-                print('{}: {:.4e}'.format(metric, value), end='\t')
-            print()
-        else:
-            epoch_loss = {loss: value / num_batch if loss == 'Criterion' else value / epoch_seen
-                          for loss, value in epoch_loss.items()}
-            for loss, value in epoch_loss.items():
-                dict_losses.setdefault(loss, []).append(value)
+        print('Average {} {} :'.format(partition, 'metrics' if torch.is_inference_mode_enabled() else 'losses'))
+        for loss_metric, value in epoch_log.items():
+            value = value / num_batch if loss_metric == 'Criterion' else value / epoch_seen
+            dict_log[loss_metric] = value
             if not self.quiet_mode:
-                print('Average {} losses :'.format(partition))
-                for loss, value in epoch_loss.items():
-                    print('{}: {:.4f}'.format(loss, value), end='\t')
-                print()
+                print('{}: {:.4e}'.format(loss_metric, value), end='\t')
+        print()
         return
 
     @abstractmethod
@@ -242,15 +227,27 @@ class Trainer(metaclass=ABCMeta):
     def helper_inputs(self, inputs, labels):
         return {'x': inputs}
 
-    def plot_losses(self, loss):
-        tidy_loss = ' '.join([s.capitalize() for s in loss.split('_')])
-        epochs = np.arange(self.epoch)
-        plt.plot(epochs, self.train_losses[loss], label='train')
-        if self.val_loader:
-            plt.plot(epochs, self.val_losses[loss], label='val')
-        plt.xlabel('Epochs')
-        plt.ylabel(tidy_loss)
-        plt.title(f'{self.exp_name}')
+    def plot_loss_metric(self, loss_metric='Criterion', partition='train and val', start_from=10):
+        plt.cla()
+        assert partition in ['train', 'val', 'train and val']
+        if partition == 'train and val' or partition == 'train':
+            assert self.train_log, 'No training log'
+            epoch_keys = [epoch for epoch in self.train_log.keys() if int(epoch) >= start_from]
+            epochs = [int(epoch) for epoch in epoch_keys]
+            values = [self.train_log[epoch][loss_metric] for epoch in epoch_keys]
+            self.ax.plot(epochs, values, label='train', color='blue')
+        if partition == 'train and val' or partition == 'val':
+            assert self.val_log, 'No validation log'
+            epoch_keys = [epoch for epoch in self.val_log.keys() if int(epoch) >= start_from]
+            epochs = [int(epoch) for epoch in epoch_keys]
+            values = [self.val_log[epoch][loss_metric] for epoch in epoch_keys]
+            self.ax.plot(epochs, values, label='val', color='green')
+        self.ax.set_xlabel('Epochs')
+        self.ax.set_ylabel(loss_metric)
+        self.ax.set_title(f'{self.exp_name}')
+        self.ax.legend()
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
         plt.show()
         return
 
@@ -261,15 +258,13 @@ class Trainer(metaclass=ABCMeta):
             return apply(obj, check=torch.is_tensor, f=lambda x: x.detach().cpu())
         return apply(obj, check=torch.is_tensor, f=lambda x: x.to(device))
 
-    def save(self, new_exp_name=None):
+    def save(self, new_exp_name=''):
         self.model.eval()
         paths = self.paths(new_exp_name)
         torch.save(self.model.state_dict(), paths['model'])
         torch.save(self.optimizer.state_dict(), paths['optim'])
-        json.dump(self.train_losses, open(paths['train_hist'], 'w'))
-        json.dump(self.val_losses, open(paths['val_hist'], 'w'))
-        if new_exp_name:
-            json.dump(self.settings, open(paths['settings'], 'w'))
+        for json_file_name in ['train_log', 'val_log', 'saved_test_metrics'] + (['settings'] if new_exp_name else []):
+            json.dump(self.__getattribute__(json_file_name), open(paths[json_file_name], 'w'))
         print('Model saved at: ', paths['model'])
         return
 
@@ -278,7 +273,7 @@ class Trainer(metaclass=ABCMeta):
             self.epoch = epoch
         else:
             past_epochs = []  # here it looks for the most recent model
-            local_path = os.path.join(self.model_dir, self.exp_name)
+            local_path = os.path.join(self.model_pardir, self.exp_name)
             if os.path.exists(local_path):
                 for file in os.listdir(local_path):
                     if file[:5] == 'model':
@@ -291,25 +286,28 @@ class Trainer(metaclass=ABCMeta):
         paths = self.paths()
         self.model.load_state_dict(torch.load(paths['model'], map_location=torch.device(self.device)))
         self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
-        self.train_losses = json.load(open(paths['train_hist']))
-        self.val_losses = json.load(open(paths['val_hist']))
+        for json_file_name in ['train_log', 'val_log', 'saved_test_metrics']:
+            json_file = json.load(open(paths[json_file_name]))
+            # Stop from loading logs of future epochs
+            if json_file_name in ['train_log', 'val_log']:
+                for epoch in list(json_file):
+                    if int(epoch) > self.epoch:
+                        json_file.pop(epoch)
+            self.__setattr__(json_file_name, defaultdict(dict, json_file))
         print('Loaded: ', paths['model'])
         return
 
     def paths(self, new_exp_name=None, epoch=None):
         epoch = self.epoch if epoch is None else epoch
-        if not os.path.exists(self.model_dir):
-            os.mkdir(self.model_dir)
+        if not os.path.exists(self.model_pardir):
+            os.mkdir(self.model_pardir)
         if new_exp_name:  # save a parallel version to work with
-            directory = os.path.join(self.model_dir, new_exp_name)
+            directory = os.path.join(self.model_pardir, new_exp_name)
         else:
-            directory = os.path.join(self.model_dir, self.exp_name)
+            directory = os.path.join(self.model_pardir, self.exp_name)
         if not os.path.exists(directory):
             os.mkdir(directory)
-        paths = {'settings': os.path.join(directory, 'settings.json'),
-                 'model': os.path.join(directory, f'model_epoch{epoch}.pt'),
-                 'optim': os.path.join(directory, f'optimizer_epoch{epoch}.pt'),
-                 'train_hist': os.path.join(directory, 'train_losses.json'),
-                 'val_hist': os.path.join(directory, 'val_losses.json')}
+        paths = {json_file: os.path.join(directory, f'{json_file}.json') for json_file in
+                 ['settings', 'train_log', 'val_log', 'saved_test_metrics']}
+        paths.update({pt_file: os.path.join(directory, f'{pt_file}_epoch{epoch}.pt') for pt_file in ['model', 'optim']})
         return paths
-

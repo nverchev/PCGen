@@ -10,29 +10,29 @@ rotation: false
 model_head: AE
 encoder_name: LDGCNN
 decoder_name: PCGen
-components: 8
-filtering: false
+components: 1
+filtering: true
 k: 20
 cw_dim: 1024
 
 # training
 recon_loss: 'Chamfer'
-load: -1 # -1 does not load, 0 loads last, else gives epoch to load
+load: false
+load_checkpoint: 0  #0 loads last
 batch_size: 16
 m_training: 0
 m_test: 0
 opt_name: AdamW
 lr: 0.0001
 wd: 0.000001
-min_decay: 0.01
 epochs: 350
-decay_period: 250
+decay_steps: 250
+min_decay: 0.01
 checkpoint: 50
 
 # utility settings
 no_cuda: false
 seed: 0 # 0 when no seed
-eval: false
 viz: []
 interactive_plot: false
 

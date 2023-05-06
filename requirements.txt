@@ -1,23 +1,21 @@
-torch~=1.13.0
-pykeops~=2.1
-numpy~=1.22.3
-plotly~=5.9.0
-matplotlib~=3.5.2
-tqdm~=4.64.0
-sklearn~=0.0
-scikit-learn~=1.1.1
+# Code should work with earlier versions of packages and python as well (up to a point)
 
-# can be removed
-minio~=7.1.8
-geomloss~=0.2.5
-requests~=2.27.1
-h5py~=3.7.0
+python_version=3.11
+torch~=2.0.0+cu118
+numpy~=1.24.1
+requests~=2.28.1
+h5py~=3.8.0
 glob2~=0.7
+scikit-learn~=1.2.2
 openmesh~=1.2.1
-scikit-image~=0.18.3
-argparse~=1.4.0
-deepspeed~=0.7.2
-pyyaml~=6.0
-setuptools~=61.2.0
-emd~=0.0.0
-scipy~=1.8.1
+PyYAML~=6.0
+plotly~=5.14.1
+pykeops~=2.1.2
+matplotlib~=3.7.1
+tqdm~=4.65.0
+geomloss~=0.2.5
+setuptools~=65.5.1
+deepspeed~=0.9.1
+simple_3dviz~=0.7.0
+
+# Before installing external packages make sure the NVIDIA drivers and g++ compiler are compatible with the cuda version

@@ -238,7 +238,7 @@ class VQVAE(AE):
         if self.training:
             x = x.view(batch, self.dim_codes, self.embedding_dim).transpose(0, 1)
             idx = idx.view(batch, self.dim_codes, 1).transpose(0, 1).expand(-1, -1, self.embedding_dim)
-            update_dict = torch.zeros_like(self.codebook).scatter_(index=idx, src=x, dim=1, reduce='add')
+            update_dict = torch.zeros_like(self.codebook).scatter_reduce_(index=idx, src=x, dim=1, reduce='sum')
             normalize = self.ema_counts.unsqueeze(2).expand(-1, -1, self.embedding_dim)
             self.codebook.data = self.codebook * self.decay + self.gain * update_dict / (normalize + 1e-6)
             self.ema_counts.data = self.decay * self.ema_counts + self.gain * one_hot_idx.sum(0)
@@ -278,8 +278,6 @@ class VQVAE(AE):
             pseudo_z.append(self.cw_encoder.gaussian_sample(pseudo_mu[i], pseudo_log_var[i]))
         pseudo_z = torch.stack(pseudo_z)
         data = {'z': pseudo_z.contiguous()}
-        torch.save(pseudo_mu, 'pseudo_mu.pt')
-        torch.save(pseudo_log_var, 'pseudo_log_var.pt')
         out = self.decode(data=data, from_z=True)
         return out
 

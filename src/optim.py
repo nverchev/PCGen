@@ -23,7 +23,7 @@ class ExponentialSchedule:
 
 
 class CosineSchedule:
-    def __init__(self, decay_steps=60, min_decay=0.1):
+    def __init__(self, decay_steps, min_decay):
         self.decay_steps = decay_steps
         self.min_decay = min_decay
 

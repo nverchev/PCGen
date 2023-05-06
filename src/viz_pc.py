@@ -46,7 +46,7 @@ def visualize_rotate(data):
     return fig
 
 
-def pc_show(pcs, colors=None, colorscale='bluered'):
+def show_pc(pcs, colors=None, colorscale='blue' + 'red'):
     if not isinstance(pcs, list):
         pcs = [pcs]
         colors = [colors]

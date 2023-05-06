@@ -17,22 +17,22 @@ cw_dim: 512
 
 # training
 recon_loss: 'ChamferEMD'
-load: -1 # -1 does not load, 0 loads last, else gives epoch to load
+load: false
+load_checkpoint: 0  #0 loads last
 batch_size: 16
 m_training: 0
 m_test: 0
 opt_name: Adam
 lr: 0.001
 wd: 0.
-min_decay: 0.01
-epochs: 1
-decay_period: 900
-checkpoint: 1
+min_decay: 1
+epochs: 1000
+decay_steps: 900
+checkpoint: 10
 
 # utility settings
 no_cuda: false
 seed: 0 # 0 when no seed
-eval: false
 viz: []
 gen: 1
 interactive_plot: false
@@ -41,11 +41,11 @@ interactive_plot: false
 book_size: 16
 embedding_dim: 4
 z_dim: 32
-c_commitment: 2
+c_commitment: 10
 
 # training second encoding
 c_kld: 2
-vae_load: -1 # -1 does not load, 0 loads last, else gives epoch to load
+vae_load: true
 vae_batch_size: 128
 vae_pseudo_inputs: 400
 vae_opt_name: Adam

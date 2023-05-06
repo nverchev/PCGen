@@ -5,10 +5,8 @@ from torch import nn
 import torch.nn.functional as F
 import geomloss
 from src.neighbour_op import square_distance
-from external.emd.emd_module import emdModule
-from external.metrics.StructuralLosses.match_cost import match_cost
-from external.metrics.StructuralLosses.nn_distance import nn_distance
-
+from emd import emdModule
+from structural_losses import match_cost
 
 # Chamfer Distance
 def chamfer(t1, t2, dist):
@@ -87,6 +85,7 @@ class ReconLoss:
         self.recon_loss = recon_loss
         self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.001,
                                              diameter=2, scaling=.9, backend='online')
+        self.emd_dist = emdModule()
 
     def __call__(self, inputs, recon):
         pairwise_dist = square_distance(inputs, recon)
@@ -95,7 +94,7 @@ class ReconLoss:
         if self.recon_loss == 'Chamfer':
             recon = squared.mean(0)
         elif self.recon_loss == 'ChamferEMD':
-            emd = match_cost(inputs.contiguous(), recon.contiguous())
+            emd = torch.sqrt(self.emd_dist(inputs, recon, 0.005, 50)[0]).mean(1)
             recon = emd.mean(0) + squared.mean(0)
             dict_recon['EMD'] = emd.sum(0)
         else:
@@ -121,6 +120,7 @@ class AELoss(nn.Module):
             'Criterion': recon_loss_dict.pop('recon'),
             **recon_loss_dict
         }
+
 
 # VAE is only for the second encoding
 # class VAELoss(AELoss):
@@ -202,8 +202,8 @@ def get_ae_loss(model_head, recon_loss, **other_args):
 class AllMetrics:
     def __init__(self, denormalise):
         self.denormalise = denormalise
-        self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.01, diameter=2, scaling=.9, backend='online')
-        self.emd = emdModule()
+        # self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.01, diameter=2, scaling=.9, backend='online')
+        #self.emd_dist = emdModule()
 
     def __call__(self, outputs, inputs):
         scale = inputs[0]
@@ -215,17 +215,17 @@ class AllMetrics:
             ref_cloud *= scale
         return self.batched_pairwise_similarity(ref_cloud, recon)
 
-    @staticmethod
-    def batched_pairwise_similarity(clouds1, clouds2):
+    def batched_pairwise_similarity(self, clouds1, clouds2):
         pairwise_dist = square_distance(clouds1, clouds2)
         squared, augmented = chamfer(clouds1, clouds2, pairwise_dist)
-        emd = match_cost(clouds1.contiguous(), clouds2.contiguous()).sum(0)
+        emd = match_cost(clouds1.contiguous(), clouds2.contiguous())
+        #emd = torch.sqrt(self.emd_dist(clouds1, clouds2, 0.005, 50)[0]).mean(1)
         if clouds1.shape == clouds2.shape:
             squared /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
             emd /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
         dict_recon_metrics = {
             'Chamfer': squared.sum(0),
             'Chamfer Augmented': augmented.sum(0),
-            'EMD': emd
+            'EMD': emd.sum(0)
         }
         return dict_recon_metrics

@@ -26,6 +26,8 @@ def bounded_num(numeric_type, v_min=None, v_max=None):
 
 # Parser options
 def parser_add_arguments(parser):
+    parser.add_argument('--exp', type=str, help='name of the model directory: setup_exp(_final)', default='')
+
     # dataset options
     dataset_opt = parser.add_argument_group('Dataset options')
     dataset_opt.add_argument('--data_dir', type=str, help='directory for data')
@@ -41,7 +43,7 @@ def parser_add_arguments(parser):
 
     # model options
     model_opt = parser.add_argument_group('Model options')
-    dataset_opt.add_argument('--model_dir', type=str, help='directory for models')
+    dataset_opt.add_argument('--model_pardir', type=str, help='directory for models')
     dataset_opt.add_argument('--model_head', choices=['VQVAE', 'AE', 'Oracle'],
                              help='regularized /  non-regularized / identity. Oracle gives a different resampling of'
                                   'the input for reconstruction and training examples for random generation')
@@ -58,9 +60,10 @@ def parser_add_arguments(parser):
     # training options
     train_opt = parser.add_argument_group('Training options')
     train_opt.add_argument('--recon_loss', choices=['Chamfer', 'ChamferEMD'], help='ChamferEMD adds both')
-    train_opt.add_argument('--load', type=bounded_num(int, v_min=-1),
-                           help='load a saved model with the same settings. -1 for starting from scratch,'
-                                '0 for most recent, otherwise epoch after which the model was saved')
+    train_opt.add_argument('--load',  action='store_true',
+                           help='load a saved model from the model directory. See --exp and --load_checkpoint')
+    train_opt.add_argument('--load_checkpoint', type=bounded_num(int, v_min=1),
+                           help='specify which checkpoint (i.e. training epochs) to load. Default: last one')
     train_opt.add_argument('--batch_size', type=bounded_num(int, v_min=1))
     train_opt.add_argument('--m_training', type=bounded_num(int, v_min=4),
                            help='points generated in training, 0 for input number of points')
@@ -72,7 +75,7 @@ def parser_add_arguments(parser):
     train_opt.add_argument('--wd', type=bounded_num(float, v_min=0), help='weight decay')
     train_opt.add_argument('--min_decay', type=float, help='fraction of the initial lr at the end of train')
     train_opt.add_argument('--epochs', type=bounded_num(int, v_min=1), help='number of total training epochs')
-    train_opt.add_argument('--decay_period', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
+    train_opt.add_argument('--decay_steps', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
     train_opt.add_argument('--checkpoint', type=bounded_num(int, v_min=1),
                            help='epochs between checkpoints (should divide epochs)')
 
@@ -80,10 +83,9 @@ def parser_add_arguments(parser):
     util_opt = parser.add_argument_group('Utility options')
     util_opt.add_argument('--no_cuda', action='store_true', help='run on CPU')
     util_opt.add_argument('--seed', type=bounded_num(int, v_min=1), help='torch/numpy seed (0 no seed)')
-    util_opt.add_argument('--eval', action='store_true', help='evaluate the model)')
     util_opt.add_argument('--viz', type=bounded_num(int, v_min=0), nargs='+',
                           help='render reconstruction of train samples if not eval. '
-                       'test samples if --final else validation samples')
+                               'test samples if --final else validation samples')
     util_opt.add_argument('--interactive_plot', action='store_true', help='3D plot with plotly')
 
 
@@ -98,8 +100,7 @@ def parser_add_vqvae_arguments(parser):
     # VAE only
     vae_opt = parser.add_argument_group('Second encoding options', 'Only used when training the discrete variable vae')
     vae_opt.add_argument('--c_kld', type=bounded_num(float, v_min=0), help='Kullback-Leibler Divergence coefficient')
-    vae_opt.add_argument('--vae_load', type=bounded_num(int, v_min=-1), help='-1 reset parameters, 0 uses'
-                                                                             'weights stored in the larger model')
+    vae_opt.add_argument('--vae_load', action='store_true', help='load weights stored in the larger model')
     vae_opt.add_argument('--vae_batch_size', type=bounded_num(int, v_min=1))
     vae_opt.add_argument('--vae_opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                          help='SGD_momentum has momentum = 0.9')
@@ -114,7 +115,7 @@ def parser_add_vqvae_arguments(parser):
 def parse_args_and_set_seed(description='Shared options for training, evaluating and random generation'):
     parser = argparse.ArgumentParser(description=description)
     subparsers = parser.add_subparsers(title='Experiment default settings',
-                                       description='Name of a file in experiment folder without extension',
+                                       description='Name of a file in the setups folder without extension',
                                        help='create a new YAML file for more default settings',
                                        required=True)
 
@@ -125,29 +126,29 @@ def parse_args_and_set_seed(description='Shared options for training, evaluating
             data_dir = file.read()
     else:
         data_dir = os.path.join(os.curdir, 'dataset')
-    if os.path.exists('model_path.txt'):
-        with open('model_path.txt', 'r') as file:
-            model_dir = file.read()
+    if os.path.exists('models_path.txt'):
+        with open('models_path.txt', 'r') as file:
+            model_pardir = file.read()
     else:
-        model_dir = os.path.join(os.curdir, 'models')
+        model_pardir = os.path.join(os.curdir, 'models')
 
-    # Defaults from the experiments folder
-    for experiment_name in os.listdir(os.path.join(os.path.curdir, 'experiments')):
-        name, ext = os.path.splitext(experiment_name)
+    # Defaults from the setups folder
+    for setup_name in os.listdir(os.path.join(os.path.curdir, 'setups')):
+        name, ext = os.path.splitext(setup_name)
         assert ext == '.yaml', 'Experiment folder should only contain yaml files'
         default_parser = subparsers.add_parser(name)
-        with open(os.path.join(os.path.curdir, 'experiments', experiment_name), 'r') as default_file:
+        with open(os.path.join(os.path.curdir, 'setups', setup_name), 'r') as default_file:
             default_values = yaml.safe_load(default_file)
         parser_add_arguments(default_parser)
         if default_values['model_head'] == 'VQVAE':
             parser_add_vqvae_arguments(default_parser)
-        default_parser.set_defaults(name=name, data_dir=data_dir, model_dir=model_dir, **default_values)
+        default_parser.set_defaults(name=name, data_dir=data_dir, model_pardir=model_pardir, **default_values)
         default_parsers.append(default_parser)
 
     args = parser.parse_args()
     if args.model_head != 'Oracle':
         exp_name = [args.name,
-                    args.decoder_name + ('F' if args.filtering else ''),
+                    args.exp,
                     *args.select_classes,
                     'final' if args.final else '']
         args.exp_name = '_'.join(filter(bool, exp_name))
@@ -155,7 +156,7 @@ def parse_args_and_set_seed(description='Shared options for training, evaluating
         args.exp_name = '_'.join(filter(bool, ['Oracle'] + args.select_classes))
     args.m_test = args.m_test if args.m_test else args.input_points
     args.m_training = args.m_test if args.m_test else args.input_points
-    args.denormalise = args.dataset_name in ['ShapenetFlow']
+    args.de_normalise = args.dataset_name in ['ShapenetFlow']
     args.device = torch.device('cuda:0' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
     if args.seed:
         torch.manual_seed = np.random.seed = args.seed

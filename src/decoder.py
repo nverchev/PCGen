@@ -273,7 +273,7 @@ class AtlasNetv2Structures(AtlasNetv2):
     def __init__(self, cw_dim, m_training, components, filtering, **model_settings):
         super().__init__(cw_dim, m_training, components, filtering)
         self.m_patch = m_training // self.num_patches
-        self.grid = nn.Parameter(torch.rand(self.num_patches, 2, self.m // self.num_patches))
+        self.grid = nn.Parameter(torch.rand(self.num_patches, 2, m_training // self.num_patches))
         self.grid.data = F.pad(self.grid, (0, 0, 0, self.patch_embed_dim - 2))
 
     def forward(self, x, m):  # for this model, m is fixed
