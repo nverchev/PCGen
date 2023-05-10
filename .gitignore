@@ -1,6 +1,7 @@
 /external/emd/build/
-/external/emd/dist/
 /external/emd/emd.egg-info/
+/external/pytorch_structural_losses/build/
+/external/pytorch_structural_losses/structural_losses.egg-info/
 dataset_path.txt
 model_path.txt
 

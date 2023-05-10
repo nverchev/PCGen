@@ -1,0 +1,754 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="build to gitignore">
+      <change afterPath="$PROJECT_DIR$/external/emd/emd/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/emd/emd/emd_module.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/emd/src/emd.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/emd/src/emd_cuda.cu" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/lib.linux-x86_64-cpython-311/structural_losses/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/lib.linux-x86_64-cpython-311/structural_losses/match_cost.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/lib.linux-x86_64-cpython-311/structural_losses/nn_distance.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/lib.linux-x86_64-cpython-311/structural_losses_backend.cpython-311-x86_64-linux-gnu.so" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/.ninja_deps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/.ninja_log" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/build.ninja" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/src/approxmatch.o" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/src/nndistance.o" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/src/structural_loss.o" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/setup.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/src/approxmatch.cu" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/src/nndistance.cu" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/src/structural_loss.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/src/utils.hpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/PKG-INFO" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/SOURCES.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/dependency_links.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/requires.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/top_level.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses/match_cost.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses/nn_distance.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/external/pytorch_structural_losses/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/loss_and_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/loss_and_metrics.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="vq" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/main.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/requirements.txt" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectId" id="29hk294pV2u0dfY0J1hxx1Bx5hD" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/nverchev/PycharmProjects/CanonicalVAE&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;two.files.diff.last.used.file&quot;: &quot;/home/nverchev/PycharmProjects/PCGen/models/LDGCNN_PCGen_Chamfer_NoVAE_final_dense_after_encoder/settings.json&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;Python&quot;,
+      &quot;TEXT&quot;
+    ]
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/experiments" />
+      <recent name="$PROJECT_DIR$/external" />
+      <recent name="$PROJECT_DIR$/external/metrics/pytorch_structural_losses" />
+      <recent name="$PROJECT_DIR$/models/LDGCNN_PCGen_Chamfer_VQVAE_test_large_cw" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/external/pytorch_structural_losses" />
+      <recent name="$PROJECT_DIR$/external/pytorch_structural_losses/src" />
+      <recent name="$PROJECT_DIR$/external" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/models/old models" />
+    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="configurationTypes">
+      <set>
+        <option value="ShConfigurationType" />
+      </set>
+    </option>
+  </component>
+  <component name="RunManager" selected="Python.eval_model">
+    <configuration name="eval_model" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/eval_model.py" />
+      <option name="PARAMETERS" value="VQVAE --exp PCGen_no_ema --no-vq_ema_update" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="evaluate_samplings" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate_samplings.py" />
+      <option name="PARAMETERS" value="VQVAE" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="loss_and_metrics" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/loss_and_metrics.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="train_eval (2)" type="PythonConfigurationType" factoryName="Python">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_main_model.py" />
+      <option name="PARAMETERS" value="AE --components 1 --final" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2">
+        <option name="RunConfigurationTask" enabled="true" run_configuration_name="train_eval (1)" run_configuration_type="PythonConfigurationType" />
+      </method>
+    </configuration>
+    <configuration name="train_main_model" type="PythonConfigurationType" factoryName="Python" singleton="false" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_main_model.py" />
+      <option name="PARAMETERS" value="VQVAE --exp PCGen_no_ema --no-vq_ema_update --load" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="train_main_model_2" type="PythonConfigurationType" factoryName="Python">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_main_model.py" />
+      <option name="PARAMETERS" value="AE --exp PCGen" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2">
+        <option name="RunConfigurationTask" enabled="false" run_configuration_name="train_main_model" run_configuration_type="PythonConfigurationType" />
+      </method>
+    </configuration>
+    <configuration name="train_second_encoding" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_second_encoding.py" />
+      <option name="PARAMETERS" value="VQVAE" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="trainer_base" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/trainer_base.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="visualize_reconstructions" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/visualize_reconstructions.py" />
+      <option name="PARAMETERS" value="VQVAE  --viz 1 20 34 345" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.visualize_reconstructions" />
+      <item itemvalue="Python.train_main_model" />
+      <item itemvalue="Python.train_main_model_2" />
+      <item itemvalue="Python.train_eval (2)" />
+      <item itemvalue="Python.eval_model" />
+      <item itemvalue="Python.loss_and_metrics" />
+      <item itemvalue="Python.trainer_base" />
+      <item itemvalue="Python.evaluate_samplings" />
+      <item itemvalue="Python.train_second_encoding" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.eval_model" />
+        <item itemvalue="Python.trainer_base" />
+        <item itemvalue="Python.loss_and_metrics" />
+        <item itemvalue="Python.evaluate_samplings" />
+        <item itemvalue="Python.train_second_encoding" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="" />
+      <created>1653572494330</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1653572494330</updated>
+    </task>
+    <task id="LOCAL-00500" summary="replicate AtlasNet Experiment">
+      <created>1667529844261</created>
+      <option name="number" value="00500" />
+      <option name="presentableId" value="LOCAL-00500" />
+      <option name="project" value="LOCAL" />
+      <updated>1667529844261</updated>
+    </task>
+    <task id="LOCAL-00501" summary="replicate AtlasNet Experiment">
+      <created>1667582568862</created>
+      <option name="number" value="00501" />
+      <option name="presentableId" value="LOCAL-00501" />
+      <option name="project" value="LOCAL" />
+      <updated>1667582568862</updated>
+    </task>
+    <task id="LOCAL-00502" summary="new optimisation">
+      <created>1667587286128</created>
+      <option name="number" value="00502" />
+      <option name="presentableId" value="LOCAL-00502" />
+      <option name="project" value="LOCAL" />
+      <updated>1667587286128</updated>
+    </task>
+    <task id="LOCAL-00503" summary="faust dataset">
+      <created>1667604359447</created>
+      <option name="number" value="00503" />
+      <option name="presentableId" value="LOCAL-00503" />
+      <option name="project" value="LOCAL" />
+      <updated>1667604359447</updated>
+    </task>
+    <task id="LOCAL-00504" summary="faust dataset">
+      <created>1667608364494</created>
+      <option name="number" value="00504" />
+      <option name="presentableId" value="LOCAL-00504" />
+      <option name="project" value="LOCAL" />
+      <updated>1667608364494</updated>
+    </task>
+    <task id="LOCAL-00505" summary="filter detach neighbours">
+      <created>1667608745854</created>
+      <option name="number" value="00505" />
+      <option name="presentableId" value="LOCAL-00505" />
+      <option name="project" value="LOCAL" />
+      <updated>1667608745854</updated>
+    </task>
+    <task id="LOCAL-00506" summary="filter detach neighbours">
+      <created>1667609073653</created>
+      <option name="number" value="00506" />
+      <option name="presentableId" value="LOCAL-00506" />
+      <option name="project" value="LOCAL" />
+      <updated>1667609073653</updated>
+    </task>
+    <task id="LOCAL-00507" summary="filter detach neighbours">
+      <created>1667609240170</created>
+      <option name="number" value="00507" />
+      <option name="presentableId" value="LOCAL-00507" />
+      <option name="project" value="LOCAL" />
+      <updated>1667609240170</updated>
+    </task>
+    <task id="LOCAL-00508" summary="filter detach neighbours">
+      <created>1667609352085</created>
+      <option name="number" value="00508" />
+      <option name="presentableId" value="LOCAL-00508" />
+      <option name="project" value="LOCAL" />
+      <updated>1667609352085</updated>
+    </task>
+    <task id="LOCAL-00509" summary="filter detach neighbours">
+      <created>1667609461877</created>
+      <option name="number" value="00509" />
+      <option name="presentableId" value="LOCAL-00509" />
+      <option name="project" value="LOCAL" />
+      <updated>1667609461877</updated>
+    </task>
+    <task id="LOCAL-00510" summary="filter detach neighbours">
+      <created>1667609646315</created>
+      <option name="number" value="00510" />
+      <option name="presentableId" value="LOCAL-00510" />
+      <option name="project" value="LOCAL" />
+      <updated>1667609646316</updated>
+    </task>
+    <task id="LOCAL-00511" summary="filter detach neighbours">
+      <created>1667665513778</created>
+      <option name="number" value="00511" />
+      <option name="presentableId" value="LOCAL-00511" />
+      <option name="project" value="LOCAL" />
+      <updated>1667665513778</updated>
+    </task>
+    <task id="LOCAL-00512" summary="filter detach neighbours">
+      <created>1667694729069</created>
+      <option name="number" value="00512" />
+      <option name="presentableId" value="LOCAL-00512" />
+      <option name="project" value="LOCAL" />
+      <updated>1667694729069</updated>
+    </task>
+    <task id="LOCAL-00513" summary="filter detach neighbours">
+      <created>1667695265855</created>
+      <option name="number" value="00513" />
+      <option name="presentableId" value="LOCAL-00513" />
+      <option name="project" value="LOCAL" />
+      <updated>1667695265855</updated>
+    </task>
+    <task id="LOCAL-00514" summary="filter detach neighbours">
+      <created>1667751153252</created>
+      <option name="number" value="00514" />
+      <option name="presentableId" value="LOCAL-00514" />
+      <option name="project" value="LOCAL" />
+      <updated>1667751153252</updated>
+    </task>
+    <task id="LOCAL-00515" summary="filter detach neighbours">
+      <created>1667752183932</created>
+      <option name="number" value="00515" />
+      <option name="presentableId" value="LOCAL-00515" />
+      <option name="project" value="LOCAL" />
+      <updated>1667752183932</updated>
+    </task>
+    <task id="LOCAL-00516" summary="filter detach neighbours">
+      <created>1667780044599</created>
+      <option name="number" value="00516" />
+      <option name="presentableId" value="LOCAL-00516" />
+      <option name="project" value="LOCAL" />
+      <updated>1667780044599</updated>
+    </task>
+    <task id="LOCAL-00517" summary="filter detach neighbours">
+      <created>1667836283334</created>
+      <option name="number" value="00517" />
+      <option name="presentableId" value="LOCAL-00517" />
+      <option name="project" value="LOCAL" />
+      <updated>1667836283334</updated>
+    </task>
+    <task id="LOCAL-00518" summary="filter detach neighbours">
+      <created>1667859810375</created>
+      <option name="number" value="00518" />
+      <option name="presentableId" value="LOCAL-00518" />
+      <option name="project" value="LOCAL" />
+      <updated>1667859810375</updated>
+    </task>
+    <task id="LOCAL-00519" summary="filter detach neighbours">
+      <created>1667863023657</created>
+      <option name="number" value="00519" />
+      <option name="presentableId" value="LOCAL-00519" />
+      <option name="project" value="LOCAL" />
+      <updated>1667863023657</updated>
+    </task>
+    <task id="LOCAL-00520" summary="filter detach neighbours">
+      <created>1667864509956</created>
+      <option name="number" value="00520" />
+      <option name="presentableId" value="LOCAL-00520" />
+      <option name="project" value="LOCAL" />
+      <updated>1667864509956</updated>
+    </task>
+    <task id="LOCAL-00521" summary="filter detach neighbours">
+      <created>1667911403801</created>
+      <option name="number" value="00521" />
+      <option name="presentableId" value="LOCAL-00521" />
+      <option name="project" value="LOCAL" />
+      <updated>1667911403801</updated>
+    </task>
+    <task id="LOCAL-00522" summary="filter detach neighbours">
+      <created>1667929286156</created>
+      <option name="number" value="00522" />
+      <option name="presentableId" value="LOCAL-00522" />
+      <option name="project" value="LOCAL" />
+      <updated>1667929286156</updated>
+    </task>
+    <task id="LOCAL-00523" summary="tranfer grad filter">
+      <created>1667932415930</created>
+      <option name="number" value="00523" />
+      <option name="presentableId" value="LOCAL-00523" />
+      <option name="project" value="LOCAL" />
+      <updated>1667932415930</updated>
+    </task>
+    <task id="LOCAL-00524" summary="tranfer grad filter">
+      <created>1668003497050</created>
+      <option name="number" value="00524" />
+      <option name="presentableId" value="LOCAL-00524" />
+      <option name="project" value="LOCAL" />
+      <updated>1668003497050</updated>
+    </task>
+    <task id="LOCAL-00525" summary="tranfer grad filter">
+      <created>1668072073762</created>
+      <option name="number" value="00525" />
+      <option name="presentableId" value="LOCAL-00525" />
+      <option name="project" value="LOCAL" />
+      <updated>1668072073762</updated>
+    </task>
+    <task id="LOCAL-00526" summary="tranfer grad filter">
+      <created>1668091136238</created>
+      <option name="number" value="00526" />
+      <option name="presentableId" value="LOCAL-00526" />
+      <option name="project" value="LOCAL" />
+      <updated>1668091136238</updated>
+    </task>
+    <task id="LOCAL-00527" summary="tranfer grad filter">
+      <created>1668106486660</created>
+      <option name="number" value="00527" />
+      <option name="presentableId" value="LOCAL-00527" />
+      <option name="project" value="LOCAL" />
+      <updated>1668106486660</updated>
+    </task>
+    <task id="LOCAL-00528" summary="tranfer grad filter">
+      <created>1668107136822</created>
+      <option name="number" value="00528" />
+      <option name="presentableId" value="LOCAL-00528" />
+      <option name="project" value="LOCAL" />
+      <updated>1668107136823</updated>
+    </task>
+    <task id="LOCAL-00529" summary="tranfer grad filter">
+      <created>1668210774518</created>
+      <option name="number" value="00529" />
+      <option name="presentableId" value="LOCAL-00529" />
+      <option name="project" value="LOCAL" />
+      <updated>1668210774518</updated>
+    </task>
+    <task id="LOCAL-00530" summary="tranfer grad filter">
+      <created>1668294536252</created>
+      <option name="number" value="00530" />
+      <option name="presentableId" value="LOCAL-00530" />
+      <option name="project" value="LOCAL" />
+      <updated>1668294536252</updated>
+    </task>
+    <task id="LOCAL-00531" summary="tranfer grad filter">
+      <created>1668294575159</created>
+      <option name="number" value="00531" />
+      <option name="presentableId" value="LOCAL-00531" />
+      <option name="project" value="LOCAL" />
+      <updated>1668294575159</updated>
+    </task>
+    <task id="LOCAL-00532" summary="tranfer grad filter">
+      <created>1668294620775</created>
+      <option name="number" value="00532" />
+      <option name="presentableId" value="LOCAL-00532" />
+      <option name="project" value="LOCAL" />
+      <updated>1668294620775</updated>
+    </task>
+    <task id="LOCAL-00533" summary="tranfer grad filter">
+      <created>1668432420384</created>
+      <option name="number" value="00533" />
+      <option name="presentableId" value="LOCAL-00533" />
+      <option name="project" value="LOCAL" />
+      <updated>1668432420384</updated>
+    </task>
+    <task id="LOCAL-00534" summary="improved VAE&#10;new graph filtering">
+      <created>1668608404446</created>
+      <option name="number" value="00534" />
+      <option name="presentableId" value="LOCAL-00534" />
+      <option name="project" value="LOCAL" />
+      <updated>1668608404446</updated>
+    </task>
+    <task id="LOCAL-00535" summary="major rewriting to accomodate new metrics">
+      <created>1668790783668</created>
+      <option name="number" value="00535" />
+      <option name="presentableId" value="LOCAL-00535" />
+      <option name="project" value="LOCAL" />
+      <updated>1668790783668</updated>
+    </task>
+    <task id="LOCAL-00536" summary="major rewriting to accomodate new metrics">
+      <created>1668791434036</created>
+      <option name="number" value="00536" />
+      <option name="presentableId" value="LOCAL-00536" />
+      <option name="project" value="LOCAL" />
+      <updated>1668791434036</updated>
+    </task>
+    <task id="LOCAL-00537" summary="major rewriting to accomodate new metrics">
+      <created>1669734713163</created>
+      <option name="number" value="00537" />
+      <option name="presentableId" value="LOCAL-00537" />
+      <option name="project" value="LOCAL" />
+      <updated>1669734713163</updated>
+    </task>
+    <task id="LOCAL-00538" summary="Correcting bugs and gmm in Decoder">
+      <created>1669805696128</created>
+      <option name="number" value="00538" />
+      <option name="presentableId" value="LOCAL-00538" />
+      <option name="project" value="LOCAL" />
+      <updated>1669805696128</updated>
+    </task>
+    <task id="LOCAL-00539" summary="Correcting bugs and gmm in Decoder">
+      <created>1669807129933</created>
+      <option name="number" value="00539" />
+      <option name="presentableId" value="LOCAL-00539" />
+      <option name="project" value="LOCAL" />
+      <updated>1669807129933</updated>
+    </task>
+    <task id="LOCAL-00540" summary="Correcting bugs and gmm in Decoder">
+      <created>1669830292206</created>
+      <option name="number" value="00540" />
+      <option name="presentableId" value="LOCAL-00540" />
+      <option name="project" value="LOCAL" />
+      <updated>1669830292206</updated>
+    </task>
+    <task id="LOCAL-00541" summary="updating the encoder">
+      <created>1670257170341</created>
+      <option name="number" value="00541" />
+      <option name="presentableId" value="LOCAL-00541" />
+      <option name="project" value="LOCAL" />
+      <updated>1670257170342</updated>
+    </task>
+    <task id="LOCAL-00542" summary="updating the encoder">
+      <created>1671556813626</created>
+      <option name="number" value="00542" />
+      <option name="presentableId" value="LOCAL-00542" />
+      <option name="project" value="LOCAL" />
+      <updated>1671556813626</updated>
+    </task>
+    <task id="LOCAL-00543" summary="current best">
+      <created>1672925670296</created>
+      <option name="number" value="00543" />
+      <option name="presentableId" value="LOCAL-00543" />
+      <option name="project" value="LOCAL" />
+      <updated>1672925670296</updated>
+    </task>
+    <task id="LOCAL-00544" summary="current best">
+      <created>1673892895235</created>
+      <option name="number" value="00544" />
+      <option name="presentableId" value="LOCAL-00544" />
+      <option name="project" value="LOCAL" />
+      <updated>1673892895235</updated>
+    </task>
+    <task id="LOCAL-00545" summary="current best">
+      <created>1673893015353</created>
+      <option name="number" value="00545" />
+      <option name="presentableId" value="LOCAL-00545" />
+      <option name="project" value="LOCAL" />
+      <updated>1673893015354</updated>
+    </task>
+    <task id="LOCAL-00546" summary="Major Rewriting:&#10;Better options,&#10;Default YAML files,&#10;removed main.py">
+      <created>1682524420746</created>
+      <option name="number" value="00546" />
+      <option name="presentableId" value="LOCAL-00546" />
+      <option name="project" value="LOCAL" />
+      <updated>1682524420747</updated>
+    </task>
+    <task id="LOCAL-00547" summary="it works with decay_steps == 0">
+      <created>1683637913719</created>
+      <option name="number" value="00547" />
+      <option name="presentableId" value="LOCAL-00547" />
+      <option name="project" value="LOCAL" />
+      <updated>1683637913719</updated>
+    </task>
+    <task id="LOCAL-00548" summary="better options, continuous plotting of curves">
+      <created>1683730709598</created>
+      <option name="number" value="00548" />
+      <option name="presentableId" value="LOCAL-00548" />
+      <option name="project" value="LOCAL" />
+      <updated>1683730709598</updated>
+    </task>
+    <option name="localTasksCounter" value="549" />
+    <servers />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="requirements.txt" />
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ID_ORDER">
+      <list>
+        <option value="Default.Root" />
+        <option value="Default.Author" />
+        <option value="Default.Date" />
+        <option value="Default.Subject" />
+        <option value="Space.CommitStatus" />
+      </list>
+    </option>
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="CWAE now trains on quantised" />
+    <MESSAGE value="CWAE now trains on continuous" />
+    <MESSAGE value="more efficient CWencoder" />
+    <MESSAGE value="crossentropy version" />
+    <MESSAGE value="temp change in PCGen" />
+    <MESSAGE value="AtlasNet Structures" />
+    <MESSAGE value="no new PCGenH" />
+    <MESSAGE value="new PCGenH" />
+    <MESSAGE value="new PCGenH and new filter" />
+    <MESSAGE value="model settings as dict" />
+    <MESSAGE value="fixed AtlasNet structure decoder" />
+    <MESSAGE value="replicate AtlasNet Experiment" />
+    <MESSAGE value="new optimisation" />
+    <MESSAGE value="faust dataset" />
+    <MESSAGE value="filter detach neighbours" />
+    <MESSAGE value="tranfer grad filter" />
+    <MESSAGE value="improved VAE&#10;new graph filtering" />
+    <MESSAGE value="major rewriting to accomodate new metrics" />
+    <MESSAGE value="Correcting bugs and gmm in Decoder" />
+    <MESSAGE value="updating the encoder" />
+    <MESSAGE value="current best" />
+    <MESSAGE value="Major Rewriting:&#10;Better options,&#10;Default YAML files,&#10;removed main.py" />
+    <MESSAGE value="it works with decay_steps == 0" />
+    <MESSAGE value="better options, continuous plotting of curves" />
+    <MESSAGE value="build to gitignore" />
+    <option name="LAST_COMMIT_MESSAGE" value="build to gitignore" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
+    </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="idx.data.numpy()" language="Python" />
+      </configuration>
+    </watches-manager>
+  </component>
+</project>

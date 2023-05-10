@@ -1,0 +1,21 @@
+Index: src/losses.py
+===================================================================
+diff --git a/src/losses.py b/src/losses.py
+--- a/src/losses.py	
++++ b/src/losses.py	
+@@ -95,6 +95,15 @@
+                 'KLD': KLD
+                 }
+ 
++class KLDVAELoss():
++    c_kld = 0.001
++
++    def __call__(self, inputs, outputs):
++        mu_loss = ((outputs['mu'] - outputs['z'].detach())**2).sum(-1).mean()
++        embed_loss
++        return {'reg': embed_loss + mu_loss / 4,
++                'Embed Loss': embed_loss
++                }
+ 
+ class ReconLoss:
+     c_rec = 1

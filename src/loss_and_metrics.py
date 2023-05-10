@@ -92,10 +92,10 @@ class ReconLoss:
         squared, augmented = chamfer(inputs, recon, pairwise_dist)
         dict_recon = {'Chamfer': squared.sum(0), 'Chamfer Augmented': augmented.sum(0)}
         if self.recon_loss == 'Chamfer':
-            recon = squared.mean(0)
+            recon = squared.mean(0)  # Sum over points, mean over samples
         elif self.recon_loss == 'ChamferEMD':
-            emd = torch.sqrt(self.emd_dist(inputs, recon, 0.005, 50)[0]).mean(1)
-            recon = emd.mean(0) + squared.mean(0)
+            emd = torch.sqrt(self.emd_dist(inputs, recon, 0.005, 50)[0]).sum(1)  # mean over samples
+            recon = emd.mean(0) + squared.mean(0)  # Sum over points, mean over samples
             dict_recon['EMD'] = emd.sum(0)
         else:
             assert self.recon_loss == 'Sinkhorn', f'Loss {self.recon_loss} not known'
