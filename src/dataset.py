@@ -239,7 +239,7 @@ class ShapenetFlowSplit(AugmentDataset):
         label = self.labels[index]
         scale = self.scales[index]
         index_pool = np.arange(cloud.shape[0])
-        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=True)
+        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=not self.resample)
         clouds = [torch.from_numpy(cloud[sampling[:self.input_points]])]
         if self.resample:
             clouds.append(torch.from_numpy(cloud[sampling[self.input_points:]]))
