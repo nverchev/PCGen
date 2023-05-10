@@ -4,36 +4,476 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="build to gitignore">
-      <change afterPath="$PROJECT_DIR$/external/emd/emd/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/emd/emd/emd_module.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/emd/src/emd.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/emd/src/emd_cuda.cu" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/lib.linux-x86_64-cpython-311/structural_losses/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/lib.linux-x86_64-cpython-311/structural_losses/match_cost.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/lib.linux-x86_64-cpython-311/structural_losses/nn_distance.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/lib.linux-x86_64-cpython-311/structural_losses_backend.cpython-311-x86_64-linux-gnu.so" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/.ninja_deps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/.ninja_log" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/build.ninja" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/src/approxmatch.o" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/src/nndistance.o" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/build/temp.linux-x86_64-cpython-311/src/structural_loss.o" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/setup.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/src/approxmatch.cu" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/src/nndistance.cu" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/src/structural_loss.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/src/utils.hpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/PKG-INFO" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/SOURCES.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/dependency_links.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/requires.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses.egg-info/top_level.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses/match_cost.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/structural_losses/nn_distance.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/external/pytorch_structural_losses/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/external/pytorch_structural_losses/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/loss_and_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/loss_and_metrics.py" afterDir="false" />
+    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="backward support">
+      <change afterPath="$PROJECT_DIR$/images/reconstruction_345.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_4_components_PCGenF_final/model_epoch200.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_4_components_PCGenF_final/optimizer_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_4_components_PCGenF_final/settings.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_AtlasNetP10_final/settings.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen/optim_epoch140.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen/optim_epoch205.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen/optim_epoch45.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen/optim_epoch50.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen_final/optim_epoch150.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen_final/optim_epoch50.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen_final/saved_test_metrics.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen_no_decay/model_epoch350.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen_no_decay/optim_epoch200.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/AE_PCGen_no_decay/settings.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet/model_epoch120.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet/model_epoch230.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet/model_epoch300.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet/optimizer_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet/optimizer_epoch350.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet/optimizer_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet_1_components/model_epoch150.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet_1_components/model_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet_1_components/model_epoch260.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet_1_components/model_epoch330.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet_1_components/model_epoch60.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet_1_components/optimizer_epoch110.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet_1_components/optimizer_epoch180.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetDeformation_AE_final_replicate_AtlasNet_1_components/optimizer_epoch290.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetStructures_AE_final_replicate_AtlasNet/model_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetStructures_AE_final_replicate_AtlasNet/model_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetStructures_AE_final_replicate_AtlasNet/model_epoch290.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetStructures_AE_final_replicate_AtlasNet/optimizer_epoch10.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetStructures_AE_final_replicate_AtlasNet/optimizer_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetStructures_AE_final_replicate_AtlasNet/optimizer_epoch80.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_AtlasNetStructures_AE_final_replicate_AtlasNet/train_losses.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_FoldingNet_AE_final_replicate_AtlasNet/model_epoch340.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_FoldingNet_AE_final_replicate_AtlasNet/optimizer_epoch120.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_FoldingNet_AE_final_replicate_AtlasNet/optimizer_epoch190.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_FoldingNet_AE_final_replicate_AtlasNet/optimizer_epoch60.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_FoldingNet_AE_final_replicate_AtlasNet/val_losses.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet/model_epoch350.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet/model_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet/optimizer_epoch10.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet/optimizer_epoch140.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet/optimizer_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet/optimizer_epoch320.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet/optimizer_epoch80.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet/settings.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet_4_components/model_epoch140.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet_4_components/model_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet_4_components/model_epoch320.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet_4_components/optimizer_epoch260.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet_4_components/optimizer_epoch330.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_AE_final_replicate_AtlasNet_4_components/optimizer_epoch70.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane/model_epoch550.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane/model_epoch800.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane/model_epoch870.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane/optimizer_epoch230.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane/optimizer_epoch550.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane/optimizer_epoch730.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane/optimizer_epoch800.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane/optimizer_epoch870.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane/optimizer_epoch980.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/model_epoch400.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/model_epoch60.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/model_epoch650.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/model_epoch830.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/model_epoch900.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch150.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch330.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch510.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch580.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch650.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch720.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch790.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_repetitions/optimizer_epoch90.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch150.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch260.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch330.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch510.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch580.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch650.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch760.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch830.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/model_epoch90.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/optimizer_epoch340.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/optimizer_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/optimizer_epoch410.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/optimizer_epoch450.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/optimizer_epoch520.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/optimizer_epoch590.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/optimizer_epoch770.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/optimizer_epoch840.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD/optimizer_epoch980.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/model_epoch160.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/model_epoch730.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/model_epoch910.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/model_epoch980.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/optimizer_epoch260.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/optimizer_epoch330.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/optimizer_epoch400.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/optimizer_epoch50.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/optimizer_epoch830.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16/optimizer_epoch970.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/model_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/model_epoch240.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/model_epoch420.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/model_epoch490.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/model_epoch600.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/model_epoch670.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/model_epoch740.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/model_epoch990.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/optimizer_epoch190.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/optimizer_epoch300.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/optimizer_epoch370.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/optimizer_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/optimizer_epoch550.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/optimizer_epoch690.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/optimizer_epoch730.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/optimizer_epoch800.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_256/optimizer_epoch870.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/model_epoch170.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/model_epoch240.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/model_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/model_epoch810.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/model_epoch880.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch1000.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch110.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch180.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch360.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch540.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch610.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch680.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch790.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_16_light/optimizer_epoch860.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/model_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/model_epoch170.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/model_epoch350.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/model_epoch420.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/model_epoch490.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/model_epoch600.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/model_epoch670.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/model_epoch850.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/model_epoch990.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/optimizer_epoch10.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/optimizer_epoch230.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/optimizer_epoch370.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/optimizer_epoch410.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/optimizer_epoch480.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/optimizer_epoch730.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/optimizer_epoch870.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/optimizer_epoch910.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dict_8/optimizer_epoch980.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/model_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/model_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/model_epoch500.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/model_epoch570.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/model_epoch750.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/model_epoch930.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch10.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch140.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch320.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch390.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch500.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch570.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch640.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch820.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch890.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_airplane_with_EMD_dim_embedding_8/optimizer_epoch960.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/model_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/model_epoch320.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/model_epoch500.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/model_epoch570.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/model_epoch610.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/model_epoch680.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/model_epoch750.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/model_epoch930.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/optimizer_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/optimizer_epoch170.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/optimizer_epoch350.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/optimizer_epoch530.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/optimizer_epoch600.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/optimizer_epoch670.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD/val_losses.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/model_epoch1000.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/model_epoch270.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/model_epoch630.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/model_epoch70.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/model_epoch700.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/model_epoch950.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/optimizer_epoch140.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/optimizer_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/optimizer_epoch320.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/optimizer_epoch390.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/optimizer_epoch570.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/optimizer_epoch640.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/optimizer_epoch710.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/optimizer_epoch820.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/optimizer_epoch890.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_car_with_EMD_dict_16_256/settings.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch210.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch280.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch490.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch600.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch670.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch780.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch850.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch920.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/model_epoch990.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/optimizer_epoch160.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/optimizer_epoch340.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/optimizer_epoch450.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/optimizer_epoch50.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/optimizer_epoch520.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/optimizer_epoch590.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/optimizer_epoch770.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/optimizer_epoch840.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16/optimizer_epoch910.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/model_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/model_epoch320.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/model_epoch500.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/model_epoch570.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/model_epoch750.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/model_epoch930.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/optimizer_epoch610.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/optimizer_epoch680.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/optimizer_epoch860.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_chair_with_EMD_dict_16_256/optimizer_epoch930.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_final_car_resampled/model_epoch240.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_final_car_resampled/model_epoch30.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_final_car_resampled/optimizer_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenCGF_VQVAE_final_car_resampled/val_losses.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet/model_epoch70.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet/optimizer_epoch120.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet/optimizer_epoch190.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet/optimizer_epoch300.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet_4/model_epoch170.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet_4/model_epoch210.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet_4/model_epoch280.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet_4/model_epoch30.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet_4/optimizer_epoch140.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_AE_final_replicate_AtlasNet_4/optimizer_epoch80.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/model_epoch10.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/model_epoch180.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/model_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/model_epoch430.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/model_epoch500.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/model_epoch570.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/optimizer_epoch140.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/optimizer_epoch210.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/optimizer_epoch280.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane/optimizer_epoch460.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane_with_EMD/model_epoch560.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane_with_EMD/model_epoch740.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane_with_EMD/optimizer_epoch180.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane_with_EMD/optimizer_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane_with_EMD/optimizer_epoch430.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane_with_EMD/optimizer_epoch680.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane_with_EMD/optimizer_epoch70.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_airplane_with_EMD/optimizer_epoch750.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_car/model_epoch110.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_car/model_epoch180.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_car/model_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_car/model_epoch290.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_car/optimizer_epoch310.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_car/optimizer_epoch90.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair/model_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair/model_epoch290.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair/optimizer_epoch120.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair/optimizer_epoch190.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair/train_losses.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair_m_4096/model_epoch180.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair_m_4096/model_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair_m_4096/optimizer_epoch160.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair_m_4096/optimizer_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair_m_4096/optimizer_epoch340.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenC_VQVAE_chair_m_4096/optimizer_epoch90.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_AE_final_replicate_AtlasNet/model_epoch210.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_AE_final_replicate_AtlasNet/model_epoch280.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_AE_final_replicate_AtlasNet/model_epoch90.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_AE_final_replicate_AtlasNet/optimizer_epoch240.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_AE_final_replicate_AtlasNet/optimizer_epoch310.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_AE_final_replicate_AtlasNet/optimizer_epoch60.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane/model_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane/model_epoch50.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane/optimizer_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane/optimizer_epoch170.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane_1024/model_epoch290.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane_1024/model_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane_1024/optimizer_epoch130.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane_1024/optimizer_epoch200.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane_1024/optimizer_epoch270.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_airplane_1024/optimizer_epoch50.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_16_book/model_epoch110.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_16_book/model_epoch180.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_16_book/optimizer_epoch260.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_16_book/optimizer_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_cw_dim_512/model_epoch110.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_cw_dim_512/model_epoch60.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_cw_dim_embedding_8/model_epoch240.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_cw_dim_embedding_8/model_epoch310.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_cw_dim_embedding_8/model_epoch80.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_cw_dim_embedding_8/optimizer_epoch130.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_cw_dim_embedding_8/optimizer_epoch240.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_cw_dim_embedding_8/optimizer_epoch310.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_dim_embedding_8/model_epoch150.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_dim_embedding_8/model_epoch330.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_dim_embedding_8/optimizer_epoch50.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenGF_VQVAE_chair_dim_embedding_8/train_losses.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet/model_epoch260.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet/model_epoch330.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet/optimizer_epoch130.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma/model_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma/model_epoch170.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma/model_epoch280.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma/model_epoch350.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma/optimizer_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma/optimizer_epoch300.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma_00001/model_epoch10.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma_00001/model_epoch260.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma_00001/model_epoch300.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma_00001/optimizer_epoch10.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma_00001/optimizer_epoch120.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma_00001/optimizer_epoch190.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_AE_final_replicate_AtlasNet_fix_sigma_00001/optimizer_epoch300.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_VQVAE_car/model_epoch270.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_VQVAE_car/model_epoch340.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_VQVAE_car/optimizer_epoch150.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_VQVAE_car/optimizer_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_VQVAE_car/optimizer_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_VQVAE_car/optimizer_epoch290.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGenS_VQVAE_car/optimizer_epoch90.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_chair/model_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_chair/optimizer_epoch30.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_chair/train_losses.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_chair/val_losses.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_dfaust/model_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_dfaust/model_epoch90.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_dfaust/optimizer_epoch110.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_dfaust/optimizer_epoch180.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_replicate_AtlasNet/model_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_replicate_AtlasNet/model_epoch290.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_replicate_AtlasNet/model_epoch50.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_replicate_AtlasNet/optimizer_epoch160.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_replicate_AtlasNet/optimizer_epoch230.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_replicate_AtlasNet/optimizer_epoch70.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_replicate_AtlasNet/train_losses.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_replicate_AtlasNet_test/model_epoch30.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_AE_final_replicate_AtlasNet_test/optimizer_epoch10.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_car/model_epoch160.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_car/model_epoch340.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_car/model_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_car/optimizer_epoch150.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_car/optimizer_epoch190.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_car/optimizer_epoch260.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_car/optimizer_epoch330.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_car/optimizer_epoch50.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_final_chair/model_epoch160.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_final_chair/model_epoch230.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_final_chair/optimizer_epoch140.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_final_chair/optimizer_epoch210.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_test/model_epoch170.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_test/model_epoch240.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_test/model_epoch60.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_test/optimizer_epoch120.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_PCGen_VQVAE_test/optimizer_epoch190.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_TearingNetGF_AE_final_replicate_AtlasNet/model_epoch110.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_TearingNetGF_AE_final_replicate_AtlasNet/model_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_TearingNetGF_AE_final_replicate_AtlasNet/optimizer_epoch280.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_TearingNetGF_AE_final_replicate_AtlasNet_4_components/settings.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_TearingNet_AE_final_replicate_AtlasNet/model_epoch300.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_TearingNet_AE_final_replicate_AtlasNet/optimizer_epoch220.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/LDGCNN_TearingNet_AE_final_replicate_AtlasNet/optimizer_epoch290.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_airplane_final/settings.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/model_epoch140.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/model_epoch320.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/model_epoch390.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/model_epoch570.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/model_epoch640.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/optim_epoch130.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/optim_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/optim_epoch630.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/optim_epoch700.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/optim_epoch770.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/optim_epoch90.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/optim_epoch950.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_1_airplane/train_log.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/model_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/model_epoch170.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/model_epoch240.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/model_epoch530.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/model_epoch670.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/model_epoch740.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/model_epoch90.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/model_epoch920.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/model_epoch990.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/optim_epoch10.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/optim_epoch160.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/optim_epoch410.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/optim_epoch480.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/optim_epoch660.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/optim_epoch730.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/optim_epoch80.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/optim_epoch910.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_c_commitment_2_airplane/optim_epoch980.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/model_epoch200.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/model_epoch270.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/model_epoch450.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/model_epoch590.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/model_epoch630.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/model_epoch700.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/model_epoch770.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/model_epoch950.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/optim_epoch120.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/optim_epoch190.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/optim_epoch260.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/optim_epoch330.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/optim_epoch370.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/optim_epoch440.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_code_redistribution_airplane/optim_epoch620.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/model_epoch110.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/model_epoch180.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/model_epoch20.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/model_epoch250.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/model_epoch430.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/model_epoch570.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/model_epoch610.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/model_epoch680.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/optim_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/optim_epoch170.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/optim_epoch240.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/optim_epoch310.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/optim_epoch350.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/optim_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/optim_epoch420.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/optim_epoch490.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_PCGen_no_ema_airplane/optim_epoch670.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/model_epoch1000.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/model_epoch360.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/model_epoch540.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/model_epoch610.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/model_epoch680.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/model_epoch790.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/model_epoch860.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/optim_epoch100.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/optim_epoch280.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/optim_epoch350.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/optim_epoch40.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/optim_epoch460.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/optim_epoch530.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/optim_epoch780.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/optim_epoch850.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/optim_epoch960.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/VQVAE_airplane/val_log.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eval_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/eval_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/external/pytorch_structural_losses/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/setups/VQVAE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/VQVAE.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/options.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/options.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -112,7 +552,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Python.eval_model">
+  <component name="RunManager" selected="Python.train_main_model">
     <configuration name="eval_model" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -126,7 +566,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/eval_model.py" />
-      <option name="PARAMETERS" value="VQVAE --exp PCGen_no_ema --no-vq_ema_update" />
+      <option name="PARAMETERS" value="AE --model_head Oracle --resample" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -335,34 +775,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1653572494330</updated>
-    </task>
-    <task id="LOCAL-00500" summary="replicate AtlasNet Experiment">
-      <created>1667529844261</created>
-      <option name="number" value="00500" />
-      <option name="presentableId" value="LOCAL-00500" />
-      <option name="project" value="LOCAL" />
-      <updated>1667529844261</updated>
-    </task>
-    <task id="LOCAL-00501" summary="replicate AtlasNet Experiment">
-      <created>1667582568862</created>
-      <option name="number" value="00501" />
-      <option name="presentableId" value="LOCAL-00501" />
-      <option name="project" value="LOCAL" />
-      <updated>1667582568862</updated>
-    </task>
-    <task id="LOCAL-00502" summary="new optimisation">
-      <created>1667587286128</created>
-      <option name="number" value="00502" />
-      <option name="presentableId" value="LOCAL-00502" />
-      <option name="project" value="LOCAL" />
-      <updated>1667587286128</updated>
-    </task>
-    <task id="LOCAL-00503" summary="faust dataset">
-      <created>1667604359447</created>
-      <option name="number" value="00503" />
-      <option name="presentableId" value="LOCAL-00503" />
-      <option name="project" value="LOCAL" />
-      <updated>1667604359447</updated>
     </task>
     <task id="LOCAL-00504" summary="faust dataset">
       <created>1667608364494</created>
@@ -679,7 +1091,35 @@
       <option name="project" value="LOCAL" />
       <updated>1683730709598</updated>
     </task>
-    <option name="localTasksCounter" value="549" />
+    <task id="LOCAL-00549" summary="build to gitignore">
+      <created>1683739740690</created>
+      <option name="number" value="00549" />
+      <option name="presentableId" value="LOCAL-00549" />
+      <option name="project" value="LOCAL" />
+      <updated>1683739740690</updated>
+    </task>
+    <task id="LOCAL-00550" summary="build to gitignore">
+      <created>1683739799632</created>
+      <option name="number" value="00550" />
+      <option name="presentableId" value="LOCAL-00550" />
+      <option name="project" value="LOCAL" />
+      <updated>1683739799632</updated>
+    </task>
+    <task id="LOCAL-00551" summary="strip path to model and dataset">
+      <created>1683741666152</created>
+      <option name="number" value="00551" />
+      <option name="presentableId" value="LOCAL-00551" />
+      <option name="project" value="LOCAL" />
+      <updated>1683741666152</updated>
+    </task>
+    <task id="LOCAL-00552" summary="Shapenet Flow does not replace when sampling">
+      <created>1683742145991</created>
+      <option name="number" value="00552" />
+      <option name="presentableId" value="LOCAL-00552" />
+      <option name="project" value="LOCAL" />
+      <updated>1683742145991</updated>
+    </task>
+    <option name="localTasksCounter" value="553" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -708,9 +1148,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="CWAE now trains on quantised" />
-    <MESSAGE value="CWAE now trains on continuous" />
-    <MESSAGE value="more efficient CWencoder" />
     <MESSAGE value="crossentropy version" />
     <MESSAGE value="temp change in PCGen" />
     <MESSAGE value="AtlasNet Structures" />
@@ -733,10 +1170,25 @@
     <MESSAGE value="it works with decay_steps == 0" />
     <MESSAGE value="better options, continuous plotting of curves" />
     <MESSAGE value="build to gitignore" />
-    <option name="LAST_COMMIT_MESSAGE" value="build to gitignore" />
+    <MESSAGE value="strip path to model and dataset" />
+    <MESSAGE value="Shapenet Flow does not replace when sampling" />
+    <MESSAGE value="backward support" />
+    <option name="LAST_COMMIT_MESSAGE" value="backward support" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/model.py</url>
+          <line>180</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/loss_and_metrics.py</url>
+          <line>229</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+      </breakpoints>
       <default-breakpoints>
         <breakpoint type="python-exception">
           <properties notifyOnTerminate="true" exception="BaseException">
@@ -745,10 +1197,5 @@
         </breakpoint>
       </default-breakpoints>
     </breakpoint-manager>
-    <watches-manager>
-      <configuration name="PythonConfigurationType">
-        <watch expression="idx.data.numpy()" language="Python" />
-      </configuration>
-    </watches-manager>
   </component>
 </project>

@@ -37,7 +37,7 @@ embedding_dim: 4
 z_dim: 32
 c_commitment: 2
 c_embedding: 2
-vq_ema_update: true
+vq_ema_update: false
 
 # training second encoding
 c_kld: 2

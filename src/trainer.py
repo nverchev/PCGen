@@ -247,7 +247,7 @@ def get_trainer(model, loaders, args):
 
     )
 
-    return (AETrainer if args.model_head == 'AE' else VQVAETrainer)(model, trainer_args)
+    return (VQVAETrainer if args.model_head == 'VQVAE' else AETrainer)(model, trainer_args)
 
 
 def get_cw_trainer(vqvae_trainer, cw_loaders, args):

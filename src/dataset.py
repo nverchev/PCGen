@@ -203,7 +203,7 @@ class ShapenetAtlasSplit(AugmentDataset):
         path = self.paths[index]
         cloud = np.load(path).astype(np.float32)
         index_pool = np.arange(cloud.shape[0])
-        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=self.resample)
+        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=not self.resample)
         ref_cloud, scale = normalise(cloud[sampling[:self.input_points]])
         clouds = [torch.from_numpy(ref_cloud)]
         if self.resample:
@@ -322,7 +322,7 @@ class ShapeNetDatasetAtlas:
             self.paths.setdefault('test', []).extend(files[second_split:])
 
     def split(self, split):
-        return ShapenetAtlasSplit(self.paths[split], self.input_points, self.classes, resample=split in ['val', 'test'],
+        return ShapenetAtlasSplit(self.paths[split], self.input_points, self.classes,
                                   **self.augmentation_settings)
 
     def to_numpy(self):

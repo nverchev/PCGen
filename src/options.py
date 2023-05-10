@@ -41,7 +41,8 @@ def parser_add_arguments(parser):
                              help='(maximum) points of the training dataset')
     dataset_opt.add_argument('--translation', action=BooleanOptionalAction, help='random translating training inputs')
     dataset_opt.add_argument('--rotation', action=BooleanOptionalAction, help='random rotating training inputs')
-    dataset_opt.add_argument('--resample', type=str, help='two different samplings for input and reference')
+    dataset_opt.add_argument('--resample', action=BooleanOptionalAction,
+                             help='two different samplings for input and reference')
 
     # model options
     model_opt = parser.add_argument_group('Model options')

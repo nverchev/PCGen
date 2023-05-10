@@ -12,8 +12,9 @@ def eval_model():
     loaders = dict(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
     trainer = get_trainer(model, loaders, args=args)
     test_partition = 'train' if args.eval_train else 'test' if args.final else 'val'
-    warnings.simplefilter("error", UserWarning)
-    trainer.load(args.load_checkpoint if args.load_checkpoint else None)
+    if args.model_head != 'Oracle':
+        warnings.simplefilter("error", UserWarning)
+        trainer.load(args.load_checkpoint if args.load_checkpoint else None)
     trainer.test(partition=test_partition, all_metrics=True, de_normalize=args.de_normalize)
     if args.training_plot:
         trainer.plot_loss_metric(start=args.checkpoint, loss_metric='Chamfer')

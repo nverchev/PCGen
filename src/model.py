@@ -239,7 +239,7 @@ class VQVAE(AE):
         if self.training and self.vq_ema_update:
             x = x.view(batch, self.dim_codes, self.embedding_dim).transpose(0, 1)
             idx = idx.view(batch, self.dim_codes, 1).transpose(0, 1).expand(-1, -1, self.embedding_dim)
-            update_dict = torch.zeros_like(self.codebook).scatter_reduce_(index=idx, src=x, dim=1, reduce='sum')
+            update_dict = torch.zeros_like(self.codebook).scatter_(index=idx, src=x, dim=1, reduce='sum')
             normalize = self.ema_counts.unsqueeze(2).expand(-1, -1, self.embedding_dim)
             self.codebook.data = self.codebook * self.decay + self.gain * update_dict / (normalize + 1e-6)
             self.ema_counts.data = self.decay * self.ema_counts + self.gain * one_hot_idx.sum(0)
