@@ -132,12 +132,12 @@ def parse_args_and_set_seed(description='Shared options for training, evaluating
     default_parsers = []
     if os.path.exists('dataset_path.txt'):
         with open('dataset_path.txt', 'r') as file:
-            data_dir = file.read()
+            data_dir = file.read().strip()
     else:
         data_dir = os.path.join(os.curdir, 'dataset')
     if os.path.exists('models_path.txt'):
         with open('models_path.txt', 'r') as file:
-            model_pardir = file.read()
+            model_pardir = file.read().strip()
     else:
         model_pardir = os.path.join(os.curdir, 'models')
 
