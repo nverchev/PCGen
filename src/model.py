@@ -93,7 +93,6 @@ class VAECW(nn.Module):
         self.pseudo_log_var = nn.Parameter(pseudo_data['pseudo_log_var'])
 
 
-
 class VAECW(nn.Module):
     settings = {}
 
@@ -207,19 +206,21 @@ class AE(BaseModel):
 
 class VQVAE(AE):
 
-    def __init__(self, book_size, cw_dim, z_dim, embedding_dim, **model_settings):
+    def __init__(self, book_size, cw_dim, z_dim, embedding_dim, vq_ema_update, **model_settings):
         # encoder gives vector quantised codes, therefore the cw dim must be multiplied by the embed dim
         super().__init__(cw_dim=cw_dim, **model_settings)
         self.double_encoding = False
         self.dim_codes = cw_dim // embedding_dim
         self.book_size = book_size
         self.embedding_dim = embedding_dim
-        self.decay = .999
-        self.gain = 1 - self.decay
+        self.vq_ema_update = vq_ema_update
         self.codebook = torch.nn.Parameter(
-            torch.randn(self.dim_codes, self.book_size, self.embedding_dim, requires_grad=False))
-        self.ema_counts = torch.nn.Parameter(
-            torch.ones(self.dim_codes, self.book_size, dtype=torch.float, requires_grad=False))
+            torch.randn(self.dim_codes, self.book_size, self.embedding_dim, requires_grad=not vq_ema_update))
+        if vq_ema_update:
+            self.decay = .999
+            self.gain = 1 - self.decay
+            self.ema_counts = torch.nn.Parameter(
+                torch.ones(self.dim_codes, self.book_size, dtype=torch.float, requires_grad=False))
         self.cw_encoder = VAECW(cw_dim, z_dim, self.codebook)
         self.settings['book_size'] = self.book_size
         self.settings['embedding_dim'] = self.embedding_dim
@@ -235,7 +236,7 @@ class VQVAE(AE):
         one_hot_idx = torch.zeros(batch, self.dim_codes, self.book_size, device=x.device)
         one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)
         # EMA update
-        if self.training:
+        if self.training and self.vq_ema_update:
             x = x.view(batch, self.dim_codes, self.embedding_dim).transpose(0, 1)
             idx = idx.view(batch, self.dim_codes, 1).transpose(0, 1).expand(-1, -1, self.embedding_dim)
             update_dict = torch.zeros_like(self.codebook).scatter_reduce_(index=idx, src=x, dim=1, reduce='sum')

@@ -193,7 +193,7 @@ class ShapenetAtlasSplit(AugmentDataset):
         self.paths = paths
         self.translation_and_scale = translation
         self.input_points = input_points
-        self.resample = True
+        self.resample = resample
         self.label_index = list(labels.values())
 
     def __len__(self):
@@ -220,7 +220,7 @@ class ShapenetFlowSplit(AugmentDataset):
         self.paths = paths
         self.pcd = []
         self.labels = []
-        self.resample = True
+        self.resample = resample
         self.input_points = input_points
         self.label_index = list(labels.keys())
         self.scales = []
@@ -256,11 +256,10 @@ class Modelnet40Dataset:
         self.modelnet_path = os.path.join(data_dir, 'modelnet40_hdf5_2048')
         self.augmentation_settings = augmentation_settings
         self.download()
-        files_path = lambda x: os.path.join(self.modelnet_path, f'*{x}*.h5')
         self.pcd, self.indices, self.labels = {}, {}, {}
         for split in ['train', 'test']:
             self.pcd[split], self.indices[split], self.labels[split] = \
-                load_h5_modelnet(files_path(split), input_points, k)
+                load_h5_modelnet(os.path.join(self.modelnet_path, f'*{split}*.h5'), input_points, k)
             if select_classes:
                 try:
                     selected_labels = [self.classes.index(selected_class) for selected_class in select_classes]
@@ -379,7 +378,7 @@ class ShapeNetDatasetFlow:
             self.paths.setdefault('test', []).extend(test_files)
 
     def split(self, split):
-        return ShapenetFlowSplit(self.paths[split], self.input_points, self.classes, resample=split in ['val', 'test'],
+        return ShapenetFlowSplit(self.paths[split], self.input_points, self.classes,
                                  **self.augmentation_settings)
 
 
@@ -390,8 +389,8 @@ class DFaustDataset(Dataset):
         self.rotation = rotation
         self.translation_and_scale = translation
         files = glob2.glob(os.path.join(self.data_dir, 'dfaust', '*'))
-        assert files, 'registrations in dataset/dfaust are missing and/or the folder has not been created' \
-                      '\nregistrations can be dowloaded from https://dfaust.is.tue.mpg.de/download.php '
+        assert files, 'registrations are missing and/or the folder has not been created' \
+                      '\nregistrations can be downloaded from https://dfaust.is.tue.mpg.de/download.php '
         self.pcd, self.indices = load_h5_dfaust(files, k)
 
     def __len__(self):
@@ -411,7 +410,7 @@ class DFaustDataset(Dataset):
 
 class MPIFaustDataset(Dataset):
 
-    def __init__(self, data_dir, k, input_points, rotation, translation):
+    def __init__(self, data_dir, input_points, rotation, translation):
         self.data_dir = data_dir
         self.rotation = rotation
         self.translation_and_scale = translation
@@ -434,7 +433,7 @@ class MPIFaustDataset(Dataset):
 
 class FaustDataset:
 
-    def __init__(self, data_dir, k, input_points, select_classes, **augmentation_settings):
+    def __init__(self, data_dir, k, input_points, **augmentation_settings):
         self.data_dir = data_dir
         self.k = k
         self.augmentation_settings = augmentation_settings

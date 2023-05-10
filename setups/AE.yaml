@@ -5,6 +5,7 @@ select_classes: []
 input_points: 2500
 translation: false
 rotation: false
+resample: false
 
 # model options
 model_head: AE
@@ -30,9 +31,13 @@ decay_steps: 250
 min_decay: 0.01
 checkpoint: 50
 
-# utility settings
-no_cuda: false
-seed: 0 # 0 when no seed
-viz: []
-interactive_plot: false
+# evaluation options
+eval_train: false
+viz: [1, 10, 100, 1000]
+training_plot: false
+interactive_plot: true
+de_normalize: false
 
+# utility settings
+cuda: true
+seed: 0 # 0 when no seed

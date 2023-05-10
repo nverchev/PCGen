@@ -3,6 +3,7 @@ import torch
 from torch.cuda.amp import GradScaler
 from torch import autocast
 import os
+import warnings
 import json
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -89,8 +90,6 @@ class Trainer(metaclass=ABCMeta):
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111)
         self.train_log, self.val_log = defaultdict(dict), defaultdict(dict)
         self.test_metadata, self.test_outputs = None, None  # store last test evaluation
         self.saved_test_metrics = {}  # saves metrics of last evaluation
@@ -227,28 +226,28 @@ class Trainer(metaclass=ABCMeta):
     def helper_inputs(self, inputs, labels):
         return {'x': inputs}
 
-    def plot_loss_metric(self, loss_metric='Criterion', partition='train and val', start_from=10):
+    def plot_loss_metric(self, loss_metric='Criterion', start=10, update=False):
         plt.cla()
-        assert partition in ['train', 'val', 'train and val']
-        if partition == 'train and val' or partition == 'train':
-            assert self.train_log, 'No training log'
-            epoch_keys = [epoch for epoch in self.train_log.keys() if int(epoch) >= start_from]
+        # fig = plt.gcf()
+        ax = plt.gca()
+        if self.train_log:
+            epoch_keys = [epoch for epoch in self.train_log.keys() if int(epoch) >= start]
             epochs = [int(epoch) for epoch in epoch_keys]
             values = [self.train_log[epoch][loss_metric] for epoch in epoch_keys]
-            self.ax.plot(epochs, values, label='train', color='blue')
-        if partition == 'train and val' or partition == 'val':
-            assert self.val_log, 'No validation log'
-            epoch_keys = [epoch for epoch in self.val_log.keys() if int(epoch) >= start_from]
+            ax.plot(epochs, values, label='train', color='blue')
+        if self.val_log:
+            epoch_keys = [epoch for epoch in self.val_log.keys() if int(epoch) >= start]
             epochs = [int(epoch) for epoch in epoch_keys]
             values = [self.val_log[epoch][loss_metric] for epoch in epoch_keys]
-            self.ax.plot(epochs, values, label='val', color='green')
-        self.ax.set_xlabel('Epochs')
-        self.ax.set_ylabel(loss_metric)
-        self.ax.set_title(f'{self.exp_name}')
-        self.ax.legend()
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
-        plt.show()
+            ax.plot(epochs, values, label='val', color='green')
+        ax.set_xlabel('Epochs')
+        ax.set_ylabel(loss_metric)
+        ax.set_title(f'{self.exp_name}')
+        ax.legend()
+        if update:
+            plt.pause(0.1)
+        else:
+            plt.show()
         return
 
     # Change device recursively to tensors inside a list or a dictionary
@@ -279,7 +278,7 @@ class Trainer(metaclass=ABCMeta):
                     if file[:5] == 'model':
                         past_epochs.append(int(''.join(filter(str.isdigit, file))))
             if not past_epochs:
-                print('No saved models found')
+                warnings.warn('No saved models found. Training from scratch.', UserWarning)
                 return
             else:
                 self.epoch = max(past_epochs)

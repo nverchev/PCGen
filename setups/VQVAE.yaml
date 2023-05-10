@@ -5,6 +5,7 @@ select_classes: [airplane]
 input_points: 2048
 translation: false
 rotation: false
+resample: true
 
 # model options
 model_head: VQVAE
@@ -25,23 +26,18 @@ m_test: 0
 opt_name: Adam
 lr: 0.001
 wd: 0.
-min_decay: 1
+min_decay: 0.01
 epochs: 1000
 decay_steps: 900
 checkpoint: 10
-
-# utility settings
-no_cuda: false
-seed: 0 # 0 when no seed
-viz: []
-gen: 1
-interactive_plot: false
 
 # VQVAE
 book_size: 16
 embedding_dim: 4
 z_dim: 32
-c_commitment: 10
+c_commitment: 2
+c_embedding: 2
+vq_ema_update: true
 
 # training second encoding
 c_kld: 2
@@ -55,3 +51,14 @@ vae_epochs: 1000
 vae_decay_period: 900
 vae_min_decay: 0.01
 vae_checkpoint: 1000
+
+# evaluation options
+eval_train: false
+viz: [1, 10, 100, 1000]
+training_plot: true
+interactive_plot: true
+de_normalize: true
+
+# utility settings
+cuda: true
+seed: 0 # 0 when no seed

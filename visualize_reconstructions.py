@@ -1,3 +1,4 @@
+import warnings
 from src.options import parse_args_and_set_seed
 from src.dataset import get_loaders
 from src.model import get_model
@@ -11,9 +12,10 @@ def visualize_reconstruction():
     train_loader, val_loader, test_loader = get_loaders(**vars(args))
     loaders = dict(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
     trainer = get_trainer(model, loaders, args=args)
+    warnings.simplefilter("error", UserWarning)
     trainer.load(args.load_checkpoint if args.load_checkpoint else None)
-    dataset = (train_loader if not args.eval else test_loader if args.final else val_loader).dataset
-
+    dataset = (train_loader if args.eval_train else test_loader if args.final else val_loader).dataset
+#
     for i in args.viz:
         assert i < len(dataset), 'Index is too large for the selected dataset'
         dataset_row = dataset[i]

@@ -6,7 +6,6 @@ import json
 from sklearn import svm, metrics
 from sklearn.decomposition import PCA
 from src.trainer_base import Trainer
-from src.dataset import get_cw_loaders
 from src.optim import get_opt, CosineSchedule
 from src.loss_and_metrics import get_ae_loss, CWEncoderLoss, AllMetrics
 from src.viz_pc import show_pc
@@ -28,9 +27,9 @@ class AETrainer(Trainer):
         self._metrics = self._loss
         return
 
-    def test(self, partition, all_metrics=False, de_normalise=False, save_outputs=False, **kwargs):
+    def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=False, **kwargs):
         if all_metrics:
-            self._metrics = lambda x, y, z: AllMetrics(de_normalise)(x, y)
+            self._metrics = lambda x, y, z: AllMetrics(de_normalize)(x, y)
         super().test(partition=partition, save_outputs=save_outputs)
         return
 
@@ -90,8 +89,8 @@ class AETrainer(Trainer):
 
 class VQVAETrainer(AETrainer):
 
-    def test(self, partition, all_metrics=False, de_normalise=False, save_outputs=True, **kwargs):
-        super().test(partition, all_metrics, de_normalise, save_outputs, **kwargs)
+    def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=True, **kwargs):
+        super().test(partition, all_metrics, de_normalize, save_outputs, **kwargs)
         idx = torch.stack(self.test_outputs['cw_idx'])
         idx = idx.mean(0)  # average dataset values
         self.print_statistics('Index Usage', idx)
@@ -251,23 +250,7 @@ def get_trainer(model, loaders, args):
     return (AETrainer if args.model_head == 'AE' else VQVAETrainer)(model, trainer_args)
 
 
-def get_cw_trainer(model, loaders, args):
-    test_partition = 'test' if args.final else 'val'
-    # TODO: load the model normally from trainer when fixing the architecture (careful with self.epoch)
-    # trainer.load(args.load_checkpoint if args.load_checkpoint else None)
-    load_path = os.path.join('models', args.exp_name, f'model_epoch{args.epochs}.pt')
-    assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
-    model_state = torch.load(load_path, map_location=args.device)
-    assert args.vae_load < 1, 'Only loading the last saved version is supported'
-    for name in list(model_state):
-        if args.vae_load == -1:
-            model.cw_encoder.reset_parameters()
-            if name[:10] == 'cw_encoder' or name[:10] == 'cw_decoder':
-                model_state.popitem(name)  # temporary feature to experiment with different cw_encoders
-    trainer = get_trainer(model, loaders, args)
-    trainer.model.load_state_dict(model_state, strict=False)
-    cw_train_loader, cw_test_loader = get_cw_loaders(trainer, test_partition, args.vae_batch_size)
-    cw_loaders = dict(train_loader=cw_train_loader, val_loader=None, test_loader=cw_test_loader)
+def get_cw_trainer(vqvae_trainer, cw_loaders, args):
     optimizer, optim_args = get_opt(args.vae_opt_name, args.vae_lr, args.vae_wd)
     trainer_args = dict(
         optimizer=optimizer,
@@ -275,4 +258,4 @@ def get_cw_trainer(model, loaders, args):
         **cw_loaders,
         **vars(args)
     )
-    return CWTrainer(trainer, trainer_args)
+    return CWTrainer(vqvae_trainer, trainer_args)

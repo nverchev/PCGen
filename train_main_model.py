@@ -14,7 +14,7 @@ def train_model():
     train_loader, val_loader, test_loader = get_loaders(**vars(args))
     loaders = dict(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
     trainer = get_trainer(model, loaders, args=args)
-    test_partition = 'test' if args.final else 'val'
+    test_partition = 'train' if args.eval_train else 'test' if args.final else 'val'
 
     if args.load:
         trainer.load(args.load_checkpoint if args.load_checkpoint else None)
@@ -29,7 +29,6 @@ def train_model():
             trainer.model.load_state_dict(state_dict, strict=False)
 
     # Uncomment to plot learning curves
-    plt.ion()
     while args.epochs > trainer.epoch:
         trainer.train(args.checkpoint)
         # if args.model_head == "VQVAE":
@@ -46,12 +45,10 @@ def train_model():
         #                 trainer.model.codebook.data[i, j] = trainer.model.codebook.data[i, k]
         if not args.final:
             trainer.test(partition='val')
-            trainer.plot_loss_metric(partition='train and val', start_from=trainer.epoch - 10 * args.checkpoint)
+        if args.training_plot:
+            trainer.plot_loss_metric(start=trainer.epoch - 10 * args.checkpoint, loss_metric='Chamfer', update=True)
         trainer.save()
-    plt.ioff()
-    if not args.final:
-        trainer.plot_loss_metric(partition='train and val', start_from=2 * args.checkpoint)
-    trainer.test(partition=test_partition, all_metrics=True, de_normalise=args.de_normalise)
+    trainer.test(partition=test_partition, all_metrics=True, de_normalize=args.de_normalize)
 
 
 if __name__ == '__main__':

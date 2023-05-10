@@ -142,19 +142,25 @@ class AELoss(nn.Module):
 
 
 class VQVAELoss(AELoss):
-    def __init__(self, recon_loss, c_commitment, **not_used):
+    def __init__(self, recon_loss, c_commitment, c_embedding, vq_ema_update, **not_used):
         super().__init__(recon_loss)
         self.c_commitment = c_commitment
+        self.c_embedding = c_embedding
+        self.vq_ema_update = vq_ema_update
 
     def forward(self, outputs, inputs, targets):
         recon_loss_dict = super().forward(outputs, inputs, targets)
-        embed_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
-        reg = self.c_commitment * embed_loss
+        if self.vq_ema_update or self.c_embedding == self.c_commitment:
+            commit_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'])
+            reg = self.c_commitment * commit_loss
+        else:
+            commit_loss = F.mse_loss(outputs['cw_q'], outputs['cw_e'].detach())
+            embed_loss = F.mse_loss(outputs['cw_q'].detach(), outputs['cw_e'])
+            reg = self.c_commitment * commit_loss + self.c_embedding * embed_loss
         criterion = recon_loss_dict.pop('Criterion') + reg
         return {'Criterion': criterion,
                 **recon_loss_dict,
-                'reg': reg,
-                'Embed Loss': embed_loss * outputs['cw_q'].shape[0]
+                'Embed Loss': commit_loss * outputs['cw_q'].shape[0]  # embed_loss and commit_loss have same value
                 }
 
 
@@ -200,16 +206,16 @@ def get_ae_loss(model_head, recon_loss, **other_args):
 
 
 class AllMetrics:
-    def __init__(self, denormalise):
-        self.denormalise = denormalise
+    def __init__(self, de_normalize):
+        self.de_normalize = de_normalize
         # self.sinkhorn = geomloss.SamplesLoss(loss='sinkhorn', p=2, blur=.01, diameter=2, scaling=.9, backend='online')
-        #self.emd_dist = emdModule()
+        # self.emd_dist = emdModule()
 
     def __call__(self, outputs, inputs):
         scale = inputs[0]
         ref_cloud = inputs[-2]  # get input shape (resampled depending on the dataset)
         recon = outputs['recon']
-        if self.denormalise:
+        if self.de_normalize:
             scale = scale.view(-1, 1, 1).expand_as(recon)
             recon *= scale
             ref_cloud *= scale
@@ -219,7 +225,7 @@ class AllMetrics:
         pairwise_dist = square_distance(clouds1, clouds2)
         squared, augmented = chamfer(clouds1, clouds2, pairwise_dist)
         emd = match_cost(clouds1.contiguous(), clouds2.contiguous())
-        #emd = torch.sqrt(self.emd_dist(clouds1, clouds2, 0.005, 50)[0]).mean(1)
+        # emd = torch.sqrt(self.emd_dist(clouds1, clouds2, 0.005, 50)[0]).mean(1)
         if clouds1.shape == clouds2.shape:
             squared /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
             emd /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal

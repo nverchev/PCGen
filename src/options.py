@@ -3,7 +3,7 @@ import os
 import yaml
 import torch
 import numpy as np
-from argparse import ArgumentTypeError
+from argparse import ArgumentTypeError, BooleanOptionalAction
 
 
 # type with value restrictions
@@ -31,15 +31,17 @@ def parser_add_arguments(parser):
     # dataset options
     dataset_opt = parser.add_argument_group('Dataset options')
     dataset_opt.add_argument('--data_dir', type=str, help='directory for data')
-    dataset_opt.add_argument('--final', action='store_true', help='uses val dataset for training and test for testing')
+    dataset_opt.add_argument('--final', action=BooleanOptionalAction,
+                             help='uses val dataset for training and test dataset for testing, otherwise test on val')
     dataset_opt.add_argument('--dataset_name',
                              choices=['Modelnet40', 'ShapenetAtlas', 'Coins', 'Faust', 'ShapenetFlow'])
     dataset_opt.add_argument('--select_classes', nargs='+', choices=['airplane', 'car', 'chair'],
                              help='select specific classes of the dataset ShapenetFlow')
     dataset_opt.add_argument('--input_points', type=bounded_num(float, v_min=0),
                              help='(maximum) points of the training dataset')
-    dataset_opt.add_argument('--translation', action='store_true', help='random translation to training inputs')
-    dataset_opt.add_argument('--rotation', action='store_true', help='random rotation to training inputs')
+    dataset_opt.add_argument('--translation', action=BooleanOptionalAction, help='random translating training inputs')
+    dataset_opt.add_argument('--rotation', action=BooleanOptionalAction, help='random rotating training inputs')
+    dataset_opt.add_argument('--resample', type=str, help='two different samplings for input and reference')
 
     # model options
     model_opt = parser.add_argument_group('Model options')
@@ -52,7 +54,7 @@ def parser_add_arguments(parser):
                                                       'AtlasNetDeformation', 'AtlasNetStructures'], help='PC decoder')
     model_opt.add_argument('--components', type=bounded_num(int, v_min=1),
                            help='components of PCGenC or patches in AtlasNet')
-    model_opt.add_argument('--filtering', action='store_true', help='Laplacian filtering after decoder')
+    model_opt.add_argument('--filtering', action=BooleanOptionalAction, help='Laplacian filtering after decoder')
     model_opt.add_argument('--k', type=bounded_num(int, v_min=1),
                            help='number of neighbours of a point (counting the point itself) in (L)DGCNN]')
     model_opt.add_argument('--cw_dim', type=bounded_num(int, v_min=1), help='codeword length')
@@ -60,7 +62,7 @@ def parser_add_arguments(parser):
     # training options
     train_opt = parser.add_argument_group('Training options')
     train_opt.add_argument('--recon_loss', choices=['Chamfer', 'ChamferEMD'], help='ChamferEMD adds both')
-    train_opt.add_argument('--load',  action='store_true',
+    train_opt.add_argument('--load', action=BooleanOptionalAction,
                            help='load a saved model from the model directory. See --exp and --load_checkpoint')
     train_opt.add_argument('--load_checkpoint', type=bounded_num(int, v_min=1),
                            help='specify which checkpoint (i.e. training epochs) to load. Default: last one')
@@ -79,14 +81,19 @@ def parser_add_arguments(parser):
     train_opt.add_argument('--checkpoint', type=bounded_num(int, v_min=1),
                            help='epochs between checkpoints (should divide epochs)')
 
+    # evaluation options
+    eval_opt = parser.add_argument_group('Evaluation options')
+    eval_opt.add_argument('--eval_train', action=BooleanOptionalAction, help='eval on train instead of test or val')
+    eval_opt.add_argument('--viz', type=bounded_num(int, v_min=0), nargs='+', help='sample indices to visualise')
+    eval_opt.add_argument('--training_plot', action=BooleanOptionalAction, help='visualize learning curves')
+    eval_opt.add_argument('--interactive_plot', action=BooleanOptionalAction, help='3D plot with plotly')
+    eval_opt.add_argument('--de_normalize', action=BooleanOptionalAction,
+                          help='compare reconstruction and input on coordinates before normalization')
+
     # utility options
     util_opt = parser.add_argument_group('Utility options')
-    util_opt.add_argument('--no_cuda', action='store_true', help='run on CPU')
+    util_opt.add_argument('--cuda', action=BooleanOptionalAction, help='run on Cuda')
     util_opt.add_argument('--seed', type=bounded_num(int, v_min=1), help='torch/numpy seed (0 no seed)')
-    util_opt.add_argument('--viz', type=bounded_num(int, v_min=0), nargs='+',
-                          help='render reconstruction of train samples if not eval. '
-                               'test samples if --final else validation samples')
-    util_opt.add_argument('--interactive_plot', action='store_true', help='3D plot with plotly')
 
 
 def parser_add_vqvae_arguments(parser):
@@ -95,12 +102,14 @@ def parser_add_vqvae_arguments(parser):
     vqvae_opt.add_argument('--embedding_dim', type=bounded_num(int, v_min=1), help='Codes length')
     vqvae_opt.add_argument('--z_dim', type=bounded_num(int, v_min=1), help='continuous latent space dim')
     vqvae_opt.add_argument('--c_commitment', type=bounded_num(float, v_min=0), help='coefficient for commitment loss')
+    vqvae_opt.add_argument('--c_embedding', type=bounded_num(float, v_min=0), help='coefficient for embedding loss')
+    vqvae_opt.add_argument('--vq_ema_update', action=BooleanOptionalAction, help='EMA update on quantized codes')
     vqvae_opt.add_argument('--gen', type=bounded_num(int, v_min=1), help='number of generated samples')
 
     # VAE only
     vae_opt = parser.add_argument_group('Second encoding options', 'Only used when training the discrete variable vae')
     vae_opt.add_argument('--c_kld', type=bounded_num(float, v_min=0), help='Kullback-Leibler Divergence coefficient')
-    vae_opt.add_argument('--vae_load', action='store_true', help='load weights stored in the larger model')
+    vae_opt.add_argument('--vae_load', action=BooleanOptionalAction, help='load weights stored in the larger model')
     vae_opt.add_argument('--vae_batch_size', type=bounded_num(int, v_min=1))
     vae_opt.add_argument('--vae_opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                          help='SGD_momentum has momentum = 0.9')
@@ -156,8 +165,7 @@ def parse_args_and_set_seed(description='Shared options for training, evaluating
         args.exp_name = '_'.join(filter(bool, ['Oracle'] + args.select_classes))
     args.m_test = args.m_test if args.m_test else args.input_points
     args.m_training = args.m_test if args.m_test else args.input_points
-    args.de_normalise = args.dataset_name in ['ShapenetFlow']
-    args.device = torch.device('cuda:0' if torch.cuda.is_available() and not args.no_cuda else 'cpu')
+    args.device = torch.device('cuda:0' if torch.cuda.is_available() and args.cuda else 'cpu')
     if args.seed:
         torch.manual_seed = np.random.seed = args.seed
     return args
