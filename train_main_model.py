@@ -31,18 +31,20 @@ def train_model():
     # Uncomment to plot learning curves
     while args.epochs > trainer.epoch:
         trainer.train(args.checkpoint)
-        # if args.model_head == "VQVAE":
-        #     trainer.test(partition='train', save_outputs=True)
-        #     idx = trainer.test_outputs['cw_idx']
-        #     idx = torch.stack(idx).sum(0)
-        #     unused_idx = (idx == 0)
-        #     for i in range(args.cw_dim // args.embedding_dim):
-        #         p = np.array(idx[i])
-        #         p = p / p.sum()
-        #         for j in range(args.book_size):
-        #             if unused_idx[i, j]:
-        #                 k = np.random.choice(np.arange(args.book_size), p=p)
-        #                 trainer.model.codebook.data[i, j] = trainer.model.codebook.data[i, k]
+        if args.model_head == "VQVAE":
+            trainer.test(partition='train', save_outputs=True)
+            idx = trainer.test_outputs['cw_idx']
+            idx = torch.stack(idx).sum(0)
+            unused_idx = (idx == 0)
+            for i in range(args.cw_dim // args.embedding_dim):
+                p = np.array(idx[i])
+                p = p / p.sum()
+                for j in range(args.book_size):
+                    if unused_idx[i, j]:
+                        k = np.random.choice(np.arange(args.book_size), p=p)
+                        used_embedding = trainer.model.codebook.data[i, k]
+                        noise = args.vq_noise * torch.randn_like(used_embedding)
+                        trainer.model.codebook.data[i, j] = used_embedding + noise
         if not args.final:
             trainer.test(partition='val')
         if args.training_plot:

@@ -10,10 +10,13 @@ The code to install the source code has been simplified and tested with cuda 11.
 You can install the packages from their root folder with `pip install .`. 
 
 ### Troubleshooting
-Pytorch comes with a version of cuda as a compute platform: https://pytorch.org/. 
+Pytorch comes with a version of cuda as a compute platform: https://pytorch.org/. \
 Make sure that version matches your nvidia drivers.
-You can check the version of your nvidia divers with  `nvcc --version`.
-
+You can check the version of your nvidia divers with  `nvcc --version`.\
+If you are using a local env, make sure that the compiler finds the correct path. For example by bashing: 
+```
+export PATH=/usr/local/cuda/bin:$PATH
+```
 ### Example use
 These implementations, differently from the original ones, install the python modules as well. 
 This way you can drop the relative path and use them in other projects as well.

@@ -19,7 +19,7 @@ cw_dim: 1024
 # training
 recon_loss: 'Chamfer'
 load: false
-load_checkpoint: 0  #0 loads last
+load_checkpoint: -1  #-1 loads last
 batch_size: 16
 m_training: 0
 m_test: 0

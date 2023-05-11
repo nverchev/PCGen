@@ -42,9 +42,9 @@ def random_scale_translate(*clouds):
 
 
 def jitter(cloud, sigma=0.01, clip=0.02):
-    jitter = torch.randn(cloud.shape) * sigma
+    jitter_noise = torch.randn(cloud.shape) * sigma
     new_cloud = cloud.clone()
-    new_cloud += torch.clamp(jitter, min=-clip, max=clip)
+    new_cloud += torch.clamp(jitter_noise, min=-clip, max=clip)
     return new_cloud
 
 
@@ -297,7 +297,7 @@ class Modelnet40Dataset:
 class ShapeNetDatasetAtlas:
     classes = json.load(open(os.path.join(os.getcwd(), 'metadata', 'shapenet_AtlasNet_classes.json'), 'r'))
 
-    def __init__(self, data_dir, k, input_points, select_classes, **augmentation_settings):
+    def __init__(self, data_dir, input_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.shapenet_path = os.path.join(self.data_dir, 'shapenet')
         if not os.path.exists(self.shapenet_path):
@@ -355,7 +355,7 @@ class ShapeNetDatasetAtlas:
 class ShapeNetDatasetFlow:
     classes = json.load(open(os.path.join(os.getcwd(), 'metadata', 'shapenet_PointFlow_classes.json'), 'r'))
 
-    def __init__(self, data_dir, k, input_points, select_classes, **augmentation_settings):
+    def __init__(self, data_dir, input_points, select_classes, **augmentation_settings):
         self.data_dir = data_dir
         self.shapenet_path = os.path.join(self.data_dir, 'ShapeNetCore.v2.PC15k')
         link = 'https://drive.google.com/drive/folders/1G0rf-6HSHoTll6aH7voh-dXj6hCRhSAQ'

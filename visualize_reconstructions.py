@@ -12,8 +12,9 @@ def visualize_reconstruction():
     train_loader, val_loader, test_loader = get_loaders(**vars(args))
     loaders = dict(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
     trainer = get_trainer(model, loaders, args=args)
-    warnings.simplefilter("error", UserWarning)
-    trainer.load(args.load_checkpoint if args.load_checkpoint else None)
+    if args.model_head != 'Oracle':
+        warnings.simplefilter("error", UserWarning)
+        trainer.load(args.load_checkpoint if args.load_checkpoint else None)
     dataset = (train_loader if args.eval_train else test_loader if args.final else val_loader).dataset
 #
     for i in args.viz:

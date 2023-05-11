@@ -38,6 +38,7 @@ z_dim: 32
 c_commitment: 2
 c_embedding: 2
 vq_ema_update: false
+vq_noise: 0.01
 
 # training second encoding
 c_kld: 2
@@ -54,7 +55,7 @@ vae_checkpoint: 1000
 
 # evaluation options
 eval_train: false
-viz: [1, 10, 100, 1000]
+viz: [1, 10, 100, 200]
 training_plot: true
 interactive_plot: true
 de_normalize: true

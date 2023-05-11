@@ -105,6 +105,7 @@ def parser_add_vqvae_arguments(parser):
     vqvae_opt.add_argument('--c_commitment', type=bounded_num(float, v_min=0), help='coefficient for commitment loss')
     vqvae_opt.add_argument('--c_embedding', type=bounded_num(float, v_min=0), help='coefficient for embedding loss')
     vqvae_opt.add_argument('--vq_ema_update', action=BooleanOptionalAction, help='EMA update on quantized codes')
+    vqvae_opt.add_argument('--vq_noise', type=bounded_num(float, v_min=0), help='noise when redistributing the codes')
     vqvae_opt.add_argument('--gen', type=bounded_num(int, v_min=1), help='number of generated samples')
 
     # VAE only
