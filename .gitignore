@@ -5,5 +5,5 @@ external/pytorch_structural_losses/structural_losses.egg-info/
 .idea/
 images/
 models/
-dataset_path.txt
+datasets_path.txt
 model_path.txt

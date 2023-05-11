@@ -30,7 +30,7 @@ def parser_add_arguments(parser):
 
     # dataset options
     dataset_opt = parser.add_argument_group('Dataset options')
-    dataset_opt.add_argument('--data_dir', type=str, help='directory for data')
+    dataset_opt.add_argument('--data_dir', type=str, help='directory for data - tip: write it in datasets_path.txt')
     dataset_opt.add_argument('--final', action=BooleanOptionalAction,
                              help='uses val dataset for training and test dataset for testing, otherwise test on val')
     dataset_opt.add_argument('--dataset_name',
@@ -46,7 +46,7 @@ def parser_add_arguments(parser):
 
     # model options
     model_opt = parser.add_argument_group('Model options')
-    dataset_opt.add_argument('--model_pardir', type=str, help='directory for models')
+    dataset_opt.add_argument('--model_pardir', type=str, help='directory for models - tip: write it in models_path.txt')
     dataset_opt.add_argument('--model_head', choices=['VQVAE', 'AE', 'Oracle'],
                              help='regularized /  non-regularized / identity. Oracle gives a different resampling of'
                                   'the input for reconstruction and training examples for random generation')
@@ -131,8 +131,8 @@ def parse_args_and_set_seed(description='Shared options for training, evaluating
 
     # Defaults for computer specific paths in .gitignore
     default_parsers = []
-    if os.path.exists('dataset_path.txt'):
-        with open('dataset_path.txt', 'r') as file:
+    if os.path.exists('datasets_path.txt'):
+        with open('datasets_path.txt', 'r') as file:
             data_dir = file.read().strip()
     else:
         data_dir = os.path.join(os.curdir, 'dataset')
