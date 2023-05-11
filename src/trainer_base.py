@@ -10,10 +10,11 @@ import matplotlib.pyplot as plt
 from abc import ABCMeta, abstractmethod
 from collections import UserDict, defaultdict
 import sys
+import typing
 
 
 # Apply recursively lists or dictionaries until check
-def apply(obj, check, f):  # changes device in dictionary and lists
+def apply(obj: typing.Any, check, f) -> typing.Any:  # changes device in dictionary and lists
     if check(obj):
         return f(obj)
     elif isinstance(obj, list):
@@ -32,7 +33,7 @@ class TorchDictList(UserDict):
         super().__init__(**kwargs)
         self.info = {}
 
-    def __getitem__(self, key_or_index):
+    def __getitem__(self, key_or_index: typing.Union[int, str]):
         if isinstance(key_or_index, int):
             return self._index_dict_list(key_or_index)
         return super().__getitem__(key_or_index)
@@ -227,16 +228,16 @@ class Trainer(metaclass=ABCMeta):
     def helper_inputs(self, inputs, labels):
         return {'x': inputs}
 
-    def plot_loss_metric(self, loss_metric='Criterion', start=10, update=False):
+    def plot_loss_metric(self, plot_train=True, plot_val=True, loss_metric='Criterion', start=0, update=False):
         plt.cla()
         # fig = plt.gcf()
         ax = plt.gca()
-        if self.train_log:
+        if self.train_log and plot_train:
             epoch_keys = [epoch for epoch in self.train_log.keys() if int(epoch) >= start]
             epochs = [int(epoch) for epoch in epoch_keys]
             values = [self.train_log[epoch][loss_metric] for epoch in epoch_keys]
             ax.plot(epochs, values, label='train', color='blue')
-        if self.val_log:
+        if self.val_log and plot_val:
             epoch_keys = [epoch for epoch in self.val_log.keys() if int(epoch) >= start]
             epochs = [int(epoch) for epoch in epoch_keys]
             values = [self.val_log[epoch][loss_metric] for epoch in epoch_keys]
