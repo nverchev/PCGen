@@ -210,7 +210,8 @@ class Trainer(metaclass=ABCMeta):
         print('Average {} {} :'.format(partition, 'metrics' if torch.is_inference_mode_enabled() else 'losses'))
         for loss_metric, value in epoch_log.items():
             value = value / num_batch if loss_metric == 'Criterion' else value / epoch_seen
-            dict_log[loss_metric] = value
+            if torch.is_inference_mode_enabled() or partition == 'train':  # Does not overwrite training curve
+                dict_log[loss_metric] = value
             if not self.quiet_mode:
                 print('{}: {:.4e}'.format(loss_metric, value), end='\t')
         print()
