@@ -15,6 +15,7 @@ from src.loss_and_metrics import chamfer
 # match cost is the emd version used in other works as a baseline
 from structural_losses import match_cost
 
+
 class AETrainer(Trainer):
     clf = svm.SVC(kernel='linear')
     saved_accuracies = {}
@@ -90,14 +91,14 @@ class AETrainer(Trainer):
 class VQVAETrainer(AETrainer):
 
     def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=True, **kwargs):
-        super().test(partition, all_metrics, de_normalize, save_outputs, **kwargs)
-        idx = torch.stack(self.test_outputs['cw_idx'])
+        super().test(partition, all_metrics, de_normalize, save_outputs=True, **kwargs)
+        idx = torch.stack(self.test_outputs['one_hot_idx']).float()
         idx = idx.mean(0)  # average dataset values
         self.print_statistics('Index Usage', idx)
         print(torch.histc(idx))
         return
 
-    def evaluate_generated_set(self, partition, repeat_chamfer=10, repeat_emd=0, batch_size=64, oracle=False):
+    def evaluate_generated_set(self, partition, repeat_chamfer=10, repeat_emd=0, batch_size=32, oracle=False):
         loader = self.test_loader if partition == 'test' else self.val_loader
         test_dataset = []
         for batch_idx, (inputs, targets, index) in enumerate(loader):
@@ -181,7 +182,9 @@ class VQVAETrainer(AETrainer):
 
     @staticmethod
     def print_statistics(name, test_outcomes):
-        assert len(test_outcomes), 'No test performed'
+        if not len(test_outcomes):
+            print(f'No test performed for "{name}"')
+            return
         to = np.array(test_outcomes)
         print(name)
         print(f'Number of tests: {len(to):} Min: {to.min(initial=None):.4e} Max: {to.max(initial=None):.4e} '
@@ -196,22 +199,19 @@ class CWTrainer(Trainer):
         self.vqvae_epoch = vqvae_trainer.epoch
         super().__init__(vqvae_trainer.model.cw_encoder, **block_args)
         self._loss = CWEncoderLoss(**block_args)
-        self.model.codebook = torch.nn.Parameter(self.vqvae_model.codebook.detach().clone(), requires_grad=False)
         return
 
-    def test(self, partition, all_metrics=False, denormalise=False, save_outputs=0, **kwargs):
-        self.test(partition=partition, save_outputs=save_outputs)
-        self.vqvae_trainer.test(partition, all_metrics, denormalise, save_outputs, **kwargs)
+    def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=0, **kwargs):
+        super().test(partition=partition, save_outputs=save_outputs)  # test partition uses val dataset
+        with self.vqvae_trainer.model.double_encoding:
+            self.vqvae_trainer.test(partition, all_metrics, de_normalize, save_outputs, **kwargs)  # test on val
 
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)
 
     def save(self, new_exp_name=None):
         self.model.eval()
-        pseudo_data = self.model.encode(None)
-        self.model.pseudo_mu.data = pseudo_data['pseudo_mu']
-        self.model.pseudo_log_var.data = pseudo_data['pseudo_log_var']
-        paths = self.paths(new_exp_name, epoch=self.vqvae_epoch)
+        paths = self.vqvae_trainer.paths(new_exp_name, epoch=self.vqvae_epoch)
         self.vqvae_model.cw_encoder.load_state_dict(self.model.state_dict())
         if new_exp_name:
             json.dump(self.settings, open(paths['settings'], 'w'))
@@ -223,7 +223,6 @@ class CWTrainer(Trainer):
         return {'x': inputs[0]}
 
     def show_latent(self):
-        self.model.update_pseudo_latent()
         mu = torch.stack(self.vqvae_trainer.test_outputs['mu'])
         pca = PCA(3)
         cw_pca = pca.fit_transform(mu.numpy())

@@ -77,7 +77,7 @@ def parser_add_arguments(parser):
     train_opt.add_argument('--lr', type=bounded_num(float, v_min=0), help='learning rate')
     train_opt.add_argument('--wd', type=bounded_num(float, v_min=0), help='weight decay')
     train_opt.add_argument('--min_decay', type=float, help='fraction of the initial lr at the end of train')
-    train_opt.add_argument('--epochs', type=bounded_num(int, v_min=1), help='number of total training epochs')
+    train_opt.add_argument('--epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
     train_opt.add_argument('--decay_steps', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
     train_opt.add_argument('--checkpoint', type=bounded_num(int, v_min=1),
                            help='epochs between checkpoints (should divide epochs)')
@@ -112,13 +112,14 @@ def parser_add_vqvae_arguments(parser):
     vae_opt = parser.add_argument_group('Second encoding options', 'Only used when training the discrete variable vae')
     vae_opt.add_argument('--c_kld', type=bounded_num(float, v_min=0), help='Kullback-Leibler Divergence coefficient')
     vae_opt.add_argument('--vae_load', action=BooleanOptionalAction, help='load weights stored in the larger model')
-    vae_opt.add_argument('--vae_batch_size', type=bounded_num(int, v_min=1))
+    vae_opt.add_argument('--vae_n_pseudo_inputs', type=bounded_num(int, v_min=1), help='num of pseudo inputs')
+    vae_opt.add_argument('--vae_batch_size', type=bounded_num(int, v_min=1), help='batch size for the vae')
     vae_opt.add_argument('--vae_opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                          help='SGD_momentum has momentum = 0.9')
     vae_opt.add_argument('--vae_lr', type=bounded_num(float, v_min=0), help='learning rate')
     vae_opt.add_argument('--vae_wd', type=bounded_num(float, v_min=0), help='weight decay')
     vae_opt.add_argument('--vae_min_decay', type=float, help='fraction of the initial lr at the end of train')
-    vae_opt.add_argument('--vae_epochs', type=bounded_num(int, v_min=1), help='number of total training epochs')
+    vae_opt.add_argument('--vae_epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
     vae_opt.add_argument('--vae_decay_period', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
     vae_opt.add_argument('--vae_checkpoint', type=bounded_num(int, v_min=1), help='epochs between checkpoints')
 

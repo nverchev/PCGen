@@ -211,7 +211,7 @@ class Trainer(metaclass=ABCMeta):
         print('Average {} {} :'.format(partition, 'metrics' if torch.is_inference_mode_enabled() else 'losses'))
         for loss_metric, value in epoch_log.items():
             value = value / num_batch if loss_metric == 'Criterion' else value / epoch_seen
-            if torch.is_inference_mode_enabled() or partition == 'train':  # Does not overwrite training curve
+            if torch.is_inference_mode_enabled() ^ (partition == 'train'):  # Does not overwrite training curve
                 dict_log[loss_metric] = value
             if not self.quiet_mode:
                 print('{}: {:.4e}'.format(loss_metric, value), end='\t')
@@ -285,8 +285,10 @@ class Trainer(metaclass=ABCMeta):
             else:
                 self.epoch = max(past_epochs)
         paths = self.paths()
+
+        #TODO: remove strict flag
         self.model.load_state_dict(torch.load(paths['model'], map_location=torch.device(self.device)))
-        self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
+        #self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
         for json_file_name in ['train_log', 'val_log', 'saved_test_metrics']:
             json_file = json.load(open(paths[json_file_name]))
             # Stop from loading logs of future epochs

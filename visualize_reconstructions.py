@@ -23,8 +23,12 @@ def visualize_reconstruction():
         scale = dataset_row[0][0]
         pc_in = dataset_row[0][1] * scale
         torch_input = dataset_row[0][-2].unsqueeze(0).to(args.device)
-        torch_input.requires_grad = False
-        pc_out = trainer.model(x=torch_input, indices=None)['recon'][0] * scale
+        #Fixme
+        import torch
+        with trainer.model.double_encoding:
+            with torch.inference_mode():
+                trainer.model.eval()
+                pc_out = trainer.model(x=torch.cat([torch_input, torch_input]), indices=None)['recon'][0] * scale
         if args.interactive_plot:
             show_pc(pc_in)
             show_pc(pc_out)

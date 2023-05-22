@@ -58,16 +58,16 @@ class EmptyDataset(Dataset):
 
 
 class CWDataset(Dataset):
-    def __init__(self, cw_e, cw_idx, labels, **other_settings):
-        self.cw_e = torch.stack(cw_e)
-        self.cw_idx = torch.stack(cw_idx)
+    def __init__(self, cw_q, one_hot_idx, labels, **other_settings):
+        self.cw_q = torch.stack(cw_q)
+        self.one_hot_idx = torch.stack(one_hot_idx)
         self.labels = torch.stack(labels)
 
     def __len__(self):
-        return self.cw_e.shape[0]
+        return self.cw_q.shape[0]
 
     def __getitem__(self, index):
-        return [self.cw_e[index], self.cw_idx[index]], self.labels[index], index
+        return [self.cw_q[index], self.one_hot_idx[index]], self.labels[index], index
 
 
 class PiercedCoinsDataset(Dataset):
@@ -484,13 +484,14 @@ def get_loaders(dataset_name, batch_size, final, data_dir, **dataset_settings):
     return train_loader, val_loader, test_loader
 
 
-def get_cw_loaders(t, partition, batch_size):
+def get_cw_loaders(t, train_partition, test_partition, batch_size):
     pin_memory = torch.cuda.is_available()
     # m=4 because we don't care about the reconstruction and m < 4 creates problems with the filtering
-    t.test(partition='train', m=4, save_outputs=True)
-    cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_idx'], t.test_metadata['targets'])
-    t.test(partition=partition, m=4, save_outputs=True)
-    cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['cw_idx'], t.test_metadata['targets'])
+    t.train_loader
+    t.test(partition=train_partition, m=4, save_outputs=True)
+    cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['one_hot_idx'], t.test_metadata['targets'])
+    t.test(partition=test_partition, m=4, save_outputs=True)
+    cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['one_hot_idx'], t.test_metadata['targets'])
     cw_train_loader = torch.utils.data.DataLoader(
         cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
     cw_test_loader = torch.utils.data.DataLoader(

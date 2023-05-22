@@ -94,7 +94,8 @@ class ReconLoss:
         if self.recon_loss == 'Chamfer':
             recon = squared.mean(0)  # Sum over points, mean over samples
         elif self.recon_loss == 'ChamferEMD':
-            emd = torch.sqrt(self.emd_dist(inputs, recon, 0.005, 50)[0]).sum(1)  # mean over samples
+            #emd = torch.sqrt(self.emd_dist(inputs, recon, 0.005, 50)[0]).sum(1)  # mean over samples
+            emd = match_cost(inputs.contiguous(), recon.contiguous())
             recon = emd.mean(0) + squared.mean(0)  # Sum over points, mean over samples
             dict_recon['EMD'] = emd.sum(0)
         else:
@@ -171,17 +172,18 @@ class CWEncoderLoss(nn.Module):
 
     def forward(self, outputs, inputs, targets):
         kld = kld_loss(**outputs)
-        cw_idx = inputs[1]
+        one_hot_idx = inputs[1]
         sqrt_dist = torch.sqrt(outputs['cw_dist'])
         cw_neg_dist = -sqrt_dist + sqrt_dist.min(2, keepdim=True)[0]
-        nll = -(cw_neg_dist.log_softmax(dim=2) * cw_idx).sum((1, 2))
+        nll = -(cw_neg_dist.log_softmax(dim=2) * one_hot_idx).sum((1, 2))
         criterion = nll.mean(0) + self.c_kld * kld.mean(0)
-
+        one_hot_predictions = F.one_hot(outputs['cw_dist'].argmin(2), num_classes=one_hot_idx.shape[2])
+        accuracy = (one_hot_idx * one_hot_predictions).sum(2).mean(1)
         return {
             'Criterion': criterion,
             'KLD': kld.sum(0),
             'NLL': nll.sum(0),
-            'Accuracy': (cw_idx * F.one_hot(outputs['cw_dist'].argmin(2), num_classes=cw_idx.shape[2])).mean(1).sum()
+            'Accuracy': accuracy.sum(0)
         }
 
 

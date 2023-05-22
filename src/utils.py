@@ -87,5 +87,18 @@ def load_h5_dfaust(files, k):
         pcs, index = load_file(file)
         clouds.extend(pcs)
         indices.extend(index)
-
     return clouds, indices
+
+
+# Allows a temporary change using the with statement
+class UsuallyFalse:
+    _value = False
+
+    def __bool__(self):
+        return self._value
+
+    def __enter__(self):
+        self._value = True
+
+    def __exit__(self, *_):
+        self._value = False

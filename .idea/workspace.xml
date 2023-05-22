@@ -4,14 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="backward support">
+    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/external/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/external/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setups/AE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/AE.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/setups/VQVAE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/VQVAE.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/loss_and_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/loss_and_metrics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/options.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/options.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_main_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_main_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/trainer_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer_base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train_second_encoding.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_second_encoding.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/visualize_reconstructions.py" beforeDir="false" afterPath="$PROJECT_DIR$/visualize_reconstructions.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -91,7 +94,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Python.visualize_reconstructions">
+  <component name="RunManager" selected="Python.evaluate_samplings">
     <configuration name="eval_model" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -105,7 +108,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/eval_model.py" />
-      <option name="PARAMETERS" value="VQVAE --model_head Oracle" />
+      <option name="PARAMETERS" value="VQVAE --exp PCGen_different_emd --select_classes car" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -126,7 +129,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate_samplings.py" />
-      <option name="PARAMETERS" value="VQVAE" />
+      <option name="PARAMETERS" value="VQVAE --exp PCGen_vq_noise_1" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -134,7 +137,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="loss_and_metrics" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="model" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -146,7 +149,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/loss_and_metrics.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/model.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -191,7 +194,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_main_model.py" />
-      <option name="PARAMETERS" value="VQVAE --exp PCGen_vq_noise_01 --vq_noise 0.01" />
+      <option name="PARAMETERS" value="VQVAE --exp PCGen_vq_noise_1" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -212,7 +215,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_main_model.py" />
-      <option name="PARAMETERS" value="VQVAE --exp PCGen_vq_noise_001 --vq_noise 0.001" />
+      <option name="PARAMETERS" value="VQVAE --exp PCGen_cw_dim_256 --book_size 8 --cw_dim 256" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -222,7 +225,7 @@
         <option name="RunConfigurationTask" enabled="false" run_configuration_name="train_main_model" run_configuration_type="PythonConfigurationType" />
       </method>
     </configuration>
-    <configuration name="train_second_encoding" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="train_second_encoding" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -235,7 +238,28 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_second_encoding.py" />
-      <option name="PARAMETERS" value="VQVAE" />
+      <option name="PARAMETERS" value="VQVAE --exp PCGen_vq_noise_1" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="trainer" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/trainer.py" />
+      <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -264,6 +288,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="utils" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/utils.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="visualize_reconstructions" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -277,7 +322,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/visualize_reconstructions.py" />
-      <option name="PARAMETERS" value="VQVAE --exp PCGen_code_redistribution" />
+      <option name="PARAMETERS" value="VQVAE" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -286,23 +331,25 @@
       <method v="2" />
     </configuration>
     <list>
+      <item itemvalue="Python.trainer" />
+      <item itemvalue="Python.train_second_encoding" />
       <item itemvalue="Python.visualize_reconstructions" />
       <item itemvalue="Python.train_main_model" />
       <item itemvalue="Python.train_main_model_2" />
       <item itemvalue="Python.train_eval (2)" />
+      <item itemvalue="Python.model" />
+      <item itemvalue="Python.utils" />
       <item itemvalue="Python.eval_model" />
-      <item itemvalue="Python.loss_and_metrics" />
       <item itemvalue="Python.trainer_base" />
       <item itemvalue="Python.evaluate_samplings" />
-      <item itemvalue="Python.train_second_encoding" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.eval_model" />
-        <item itemvalue="Python.trainer_base" />
-        <item itemvalue="Python.loss_and_metrics" />
         <item itemvalue="Python.evaluate_samplings" />
-        <item itemvalue="Python.train_second_encoding" />
+        <item itemvalue="Python.model" />
+        <item itemvalue="Python.eval_model" />
+        <item itemvalue="Python.utils" />
+        <item itemvalue="Python.trainer_base" />
       </list>
     </recent_temporary>
   </component>
@@ -314,13 +361,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1653572494330</updated>
-    </task>
-    <task id="LOCAL-00508" summary="filter detach neighbours">
-      <created>1667609352085</created>
-      <option name="number" value="00508" />
-      <option name="presentableId" value="LOCAL-00508" />
-      <option name="project" value="LOCAL" />
-      <updated>1667609352085</updated>
     </task>
     <task id="LOCAL-00509" summary="filter detach neighbours">
       <created>1667609461877</created>
@@ -658,7 +698,14 @@
       <option name="project" value="LOCAL" />
       <updated>1683818008320</updated>
     </task>
-    <option name="localTasksCounter" value="557" />
+    <task id="LOCAL-00557" summary="code redistribution">
+      <created>1683820490658</created>
+      <option name="number" value="00557" />
+      <option name="presentableId" value="LOCAL-00557" />
+      <option name="project" value="LOCAL" />
+      <updated>1683820490658</updated>
+    </task>
+    <option name="localTasksCounter" value="558" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -687,7 +734,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="new PCGenH" />
     <MESSAGE value="new PCGenH and new filter" />
     <MESSAGE value="model settings as dict" />
     <MESSAGE value="fixed AtlasNet structure decoder" />
@@ -712,15 +758,16 @@
     <MESSAGE value="dataset!s!_path.txt" />
     <MESSAGE value="math error" />
     <MESSAGE value="plot options" />
-    <option name="LAST_COMMIT_MESSAGE" value="plot options" />
+    <MESSAGE value="code redistribution" />
+    <option name="LAST_COMMIT_MESSAGE" value="code redistribution" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/loss_and_metrics.py</url>
-          <line>229</line>
-          <option name="timeStamp" value="6" />
+          <url>file://$PROJECT_DIR$/src/dataset.py</url>
+          <line>489</line>
+          <option name="timeStamp" value="19" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
