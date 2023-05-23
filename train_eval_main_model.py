@@ -8,14 +8,13 @@ from src.model import get_model
 from src.trainer import get_trainer
 
 
-def train_model():
-    args = parse_args_and_set_seed(description='Train a (loaded) model')
+def train_eval_model():
+    args = parse_args_and_set_seed(task='train', description='Train a (loaded) model')
     model = get_model(**vars(args))
     train_loader, val_loader, test_loader = get_loaders(**vars(args))
     loaders = dict(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
     trainer = get_trainer(model, loaders, args=args)
     test_partition = 'train' if args.eval_train else 'test' if args.final else 'val'
-
     if args.load:
         trainer.load(args.load_checkpoint if args.load_checkpoint else None)
     else:
@@ -33,7 +32,7 @@ def train_model():
         trainer.train(args.checkpoint)
         if args.model_head == "VQVAE":
             trainer.test(partition='train', save_outputs=True)
-            idx = trainer.test_outputs['cw_idx']
+            idx = trainer.test_outputs['one_hot_idx']
             idx = torch.stack(idx).sum(0)
             unused_idx = (idx == 0)
             for i in range(args.cw_dim // args.embedding_dim):
@@ -51,7 +50,9 @@ def train_model():
             trainer.plot_loss_metric(start=trainer.epoch - 10 * args.checkpoint, loss_metric='Chamfer', update=True)
         trainer.save()
     trainer.test(partition=test_partition, all_metrics=True, de_normalize=args.de_normalize)
+    if args.training_plot:
+        trainer.plot_loss_metric(start=args.checkpoint, loss_metric='Chamfer')
 
 
 if __name__ == '__main__':
-    train_model()
+    train_eval_model()

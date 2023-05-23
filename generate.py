@@ -6,7 +6,7 @@ from src.viz_pc import show_pc, render_cloud
 
 
 def generate_random_samples():
-    args = parse_args_and_set_seed(description='Generate, visualize and render samples from a loaded model')
+    args = parse_args_and_set_seed(task='gen_viz', description='Generate, visualize and render samples')
     assert args.model_head == 'VQVAE', 'Only VQVAE models can do random generation'
     model = get_model(**vars(args))
     datasets = dict(train_loader=EmptyDataset())

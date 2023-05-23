@@ -7,7 +7,7 @@ from src.trainer import get_trainer, get_cw_trainer
 
 
 def train_second_encoding():
-    args = parse_args_and_set_seed(description='Train second encoding')
+    args = parse_args_and_set_seed(task='train_vae', description='Train second encoding')
     assert args.model_head == 'VQVAE', 'Only VQVAE supported'
     model = get_model(**vars(args))
     train_loader, val_loader, test_loader = get_loaders(**vars(args))

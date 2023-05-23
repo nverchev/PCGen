@@ -6,6 +6,7 @@ input_points: 2500
 translation: false
 rotation: false
 resample: false
+batch_size: 16
 
 # model options
 model_head: AE
@@ -16,28 +17,31 @@ filtering: true
 k: 20
 cw_dim: 1024
 
-# training
+# optimization options
 recon_loss: 'Chamfer'
-load: false
-load_checkpoint: -1  #-1 loads last
-batch_size: 16
 m_training: 0
-m_test: 0
 opt_name: AdamW
 lr: 0.0001
 wd: 0.000001
-epochs: 350
-decay_steps: 250
 min_decay: 0.01
-checkpoint: 50
+decay_steps: 250
+epochs: 350
 
 # evaluation options
+m_test: 0
 eval_train: false
-viz: [1, 10, 100, 1000]
 training_plot: false
-interactive_plot: true
 de_normalize: false
 
 # utility settings
+load: false
+load_checkpoint: -1  #-1 loads last
+checkpoint: 50
 cuda: true
 seed: 0 # 0 when no seed
+
+# visualization options
+viz: [1, 10, 100, 1000]
+interactive_plot: true
+
+

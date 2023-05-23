@@ -6,7 +6,7 @@ from src.trainer import get_trainer
 
 
 def evaluate_samplings():
-    args = parse_args_and_set_seed(description='Evaluates random samplings according to current metrics')
+    args = parse_args_and_set_seed(task='eval_gen', description='Evaluates random samplings')
     assert args.model_head == 'VQVAE' or "Oracle", 'Only VQVAE supported'
     model = get_model(**vars(args))
     train_loader, val_loader, test_loader = get_loaders(**vars(args))
@@ -15,7 +15,10 @@ def evaluate_samplings():
     test_partition = 'train' if args.eval_train else 'test' if args.final else 'val'
     warnings.simplefilter("error", UserWarning)
     trainer.load(args.load_checkpoint if args.load_checkpoint else None)
-    trainer.evaluate_generated_set(test_partition, repeat_chamfer=10, repeat_emd=0, oracle=args.model_head == 'Oracle')
+    trainer.evaluate_generated_set(test_partition,
+                                   repeat_chamfer=args.ch_tests,
+                                   repeat_emd=args.emd_tests,
+                                   oracle=args.model_head == 'Oracle')
 
 
 if __name__ == '__main__':

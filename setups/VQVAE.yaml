@@ -1,4 +1,4 @@
-# dataset options
+# dataloader options
 final: false
 dataset_name: ShapenetFlow
 select_classes: [airplane]
@@ -6,6 +6,7 @@ input_points: 2048
 translation: false
 rotation: false
 resample: true
+batch_size: 16
 
 # model options
 model_head: VQVAE
@@ -16,20 +17,28 @@ filtering: true
 k: 20
 cw_dim: 512
 
-# training
+# optimization options
 recon_loss: 'ChamferEMD'
-load: false
-load_checkpoint: 0  #0 loads last
-batch_size: 16
 m_training: 0
-m_test: 0
 opt_name: Adam
 lr: 0.001
 wd: 0.
 min_decay: 0.01
-epochs: 1000
 decay_steps: 900
+epochs: 1000
+
+# evaluation options
+m_test: 0
+eval_train: false
+training_plot: true
+de_normalize: true
+
+# utility settings
+load: false
+load_checkpoint: 0  #0 loads last
 checkpoint: 10
+cuda: true
+seed: 0 # 0 when no seed
 
 # VQVAE
 book_size: 16
@@ -40,7 +49,7 @@ c_embedding: 2
 vq_ema_update: false
 vq_noise: 1.
 
-# training second encoding
+# second encoding options
 c_kld: 2
 vae_load: false
 vae_batch_size: 128
@@ -48,18 +57,19 @@ vae_n_pseudo_inputs: 400
 vae_opt_name: Adam
 vae_lr: 0.001
 vae_wd: 0
-vae_epochs: 990
-vae_decay_period: 900
 vae_min_decay: 0.01
+vae_decay_period: 900
+vae_epochs: 1000
 vae_checkpoint: 100
 
-# evaluation options
-eval_train: false
+# visualization options
 viz: [1, 10, 100, 200]
-training_plot: true
 interactive_plot: true
-de_normalize: true
+viz_double_encoding: false
 
-# utility settings
-cuda: true
-seed: 0 # 0 when no seed
+# generation options
+gen: 3
+
+# evaluate samplings options
+ch_tests: 10
+emd_tests: 0

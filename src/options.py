@@ -28,28 +28,29 @@ def bounded_num(numeric_type, v_min=None, v_max=None):
 def parser_add_arguments(parser):
     parser.add_argument('--exp', type=str, help='name of the model directory: setup_exp(_final)', default='')
 
-    # dataset options
-    dataset_opt = parser.add_argument_group('Dataset options')
-    dataset_opt.add_argument('--data_dir', type=str, help='directory for data - tip: write it in datasets_path.txt')
-    dataset_opt.add_argument('--final', action=BooleanOptionalAction,
-                             help='uses val dataset for training and test dataset for testing, otherwise test on val')
-    dataset_opt.add_argument('--dataset_name',
-                             choices=['Modelnet40', 'ShapenetAtlas', 'Coins', 'Faust', 'ShapenetFlow'])
-    dataset_opt.add_argument('--select_classes', nargs='+', choices=['airplane', 'car', 'chair'],
-                             help='select specific classes of the dataset ShapenetFlow')
-    dataset_opt.add_argument('--input_points', type=bounded_num(float, v_min=0),
-                             help='(maximum) points of the training dataset')
-    dataset_opt.add_argument('--translation', action=BooleanOptionalAction, help='random translating training inputs')
-    dataset_opt.add_argument('--rotation', action=BooleanOptionalAction, help='random rotating training inputs')
-    dataset_opt.add_argument('--resample', action=BooleanOptionalAction,
-                             help='two different samplings for input and reference')
+    # dataloader options
+    loader_opt = parser.add_argument_group('Dataloader options', 'Options for the dataloader')
+    loader_opt.add_argument('--data_dir', type=str, help='directory for data - tip: write it in datasets_path.txt')
+    loader_opt.add_argument('--final', action=BooleanOptionalAction,
+                            help='uses val dataset for training and test dataset for testing, otherwise test on val')
+    loader_opt.add_argument('--dataset_name',
+                            choices=['Modelnet40', 'ShapenetAtlas', 'Coins', 'Faust', 'ShapenetFlow'])
+    loader_opt.add_argument('--select_classes', nargs='+', choices=['airplane', 'car', 'chair'],
+                            help='select specific classes of the dataset ShapenetFlow')
+    loader_opt.add_argument('--input_points', type=bounded_num(float, v_min=0),
+                            help='(maximum) points of the training dataset')
+    loader_opt.add_argument('--translation', action=BooleanOptionalAction, help='random translating training inputs')
+    loader_opt.add_argument('--rotation', action=BooleanOptionalAction, help='random rotating training inputs')
+    loader_opt.add_argument('--resample', action=BooleanOptionalAction,
+                            help='two different samplings for input and reference')
+    loader_opt.add_argument('--batch_size', type=bounded_num(int, v_min=1))
 
     # model options
-    model_opt = parser.add_argument_group('Model options')
-    dataset_opt.add_argument('--model_pardir', type=str, help='directory for models - tip: write it in models_path.txt')
-    dataset_opt.add_argument('--model_head', choices=['VQVAE', 'AE', 'Oracle'],
-                             help='regularized /  non-regularized / identity. Oracle gives a different resampling of'
-                                  'the input for reconstruction and training examples for random generation')
+    model_opt = parser.add_argument_group('Model options', 'Architectural options fo the model')
+    model_opt.add_argument('--model_pardir', type=str, help='directory for models - tip: write it in models_path.txt')
+    model_opt.add_argument('--model_head', choices=['VQVAE', 'AE', 'Oracle'],
+                           help='regularized /  non-regularized / identity. Oracle gives a different resampling of'
+                                'the input for reconstruction and training examples for random generation')
     model_opt.add_argument('--encoder_name', choices=['LDGCNN', 'DGCNN', 'FoldingNet'], help='PC encoder')
     model_opt.add_argument('--decoder_name', choices=['PCGen', 'PCGenC', 'Full', 'FoldingNet', 'TearingNet',
                                                       'AtlasNetDeformation', 'AtlasNetStructures'], help='PC decoder')
@@ -60,45 +61,43 @@ def parser_add_arguments(parser):
                            help='number of neighbours of a point (counting the point itself) in (L)DGCNN]')
     model_opt.add_argument('--cw_dim', type=bounded_num(int, v_min=1), help='codeword length')
 
-    # training options
-    train_opt = parser.add_argument_group('Training options')
-    train_opt.add_argument('--recon_loss', choices=['Chamfer', 'ChamferEMD'], help='ChamferEMD adds both')
-    train_opt.add_argument('--load', action=BooleanOptionalAction,
-                           help='load a saved model from the model directory. See --exp and --load_checkpoint')
-    train_opt.add_argument('--load_checkpoint', type=bounded_num(int, v_min=1),
-                           help='specify which checkpoint (i.e. training epochs) to load. Default: last one')
-    train_opt.add_argument('--batch_size', type=bounded_num(int, v_min=1))
-    train_opt.add_argument('--m_training', type=bounded_num(int, v_min=4),
+    # optimization options
+    optim_opt = parser.add_argument_group('Optimization options', 'Options for the loss, the optimizer, etc')
+    optim_opt.add_argument('--recon_loss', choices=['Chamfer', 'ChamferEMD'], help='ChamferEMD adds both')
+    optim_opt.add_argument('--m_training', type=bounded_num(int, v_min=4),
                            help='points generated in training, 0 for input number of points')
-    train_opt.add_argument('--m_test', type=bounded_num(int, v_min=4),
-                           help='points generated in testing, 0 for input number of points')
-    train_opt.add_argument('--opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
+    optim_opt.add_argument('--opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                            help='optimizer. SGD_momentum has momentum = 0.9')
-    train_opt.add_argument('--lr', type=bounded_num(float, v_min=0), help='learning rate')
-    train_opt.add_argument('--wd', type=bounded_num(float, v_min=0), help='weight decay')
-    train_opt.add_argument('--min_decay', type=float, help='fraction of the initial lr at the end of train')
-    train_opt.add_argument('--epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
-    train_opt.add_argument('--decay_steps', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
-    train_opt.add_argument('--checkpoint', type=bounded_num(int, v_min=1),
-                           help='epochs between checkpoints (should divide epochs)')
+    optim_opt.add_argument('--lr', type=bounded_num(float, v_min=0), help='learning rate')
+    optim_opt.add_argument('--wd', type=bounded_num(float, v_min=0), help='weight decay')
+    optim_opt.add_argument('--min_decay', type=float, help='fraction of the initial lr at the end of train')
+    optim_opt.add_argument('--decay_steps', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
+    optim_opt.add_argument('--epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
 
     # evaluation options
-    eval_opt = parser.add_argument_group('Evaluation options')
+    eval_opt = parser.add_argument_group('Evaluation options', 'Do not impact training')
+    eval_opt.add_argument('--m_test', type=bounded_num(int, v_min=4),
+                          help='points generated in testing, 0 for input number of points')
     eval_opt.add_argument('--eval_train', action=BooleanOptionalAction, help='eval on train instead of test or val')
-    eval_opt.add_argument('--viz', type=bounded_num(int, v_min=0), nargs='+', help='sample indices to visualise')
     eval_opt.add_argument('--training_plot', action=BooleanOptionalAction, help='visualize learning curves')
-    eval_opt.add_argument('--interactive_plot', action=BooleanOptionalAction, help='3D plot with plotly')
     eval_opt.add_argument('--de_normalize', action=BooleanOptionalAction,
                           help='compare reconstruction and input on coordinates before normalization')
 
     # utility options
-    util_opt = parser.add_argument_group('Utility options')
+    util_opt = parser.add_argument_group('Utility options', 'Auxiliary options. MAY STILL IMPACT TRAINING')
+    util_opt.add_argument('--load', action=BooleanOptionalAction,
+                          help='load a saved model from the model directory. See --exp and --load_checkpoint')
+    util_opt.add_argument('--load_checkpoint', type=bounded_num(int, v_min=1),
+                          help='specify which checkpoint (i.e. training epochs) to load. Default: last one')
+    util_opt.add_argument('--checkpoint', type=bounded_num(int, v_min=1),
+                          help='epochs between checkpoints (should divide epochs)')
     util_opt.add_argument('--cuda', action=BooleanOptionalAction, help='run on Cuda')
     util_opt.add_argument('--seed', type=bounded_num(int, v_min=1), help='torch/numpy seed (0 no seed)')
 
 
 def parser_add_vqvae_arguments(parser):
-    vqvae_opt = parser.add_argument_group('VQVAE options', 'ignored when VQVAE is not used')
+    # VQVAE options
+    vqvae_opt = parser.add_argument_group('VQVAE options', 'VQVAE specific options')
     vqvae_opt.add_argument('--book_size', type=bounded_num(int, v_min=1), help='dictionary size')
     vqvae_opt.add_argument('--embedding_dim', type=bounded_num(int, v_min=1), help='Codes length')
     vqvae_opt.add_argument('--z_dim', type=bounded_num(int, v_min=1), help='continuous latent space dim')
@@ -106,25 +105,51 @@ def parser_add_vqvae_arguments(parser):
     vqvae_opt.add_argument('--c_embedding', type=bounded_num(float, v_min=0), help='coefficient for embedding loss')
     vqvae_opt.add_argument('--vq_ema_update', action=BooleanOptionalAction, help='EMA update on quantized codes')
     vqvae_opt.add_argument('--vq_noise', type=bounded_num(float, v_min=0), help='noise when redistributing the codes')
-    vqvae_opt.add_argument('--gen', type=bounded_num(int, v_min=1), help='number of generated samples')
 
-    # VAE only
-    vae_opt = parser.add_argument_group('Second encoding options', 'Only used when training the discrete variable vae')
+
+def parser_add_vae_arguments(parser):
+    # second encoding options
+    vae_opt = parser.add_argument_group('Second encoding options', 'Options for the VAE encoding')
     vae_opt.add_argument('--c_kld', type=bounded_num(float, v_min=0), help='Kullback-Leibler Divergence coefficient')
     vae_opt.add_argument('--vae_load', action=BooleanOptionalAction, help='load weights stored in the larger model')
-    vae_opt.add_argument('--vae_n_pseudo_inputs', type=bounded_num(int, v_min=1), help='num of pseudo inputs')
     vae_opt.add_argument('--vae_batch_size', type=bounded_num(int, v_min=1), help='batch size for the vae')
+    vae_opt.add_argument('--vae_n_pseudo_inputs', type=bounded_num(int, v_min=1), help='num of pseudo inputs')
     vae_opt.add_argument('--vae_opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                          help='SGD_momentum has momentum = 0.9')
     vae_opt.add_argument('--vae_lr', type=bounded_num(float, v_min=0), help='learning rate')
     vae_opt.add_argument('--vae_wd', type=bounded_num(float, v_min=0), help='weight decay')
     vae_opt.add_argument('--vae_min_decay', type=float, help='fraction of the initial lr at the end of train')
-    vae_opt.add_argument('--vae_epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
     vae_opt.add_argument('--vae_decay_period', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
+    vae_opt.add_argument('--vae_epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
     vae_opt.add_argument('--vae_checkpoint', type=bounded_num(int, v_min=1), help='epochs between checkpoints')
 
 
-def parse_args_and_set_seed(description='Shared options for training, evaluating and random generation'):
+def parser_add_viz_arguments(parser, viz_vqvae=False):
+    # visualization options
+    viz_opt = parser.add_argument_group('Visualization options', 'Shows reconstructions given one or more indices')
+    viz_opt.add_argument('--viz', type=bounded_num(int, v_min=0), nargs='+', help='sample indices to visualise')
+    viz_opt.add_argument('--interactive_plot', action=BooleanOptionalAction, help='3D plot with plotly')
+    if viz_vqvae:
+        viz_opt.add_argument('--viz_double_encoding', action=BooleanOptionalAction,
+                             help='reconstructs samples based on the retrieved codes')
+
+
+def parser_add_gen_arguments(parser):
+    # generation options
+    gen_opt = parser.add_argument_group('Generation options', 'Options to generate random samplings')
+    gen_opt.add_argument('--gen', type=bounded_num(int, v_min=0), help='number of generated samples')
+
+
+def parser_add_gen_eval_arguments(parser):
+    # evaluate samplings options
+    gen_eval = parser.add_argument_group('Evaluate samplings options', 'Options to evaluate random samplings')
+    gen_eval.add_argument('--ch_tests', type=bounded_num(int, v_min=0),
+                          help='number of tests for generation metrics based on the Chamfer distance')
+    gen_eval.add_argument('--emd_tests', type=bounded_num(int, v_min=0),
+                          help='number of tests for generation metrics based on the Earth Mover distance')
+
+
+def parse_args_and_set_seed(task, description='Shared options for training, evaluating and random generation'):
     parser = argparse.ArgumentParser(description=description)
     subparsers = parser.add_subparsers(title='Experiment default settings',
                                        description='Name of a file in the setups folder without extension',
@@ -154,6 +179,14 @@ def parse_args_and_set_seed(description='Shared options for training, evaluating
         parser_add_arguments(default_parser)
         if default_values['model_head'] == 'VQVAE':
             parser_add_vqvae_arguments(default_parser)
+        if task == 'train_vae':
+            parser_add_vae_arguments(default_parser)
+        if task in ['gen_viz', 'viz']:
+            parser_add_viz_arguments(default_parser, viz_vqvae='viz' and default_values['model_head'] == 'VQVAE')
+        if task == 'gen_viz':
+            parser_add_gen_arguments(default_parser)
+        if task == 'eval_gen':
+            parser_add_gen_eval_arguments(default_parser)
         default_parser.set_defaults(name=name, data_dir=data_dir, model_pardir=model_pardir, **default_values)
         default_parsers.append(default_parser)
 
