@@ -105,6 +105,8 @@ def parser_add_vqvae_arguments(parser):
     vqvae_opt.add_argument('--c_embedding', type=bounded_num(float, v_min=0), help='coefficient for embedding loss')
     vqvae_opt.add_argument('--vq_ema_update', action=BooleanOptionalAction, help='EMA update on quantized codes')
     vqvae_opt.add_argument('--vq_noise', type=bounded_num(float, v_min=0), help='noise when redistributing the codes')
+    # Needs to be here because model architecture is defined in the VQVAE model
+    vqvae_opt.add_argument('--vae_n_pseudo_inputs', type=bounded_num(int, v_min=1), help='num of pseudo inputs')
 
 
 def parser_add_vae_arguments(parser):
@@ -113,7 +115,7 @@ def parser_add_vae_arguments(parser):
     vae_opt.add_argument('--c_kld', type=bounded_num(float, v_min=0), help='Kullback-Leibler Divergence coefficient')
     vae_opt.add_argument('--vae_load', action=BooleanOptionalAction, help='load weights stored in the larger model')
     vae_opt.add_argument('--vae_batch_size', type=bounded_num(int, v_min=1), help='batch size for the vae')
-    vae_opt.add_argument('--vae_n_pseudo_inputs', type=bounded_num(int, v_min=1), help='num of pseudo inputs')
+
     vae_opt.add_argument('--vae_opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
                          help='SGD_momentum has momentum = 0.9')
     vae_opt.add_argument('--vae_lr', type=bounded_num(float, v_min=0), help='learning rate')
@@ -122,6 +124,7 @@ def parser_add_vae_arguments(parser):
     vae_opt.add_argument('--vae_decay_period', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
     vae_opt.add_argument('--vae_epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
     vae_opt.add_argument('--vae_checkpoint', type=bounded_num(int, v_min=1), help='epochs between checkpoints')
+    vae_opt.add_argument('--vae_dropout', type=bounded_num(float, v_min=0), help='dropout probability')
 
 
 def parser_add_viz_arguments(parser, viz_vqvae=False):
@@ -191,6 +194,8 @@ def parse_args_and_set_seed(task, description='Shared options for training, eval
         default_parsers.append(default_parser)
 
     args = parser.parse_args()
+    # constraint of the model
+    args.hidden_dims[1] = args.cw_dim
     if args.model_head != 'Oracle':
         exp_name = [args.name,
                     args.exp,

@@ -1,15 +1,9 @@
-TRaining DAtaset CAR
-Minimum Matching Distance score (Chamfer):
-Number of tests: 10 Min: 3.6496e-03 Max: 3.7151e-03 Mean: 3.6845e-03 Std: 2.0723e-05
+Number of tests: 10 Min: 8.3110e-04 Max: 9.1987e-04 Mean: 8.6245e-04 Std: 2.2895e-05
 Coverage score (Chamfer):
-Number of tests: 10 Min: 4.6875e-01 Max: 5.1136e-01 Mean: 4.8750e-01 Std: 1.5414e-02
+Number of tests: 10 Min: 3.4815e-01 Max: 4.0988e-01 Mean: 3.8025e-01 Std: 1.8378e-02
 1-NNA score (Chamfer):
-Number of tests: 10 Min: 5.3409e-01 Max: 5.9091e-01 Mean: 5.6023e-01 Std: 1.8921e-02
+Number of tests: 10 Min: 6.1358e-01 Max: 6.9383e-01 Mean: 6.4630e-01 Std: 2.1732e-02
 
-Minimum Matching Distance score (Emd):
-Number of tests: 10 Min: 9.2886e-02 Max: 9.3572e-02 Mean: 9.3195e-02 Std: 2.3283e-04
-Coverage score (Emd):
-Number of tests: 10 Min: 4.9148e-01 Max: 5.3125e-01 Mean: 5.0938e-01 Std: 1.2580e-02
-1-NNA score (Emd):
-Number of tests: 10 Min: 5.0710e-01 Max: 5.6534e-01 Mean: 5.2969e-01 Std: 1.7448e-02
-
+Coverage score (Chamfer): 4.0988e-01
+Minimum Matching Distance score (Chamfer): 8.3110e-04
+1-NNA score (Chamfer): 6.1358e-01

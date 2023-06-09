@@ -8,74 +8,49 @@ from src.neighbour_op import graph_filtering
 OUT_CHAN = 3
 
 
-class CWDecoder(nn.Module):
+# class WDecoder(nn.Module):
+#
+#     def __init__(self, cw_dim, z_dim, embedding_dim, book_size, dropout):
+#         super().__init__()
+#         self.cw_dim = cw_dim
+#         self.embedding_dim = embedding_dim
+#         self.book_size = book_size
+#         self.dim_codes = cw_dim // embedding_dim
+#         self.expand = 16
+#         self.h_dim = [z_dim, cw_dim //2,  cw_dim, self.expand * cw_dim]
+#         self.do = [dropout, dropout, dropout]
+#         modules = [nn.BatchNorm1d(self.h_dim[0])]
+#         for in_dim, out_dim, do in zip(self.h_dim, self.h_dim[1:], self.do):
+#             modules.append(LinearLayer(in_dim, out_dim))
+#             modules.append(nn.Dropout(do))
+#         self.decode = nn.Sequential(*modules)
+#         self.conv = nn.Sequential(
+#             nn.Conv1d(self.expand * self.embedding_dim, self.embedding_dim, kernel_size=1))
+#
+#     def forward(self, x):
+#         x = self.decode(x).view(-1, self.expand * self.embedding_dim, self.cw_dim // self.embedding_dim)
+#         x = self.conv(x).transpose(2, 1).reshape(-1, self.cw_dim)
+#         return x
 
-    def __init__(self, cw_dim, z_dim, embedding_dim, book_size):
-        super().__init__()
-        self.cw_dim = cw_dim
-        self.embedding_dim = embedding_dim
-        self.book_size = book_size
-        self.expand = 16
-        self.h_dim = [self.expand * cw_dim]
-        self.decode = nn.Sequential(LinearLayer(3 * z_dim // 4, cw_dim // 2),
-                                    LinearLayer(cw_dim // 2, cw_dim),
-                                    LinearLayer(cw_dim, self.expand * cw_dim), )
-        self.conv = nn.Sequential(
-            PointsConvLayer(self.expand * self.embedding_dim, self.expand * self.embedding_dim),
-            PointsConvLayer(self.expand * self.embedding_dim, self.expand * self.embedding_dim),
-            nn.Conv1d(self.expand * self.embedding_dim, self.embedding_dim, kernel_size=1))
+class WDecoder(nn.Module):
 
-    def forward(self, x):
-        x = self.decode(x).view(-1, self.expand * self.embedding_dim, self.cw_dim // self.embedding_dim)
-        x = self.conv(x).transpose(2, 1).reshape(-1, self.cw_dim)
-        return x
-
-
-class CWDecoder(nn.Module):
-
-    def __init__(self, cw_dim, z_dim, embedding_dim, book_size):
+    def __init__(self, cw_dim, z_dim, embedding_dim, book_size, dropout):
         super().__init__()
         self.cw_dim = cw_dim
         self.embedding_dim = embedding_dim
         self.dim_codes = cw_dim // embedding_dim
         self.book_size = book_size
-        self.expand = 4
-        self.h_dim = [self.expand * cw_dim]
+        self.h_dim = [64, 64]
         self.decode = nn.Sequential(
-            PointsConvLayer(z_dim * self.dim_codes, self.dim_codes * 512, groups=self.dim_codes, batch_norm=False,
-                            act=nn.RReLU()),
-            nn.Dropout1d(0.5),
-            PointsConvLayer(self.dim_codes * 512, self.dim_codes * 64, groups=self.dim_codes, batch_norm=False,
-                            act=nn.RReLU()),
-            nn.Dropout1d(0.3),
-            PointsConvLayer(self.dim_codes * 64, cw_dim, groups=self.dim_codes, batch_norm=False, act=None))
+            PointsConvLayer(self.dim_codes * z_dim, self.dim_codes * self.h_dim[0], groups=self.dim_codes),
+            nn.Dropout1d(dropout),
+            PointsConvLayer(self.dim_codes * self.h_dim[0], self.dim_codes * self.h_dim[1], groups=self.dim_codes),
+            nn.Dropout1d(dropout),
+            PointsConvLayer(self.dim_codes * self.h_dim[1], cw_dim, groups=self.dim_codes, batch_norm=False, act=None))
 
     def forward(self, x):
         x = self.decode(x.repeat(1, self.dim_codes).unsqueeze(2))
-        return x.squeeze(2)
-
-
-class CWDecoder(nn.Module):
-
-    def __init__(self, cw_dim, z_dim, embedding_dim, book_size):
-        super().__init__()
-        self.cw_dim = cw_dim
-        self.embedding_dim = embedding_dim
-        self.book_size = book_size
-        self.expand = 4
-        self.h_dim = [self.expand * cw_dim]
-        self.decode = nn.Sequential(LinearLayer(z_dim, cw_dim // 2),
-                                    LinearLayer(cw_dim // 2, cw_dim),
-                                    LinearLayer(cw_dim, self.expand * cw_dim), )
-        self.conv = nn.Sequential(
-            PointsConvLayer(self.expand * self.embedding_dim, self.expand * self.embedding_dim),
-            PointsConvLayer(self.expand * self.embedding_dim, self.expand * self.embedding_dim),
-            nn.Conv1d(self.expand * self.embedding_dim, self.embedding_dim, kernel_size=1))
-
-    def forward(self, x):
-        x = self.decode(x).view(-1, self.expand * self.embedding_dim, self.cw_dim // self.embedding_dim)
-        x = self.conv(x).transpose(2, 1).reshape(-1, self.cw_dim)
-        return x
+        return x.squeeze()
 
 
 class FullyConnected(nn.Module):
@@ -88,11 +63,11 @@ class FullyConnected(nn.Module):
         self.m = m_training
         modules = [LinearLayer(cw_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True)),
                    LinearLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.ReLU(inplace=True)),
-                   LinearLayer(self.h_dim[1], OUT_CHAN * m, batch_norm=False, act=None)]
+                   LinearLayer(self.h_dim[1], OUT_CHAN * self.m, batch_norm=False, act=None)]
         self.mlp = nn.Sequential(*modules)
 
-    def forward(self, z, m):  # for this model, m is fixed
-        x = self.mlp(z)
+    def forward(self, w, m):  # for this model, m is fixed
+        x = self.mlp(w)
         return x.view(-1, OUT_CHAN, self.m)
 
 
@@ -105,8 +80,8 @@ class FoldingBlock(nn.Module):
             modules.extend([nn.ReLU(inplace=True), nn.Conv1d(in_dim, out_dim, kernel_size=1)])
         self.layers = nn.Sequential(*modules)
 
-    def forward(self, grids, x):
-        x = torch.cat([grids, x], dim=1).contiguous()
+    def forward(self, grids, w):
+        x = torch.cat([grids, w], dim=1).contiguous()
         x = self.layers(x)
         return x
 
@@ -130,13 +105,13 @@ class FoldingNet(nn.Module):
         self.graph_eps_sqr = self.graph_eps ** 2
         self.graph_lam = 0.5
 
-    def forward(self, z, m, grid=None):  # for this model, m is fixed
-        batch_size = z.shape[0]
+    def forward(self, w, m, grid=None):  # for this model, m is fixed
+        batch_size = w.shape[0]
         if grid is None:
             grid = self.grid.unsqueeze(0).repeat(batch_size, 1, 1)
-        z = z.unsqueeze(2).repeat(1, 1, self.m_grid)
-        x = self.fold1(grid, z)
-        x = self.fold2(x, z)
+        w = w.unsqueeze(2).repeat(1, 1, self.m_grid)
+        x = self.fold1(grid, w)
+        x = self.fold2(x, w)
         if self.filtering:
             x = self.graph_filter(x, grid, batch_size)
         return x
@@ -188,22 +163,22 @@ class TearingNet(FoldingNet):
             modules.append(nn.Conv2d(in_dim, out_dim, kernel_size=1))
         self.tearing2 = nn.Sequential(*modules)
 
-    def forward(self, z, m, grid=None):  # for this model, m is fixed
-        batch_size = z.shape[0]
-        grid = self.grid.to(z.device)
+    def forward(self, w, m, grid=None):  # for this model, m is fixed
+        batch_size = w.shape[0]
+        grid = self.grid.to(w.device)
         grid = grid.unsqueeze(0).repeat(batch_size, 1, 1)
-        x = super().forward(z, grid)
+        x = super().forward(w, grid)
         grid_exp = grid.view(batch_size, 2, self.num_grid, self.num_grid)
         x_exp = x.view(-1, 3, self.num_grid, self.num_grid)
-        z_exp = z.view(-1, self.cw_dim, 1, 1).expand(-1, -1, self.num_grid, self.num_grid)
-        in1 = torch.cat((grid_exp, x_exp, z_exp), 1).contiguous()
+        w_exp = w.view(-1, self.cw_dim, 1, 1).expand(-1, -1, self.num_grid, self.num_grid)
+        in1 = torch.cat((grid_exp, x_exp, w_exp), 1).contiguous()
         # Compute the torn 2D grid
         out1 = self.tearing1(in1)  # 1st tearing
         in2 = torch.cat((in1, out1), 1)
         out2 = self.tearing2(in2)  # 2nd tearing
         out2 = out2.reshape(batch_size, 2, self.num_grid * self.num_grid)
         grid = grid + out2
-        x = super().forward(z, grid)
+        x = super().forward(w, grid)
         if self.filtering:
             x = self.graph_filter(x, grid, batch_size)
         return x
@@ -211,7 +186,7 @@ class TearingNet(FoldingNet):
 
 # AtlasNet
 class AtlasNetv2(nn.Module):
-    '''Atlas net PatchDeformMLPAdj'''
+    """AtlasNet PatchDeformMLPAdj"""
     patch_embed_dim = 2
 
     def __init__(self, cw_dim, m_training, components, filtering, **model_settings):
@@ -233,14 +208,14 @@ class AtlasNetv2(nn.Module):
         modules.append(PointsConvLayer(dims[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
         return nn.Sequential(*modules)
 
-    def forward(self, x, m):
-        batch = x.size(0)
-        device = x.device
+    def forward(self, w, m):
+        batch = w.size(0)
+        device = w.device
         outs = []
         for i in range(self.num_patches):
             rand_grid = torch.rand(batch, 2, m // self.num_patches, device=device)
             rand_grid = self.patchDeformation[i](rand_grid)
-            y = x.unsqueeze(2).expand(-1, -1, m // self.num_patches
+            y = w.unsqueeze(2).expand(-1, -1, m // self.num_patches
                                       ).contiguous()
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
@@ -251,7 +226,7 @@ class AtlasNetv2(nn.Module):
 
 
 class AtlasNetv2Deformation(AtlasNetv2):
-    '''Atlas net PatchDeformMLPAdj'''
+    """AtlasNet PatchDeformMLPAdj"""
     patch_embed_dim = 10
 
     def __init__(self, cw_dim, m_training, components, filtering, **model_settings):
@@ -267,7 +242,7 @@ class AtlasNetv2Deformation(AtlasNetv2):
 
 
 class AtlasNetv2Structures(AtlasNetv2):
-    '''Atlas net PointTranslationMLPAdj'''
+    """AtlasNet PointTranslationMLPAdj"""
     patch_embed_dim = 10
 
     def __init__(self, cw_dim, m_training, components, filtering, **model_settings):
@@ -276,12 +251,12 @@ class AtlasNetv2Structures(AtlasNetv2):
         self.grid = nn.Parameter(torch.rand(self.num_patches, 2, m_training // self.num_patches))
         self.grid.data = F.pad(self.grid, (0, 0, 0, self.patch_embed_dim - 2))
 
-    def forward(self, x, m):  # for this model, m is fixed
-        batch = x.size(0)
+    def forward(self, w, m):  # for this model, m is fixed
+        batch = w.size(0)
         outs = []
         for i in range(self.num_patches):
             rand_grid = self.grid[i].expand(batch, -1, -1)
-            y = x.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
+            y = w.unsqueeze(2).expand(-1, -1, self.m_patch).contiguous()
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
         x = torch.cat(outs, 2).contiguous()
@@ -339,11 +314,12 @@ class PCGen(nn.Module):
 
     def __init__(self, cw_dim, m_training, components, filtering=True, **model_settings):
         super().__init__()
-        self.h_dim = [256, cw_dim, 512, 512, 512, 64]
+        self.h_dim = model_settings['hidden_dims']
+        self.act = getattr(nn, model_settings['act'])(inplace=True)
         self.filtering = filtering
         self.sample_dim = 16
         self.num_groups = components
-        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True))
+        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=self.act)
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
                                            act=nn.Hardtanh(inplace=True))
         self.group_conv = nn.ModuleList()
@@ -351,20 +327,20 @@ class PCGen(nn.Module):
         for _ in range(self.num_groups):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-                modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
+                modules.append(PointsConvLayer(in_dim, out_dim, act=self.act))
             self.group_conv.append(nn.Sequential(*modules))
             self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
         if self.num_groups > 1:
             self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, act=None)
 
-    def forward(self, z, m, s=None):
-        batch = z.size()[0]
-        device = z.device
+    def forward(self, w, m, s=None):
+        batch = w.size()[0]
+        device = w.device
         x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
         x = self.map_sample1(x)
         x = self.map_sample2(x)
-        x = z.unsqueeze(2) * x
+        x = w.unsqueeze(2) * x
         xs = []
         group_atts = []
         for group in range(self.num_groups):
@@ -380,7 +356,6 @@ class PCGen(nn.Module):
         if self.filtering:
             x = graph_filtering(x)
         return x
-
 
 
 def get_decoder(decoder_name):

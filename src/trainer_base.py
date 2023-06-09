@@ -140,8 +140,10 @@ class Trainer(metaclass=ABCMeta):
                 print('\r====> Epoch:{:4d}'.format(self.epoch), end='')
             else:
                 print('====> Epoch:{:4d}'.format(self.epoch))
+            self._hook_before_training_epoch()
             self.model.train()
             self._run_session(partition='train')
+            self._hook_after_training_epoch()
             if self.val_loader and val_after_train:  # check losses on val
                 self.model.eval()
                 with torch.inference_mode():
@@ -230,7 +232,6 @@ class Trainer(metaclass=ABCMeta):
 
     def plot_loss_metric(self, plot_train=True, plot_val=True, loss_metric='Criterion', start=0, update=False):
         plt.cla()
-        # fig = plt.gcf()
         ax = plt.gca()
         if self.train_log and plot_train:
             epoch_keys = [epoch for epoch in self.train_log.keys() if int(epoch) >= start]
@@ -286,9 +287,9 @@ class Trainer(metaclass=ABCMeta):
                 self.epoch = max(past_epochs)
         paths = self.paths()
 
-        #TODO: remove strict flag
+        # TODO: remove strict flag
         self.model.load_state_dict(torch.load(paths['model'], map_location=torch.device(self.device)))
-        #self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
+        # self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
         for json_file_name in ['train_log', 'val_log', 'saved_test_metrics']:
             json_file = json.load(open(paths[json_file_name]))
             # Stop from loading logs of future epochs
@@ -314,3 +315,9 @@ class Trainer(metaclass=ABCMeta):
                  ['settings', 'train_log', 'val_log', 'saved_test_metrics']}
         paths.update({pt_file: os.path.join(directory, f'{pt_file}_epoch{epoch}.pt') for pt_file in ['model', 'optim']})
         return paths
+
+    def _hook_before_training_epoch(self):
+        pass
+
+    def _hook_after_training_epoch(self):
+        pass

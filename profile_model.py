@@ -6,13 +6,13 @@ from src.model import get_model
 
 @torch.inference_mode()
 def profile_model():
-    args = parse_args_and_set_seed(description='Estimate model computational cost')
+    args = parse_args_and_set_seed(task="profile", description='Estimate model computational cost')
     model = get_model(**vars(args))
     model = model.eval()
     model.to(args.device)
     if args.model_head == 'VQVAE':
         model.forward = model.random_sampling  # Overwrites forward method to profile random generation
-        dummy_input = [args.batch_size, args.m_test]
+        dummy_input = [args.batch_size]
     else:
         dummy_input = [torch.ones(args.batch_size, args.input_points, 3, device=args.device),
                        torch.zeros(args.batch_size, args.input_points, args.k, device=args.device, dtype=torch.long)]
@@ -20,7 +20,7 @@ def profile_model():
     flops, macs, params = get_model_profile(model=model,
                                             args=dummy_input,
                                             print_profile=True,
-                                            detailed=False,
+                                            detailed=True,
                                             module_depth=2,
                                             top_modules=2,
                                             warm_up=10,

@@ -6,66 +6,30 @@ from src.neighbour_op import get_graph_features, graph_max_pooling, get_local_co
 IN_CHAN = 3
 
 
-class CWEncoder(nn.Module):
 
-    def __init__(self, cw_dim, z_dim, embedding_dim):
+
+class WEncoder(nn.Module):
+
+    def __init__(self, cw_dim, z_dim, embedding_dim, dropout):
         super().__init__()
         self.cw_dim = cw_dim
-        self.project_dim = 16 * embedding_dim
-        self.h_dim = [cw_dim * self.project_dim // embedding_dim]
-        self.conv = PointsConvLayer(embedding_dim,  self.project_dim)
-        self.encode = nn.Sequential(LinearLayer(self.h_dim[0], self.cw_dim),
-                                    nn.Dropout(0.3),)
+        self.embedding_dim = embedding_dim
+        self.dim_codes = cw_dim // embedding_dim
+        self.h_dim = [8]
+        self.conv = PointsConvLayer(embedding_dim, embedding_dim * self.h_dim[0])
+        self.do1 = nn.Dropout(dropout)
+        self.encode = LinearLayer(self.cw_dim * self.h_dim[0], self.cw_dim)
+        self.do2 = nn.Dropout(dropout)
+        self.inference = LinearLayer(cw_dim, 2 * z_dim, act=None)
 
     def forward(self, x):
-        x = self.conv(x).view(-1, self.h_dim[0])
+        x = self.conv(x).view(-1, self.cw_dim * self.h_dim[0])
+        x = self.do1(x)
         x = self.encode(x)
+        x = self.do2(x)
+        x = self.inference(x)
         return x
 
-
-class CWEncoder(nn.Module):
-
-    def __init__(self, cw_dim, z_dim, embedding_dim):
-        super().__init__()
-        self.cw_dim = cw_dim
-        self.project_dim = 2
-        self.h_dim = [cw_dim * self.project_dim // embedding_dim]
-        self.conv = PointsConvLayer(embedding_dim,  self.project_dim)
-        #self.att = nn.MultiheadAttention(self.project_dim, num_heads=1, batch_first=True)
-        self.encode = nn.Sequential(LinearLayer(self.h_dim[0], self.h_dim[0], batch_norm=False),
-                                    nn.Dropout(0.3),
-                                    LinearLayer(self.h_dim[0], 2 * z_dim, batch_norm=False, act=None))
-
-    def forward(self, x):
-        x = self.conv(x)#.transpose(2, 1)
-        #x = self.att(x, x, x, need_weights=False)[0] + x
-        x = self.encode(x.reshape(-1, self.h_dim[0]))
-        return x
-#
-# class CWEncoder(nn.Module):
-#
-#     def __init__(self, cw_dim, z_dim, embedding_dim):
-#         super().__init__()
-#         self.cw_dim = cw_dim
-#         self.embedding_dim = embedding_dim
-#         self.project_dim = 512
-#         self.h_dim = [cw_dim * self.project_dim // embedding_dim]
-#         self.conv = PointsConvLayer(embedding_dim, self.project_dim)
-#         self.att1 = nn.MultiheadAttention(self.project_dim, num_heads=32, batch_first=True, dropout=0.3)
-#         self.att2 = nn.MultiheadAttention(self.project_dim, num_heads=32, batch_first=True, dropout=0.3)
-#
-#         self.encode = nn.Sequential(nn.ReLU(),
-#                                     nn.BatchNorm1d(self.project_dim),
-#                                     PointsConvLayer(self.project_dim, 2, batch_norm=False, act=None),)
-#                                     #LinearLayer(self.h_dim[0], 2 * z_dim, batch_norm=False, act=None))
-#
-#     def forward(self, x):
-#         b = x.shape[0]
-#         x = self.conv(x).transpose(2, 1)
-#         x = self.att1(x, x, x, need_weights=False)[0] + x
-#         x = self.att2(x, x, x, need_weights=False)[0].transpose(2, 1)
-#         x = self.encode(x).reshape(b, 2 * self.cw_dim // self.embedding_dim)
-#         return x
 
 class LDGCNN(nn.Module):
     def __init__(self, cw_dim, k, **model_settings):

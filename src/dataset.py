@@ -487,7 +487,6 @@ def get_loaders(dataset_name, batch_size, final, data_dir, **dataset_settings):
 def get_cw_loaders(t, train_partition, test_partition, batch_size):
     pin_memory = torch.cuda.is_available()
     # m=4 because we don't care about the reconstruction and m < 4 creates problems with the filtering
-    t.train_loader
     t.test(partition=train_partition, m=4, save_outputs=True)
     cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['one_hot_idx'], t.test_metadata['targets'])
     t.test(partition=test_partition, m=4, save_outputs=True)

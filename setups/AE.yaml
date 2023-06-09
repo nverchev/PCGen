@@ -15,7 +15,11 @@ decoder_name: PCGen
 components: 1
 filtering: true
 k: 20
-cw_dim: 1024
+cw_dim: &cw_dim 1024
+
+# PCGen options
+hidden_dims: [256, *cw_dim, 512, 512, 512, 64]
+act: ReLU
 
 # optimization options
 recon_loss: 'Chamfer'

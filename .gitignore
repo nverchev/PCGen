@@ -7,3 +7,4 @@ images/
 models/
 datasets_path.txt
 model_path.txt
+/results/

@@ -64,15 +64,10 @@ def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var, d_mu=(), d_log_var=(), p
     pseudo_log_var = pseudo_log_var.unsqueeze(0).expand(b, -1, -1)  # expand to each sample
     prior_ll = torch.logsumexp(gaussian_ll(z, pseudo_mu, pseudo_log_var).sum(2), dim=1)
     kld = posterior_ll - prior_ll + np.log(k)
-    kld = F.softplus(kld - 1, threshold=5) + 1
     for d_mu, d_log_var, p_log_var in zip(d_mu, d_log_var, prior_log_var):
         # d_mu = q_mu - p_mu
         # d_logvar = q_logvar - p_logvar
-        assert (d_log_var > - 1000).prod()
-        assert (d_log_var < 1000).prod()
-        assert (p_log_var > - 1000).prod()
-        assert (p_log_var < 1000).prod()
-        kld_matrix = -1 - d_log_var + (d_mu ** 2) / (p_log_var.exp() + 0.00001) + d_log_var.exp()
+        kld_matrix = -1 - d_log_var + (d_mu ** 2) / p_log_var.exp() + d_log_var.exp()
         kld += 0.5 * kld_matrix.sum(1)
     return kld
 
@@ -189,8 +184,8 @@ class CWEncoderLoss(nn.Module):
 
 # Currently not used, replace VQVAE loo in get_ae_loss to use it
 class DoubleEncoding(VQVAELoss):
-    def __init__(self, recon_loss, c_commitment, c_kld, **not_used):
-        super().__init__(recon_loss, c_commitment)
+    def __init__(self, recon_loss, c_commitment, c_embedding, c_kld, vq_ema_update, **not_used):
+        super().__init__(recon_loss, c_commitment=c_commitment, c_embedding=c_embedding, vq_ema_update=vq_ema_update)
         cw_loss = CWEncoderLoss(c_kld)
 
     def forward(self, outputs, inputs, targets):

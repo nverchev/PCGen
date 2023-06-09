@@ -16,7 +16,8 @@ def generate_random_samples():
     for i, sample in enumerate(samples):
         if args.interactive_plot:
             show_pc(sample)
-        render_cloud([sample], name=f'generated_{i}.png')
+        sample_name = '_'.join(args.select_classes + [str(i)])
+        render_cloud([sample], name=f'{sample_name}.png')
 
 
 if __name__ == '__main__':

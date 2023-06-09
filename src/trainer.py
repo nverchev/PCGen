@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import json
 from sklearn import svm, metrics
+from sklearn.mixture import GaussianMixture
 from sklearn.decomposition import PCA
 from src.trainer_base import Trainer
 from src.optim import get_opt, CosineSchedule
@@ -98,7 +99,15 @@ class VQVAETrainer(AETrainer):
         print(torch.histc(idx))
         return
 
+    def gmm_sampling(self):
+        with self.model.double_encoding:
+            self.test(partition='train', save_outputs=True)
+        z = torch.stack(self.test_outputs['z']).detach().numpy()
+        self.model.gm = GaussianMixture(32).fit(z)
+        return
+
     def evaluate_generated_set(self, partition, repeat_chamfer=10, repeat_emd=0, batch_size=32, oracle=False):
+        #self.gmm_sampling()
         loader = self.test_loader if partition == 'test' else self.val_loader
         test_dataset = []
         for batch_idx, (inputs, targets, index) in enumerate(loader):
@@ -111,7 +120,8 @@ class VQVAETrainer(AETrainer):
         cov_emd = []
         nna_chamfer = []
         nna_emd = []
-        for _ in range(max(repeat_chamfer, repeat_emd)):
+        for test_idx in range(max(repeat_chamfer, repeat_emd)):
+            print(f'Test {test_idx + 1}:')
             # Generating the samples
             generated_dataset = []
             if oracle:
@@ -163,7 +173,7 @@ class VQVAETrainer(AETrainer):
                     pairwise_dist = square_distance(clouds1, clouds2)
                     dist = chamfer(clouds1, clouds2, pairwise_dist)[0] / cloud.shape[0]
                 else:
-                    dist = match_cost(clouds1.continuous(), clouds2.continuous()) / cloud.shape[0]
+                    dist = match_cost(clouds1.contiguous(), clouds2.contiguous()) / cloud.shape[0]
                 dist_array[i, j:j + len(clouds1)] = dist.cpu()
                 dist_array[j:j + len(clouds1), i] = dist.cpu()
         closest = dist_array.argmin(axis=1)  # np.inf on the diagonal so argmin != index
@@ -200,6 +210,19 @@ class CWTrainer(Trainer):
         super().__init__(vqvae_trainer.model.cw_encoder, **block_args)
         self._loss = CWEncoderLoss(**block_args)
         return
+
+    def train(self, num_epoch, val_after_train=False):
+        if self.epoch:
+            super().train(num_epoch, val_after_train)
+            return
+        # automatically restarts if first epochs meets inf or nan
+        while True:
+            try:
+                super().train(num_epoch, val_after_train)
+                break
+            except ValueError:
+                self.model._reset_parameters()
+                self.epoch = 0
 
     def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=0, **kwargs):
         super().test(partition=partition, save_outputs=save_outputs)  # test partition uses val dataset

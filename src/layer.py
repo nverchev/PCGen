@@ -54,6 +54,8 @@ class LinearLayer(nn.Module):
             pass  # default works better than theoretically approved one
 
     def get_dense_layer(self):
+        if self.groups > 1:
+            raise NotImplementedError('nn.Linear has not option for groups')
         return nn.Linear(self.in_dim, self.out_dim, bias=self.bias)
 
     def get_bn_layer(self):
