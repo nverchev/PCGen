@@ -10,20 +10,20 @@ IN_CHAN = 3
 
 class WEncoder(nn.Module):
 
-    def __init__(self, cw_dim, z_dim, embedding_dim, dropout):
+    def __init__(self, w_dim, z_dim, embedding_dim, dropout):
         super().__init__()
-        self.cw_dim = cw_dim
+        self.w_dim = w_dim
         self.embedding_dim = embedding_dim
-        self.dim_codes = cw_dim // embedding_dim
+        self.dim_codes = w_dim // embedding_dim
         self.h_dim = [8]
         self.conv = PointsConvLayer(embedding_dim, embedding_dim * self.h_dim[0])
         self.do1 = nn.Dropout(dropout)
-        self.encode = LinearLayer(self.cw_dim * self.h_dim[0], self.cw_dim)
+        self.encode = LinearLayer(self.w_dim * self.h_dim[0], self.w_dim)
         self.do2 = nn.Dropout(dropout)
-        self.inference = LinearLayer(cw_dim, 2 * z_dim, act=None)
+        self.inference = LinearLayer(w_dim, 2 * z_dim, act=None)
 
     def forward(self, x):
-        x = self.conv(x).view(-1, self.cw_dim * self.h_dim[0])
+        x = self.conv(x).view(-1, self.w_dim * self.h_dim[0])
         x = self.do1(x)
         x = self.encode(x)
         x = self.do2(x)
@@ -32,7 +32,7 @@ class WEncoder(nn.Module):
 
 
 class LDGCNN(nn.Module):
-    def __init__(self, cw_dim, k, **model_settings):
+    def __init__(self, w_dim, k, **model_settings):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
@@ -41,7 +41,7 @@ class LDGCNN(nn.Module):
         for in_dim, out_dim in zip(self.h_dim[:3], self.h_dim[1:]):
             modules.append(PointsConvLayer(in_dim, out_dim))
         self.points_convs = nn.Sequential(*modules)
-        self.final_conv = PointsConvLayer(sum(self.h_dim), cw_dim, act=None, batch_norm=False)
+        self.final_conv = PointsConvLayer(sum(self.h_dim), w_dim, act=None, batch_norm=False)
 
     def forward(self, x, indices):
         x = x.transpose(2, 1)
@@ -60,7 +60,7 @@ class LDGCNN(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, cw_dim, k, **model_settings):
+    def __init__(self, w_dim, k, **model_settings):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
@@ -68,7 +68,7 @@ class DGCNN(nn.Module):
         for in_dim, out_dim in zip(self.h_dim[:3], self.h_dim[1:]):
             edge_conv_list.append(EdgeConvLayer(2 * in_dim, out_dim, batch_norm=True))
         self.edge_convs = nn.Sequential(*edge_conv_list)
-        self.final_conv = nn.Conv1d(sum(self.h_dim), cw_dim, kernel_size=1)
+        self.final_conv = nn.Conv1d(sum(self.h_dim), w_dim, kernel_size=1)
 
     def forward(self, x, indices):
         xs = []
@@ -87,7 +87,7 @@ class DGCNN(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self, cw_dim, k, **model_settings):
+    def __init__(self, w_dim, k, **model_settings):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 64, 128, 1024, 1024]
@@ -98,7 +98,7 @@ class FoldingNet(nn.Module):
         self.conv1 = PointsConvLayer(self.h_dim[2], self.h_dim[3], act=nn.ReLU(), batch_norm=False)
         self.conv2 = PointsConvLayer(self.h_dim[3], self.h_dim[4], act=nn.ReLU(), batch_norm=False)
         self.features_mlp = nn.Sequential(LinearLayer(self.h_dim[4], self.h_dim[5], act=nn.ReLU(), batch_norm=False),
-                                          nn.Linear(self.h_dim[5], cw_dim))
+                                          nn.Linear(self.h_dim[5], w_dim))
 
     def forward(self, x, indices):
         x = x.transpose(2, 1)

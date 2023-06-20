@@ -483,7 +483,6 @@ def get_loaders(dataset_name, batch_size, final, data_dir, **dataset_settings):
     del dataset
     return train_loader, val_loader, test_loader
 
-
 def get_cw_loaders(t, train_partition, test_partition, batch_size):
     pin_memory = torch.cuda.is_available()
     # m=4 because we don't care about the reconstruction and m < 4 creates problems with the filtering
@@ -496,3 +495,4 @@ def get_cw_loaders(t, train_partition, test_partition, batch_size):
     cw_test_loader = torch.utils.data.DataLoader(
         cw_test_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
     return cw_train_loader, cw_test_loader
+

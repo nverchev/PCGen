@@ -15,10 +15,11 @@ decoder_name: PCGen
 components: 4
 filtering: true
 k: 20
-cw_dim: &cw_dim 512
+w_dim: &w_dim 512
 
 # PCGen options
-hidden_dims: [256, *cw_dim, 512, 512, 512, 64]
+sample_dim: 16
+hidden_dims: [256, *w_dim, 512, 512, 512, 64]
 act: ReLU
 
 # optimization options
@@ -39,7 +40,7 @@ de_normalize: true
 
 # utility settings
 load: false
-load_checkpoint: 0  #0 loads last
+load_checkpoint: -1  #-1 loads last
 checkpoint: 10
 cuda: true
 seed: 0 # 0 when no seed
@@ -59,7 +60,7 @@ vae_load: false
 vae_batch_size: 128
 vae_n_pseudo_inputs: 400
 vae_opt_name: Adam
-vae_lr: 0.01
+vae_lr: 0.001
 vae_wd: 0.00
 vae_min_decay: 0.01
 vae_decay_period: 250
@@ -71,6 +72,7 @@ vae_dropout: 0.0
 viz: [1, 10, 100, 200]
 interactive_plot: true
 viz_double_encoding: false
+add_viz:
 
 # generation options
 gen: 3

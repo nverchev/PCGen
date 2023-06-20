@@ -4,6 +4,9 @@ import torch
 from simple_3dviz import Spherecloud
 from simple_3dviz import Scene
 from simple_3dviz.utils import save_frame
+
+#import pyvista as pv
+
 import os
 
 
@@ -47,9 +50,9 @@ def visualize_rotate(data):
 
 
 def show_pc(pcs, colors=None, colorscale='blue' + 'red'):
-    if not isinstance(pcs, list):
-        pcs = [pcs]
-        colors = [colors]
+    if not isinstance(pcs, tuple) and not isinstance(pcs, list):
+        pcs = (pcs, )
+        colors = (colors, )
     data = []
     for pc, color in zip(pcs, colors):
         if isinstance(pc, torch.Tensor):
@@ -57,30 +60,70 @@ def show_pc(pcs, colors=None, colorscale='blue' + 'red'):
         xs, zs, ys = pc.transpose()
         data.append(go.Scatter3d(x=xs, y=-ys, z=zs,
                                  mode='markers',
-                                 marker=dict(color=color, colorscale=colorscale)))
+                                 marker=dict(size=2, color=color, colorscale=colorscale)))
     fig = visualize_rotate(data)
-    fig.update_traces(marker=dict(size=2,
-                                  line=dict(width=0.2,
-                                            color='DarkSlateGrey')),
-                      selector=dict(mode='markers'))
-    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
     fig.show()
 
 
-def render_cloud(clouds, name):
+def render_cloud(clouds, name, colors=iter(lambda: 0, 1), colorscale='sequence'):
     scene = Scene(background=(.8, .9, 0.9, .9), size=(1024, 1024))
+    blue = np.array([0.3, 0.3, 0.9, 0.9])
+    red = np.array([0.9, 0.3, 0.3, 0.9])
+    green = np.array([0.3, 0.9, 0.3, 0.9])
+    violet = np.array([0.6, 0.0, 0.9, 0.9])
+    orange = np.array([0.9, 0.6, 0.0, 0.9])
+    color_sequence = [blue, red,  green, violet, orange]
     l = len(clouds)
-    for i, cloud in enumerate(clouds):
-        colors = np.ones(cloud.shape[0])[:, None] * np.array([0.3, 0.6, 0.9, 0.8])[None, :]
+    for i, (cloud, color) in enumerate(zip(clouds, colors)):
+        if not len(cloud):
+            continue
+        if colorscale == 'blue' + 'red':
+            color = np.ones(cloud.shape[0])[:, None] * ((1 - color) * blue + color * red)[None, :]
+        if colorscale == 'sequence':
+            color = np.ones(cloud.shape[0])[:, None] * color_sequence[color][None, :]
+
         sizes = np.ones(cloud.shape[0]) * 0.02
-        s = Spherecloud(cloud + np.array([(1 - l) / 2 + i, 0, 0])[None, :], sizes=sizes, colors=colors)
+        #cloud = cloud + np.array([(1 - l) / 2 + i, 0, 0])[None, :]
+        s = Spherecloud(cloud, sizes=sizes, colors=color)
         scene.add(s)
     scene.camera_position = (-1.2, 1, -2)
     scene.up_vector = (0, 1, 0)
-    scene.light = (30, 5, 20)
+    scene.light = (60, 60, 60)
     scene.render()
     if not os.path.exists('images'):
         os.mkdir('images')
     save_frame(os.path.join('images', name), scene.frame)
+
+
+
+# def render_cloud(clouds, name, colors=iter(lambda: 0, 1), colorscale='sequence'):
+#     plotter = pv.Plotter(lighting='none', window_size=(1024, 1024))
+#     plotter.set_background(color=(.8, .9, 0.9, .9))
+#     blue = np.array([0.3, 0.3, 0.9, 0.9])
+#     red = np.array([0.9, 0.3, 0.3, 0.9])
+#     green = np.array([0.3, 0.9, 0.3, 0.9])
+#     violet = np.array([0.6, 0.0, 0.9, 0.9])
+#     orange = np.array([0.9, 0.6, 0.0, 0.9])
+#     color_sequence = [blue, red,  green, violet, orange]
+#     l = len(clouds)
+#     for i, (cloud, color) in enumerate(zip(clouds, colors)):
+#         if not len(cloud):
+#             continue
+#         if colorscale == 'blue' + 'red':
+#             color = np.ones(cloud.shape[0])[:, None] * ((1 - color) * blue + color * red)[None, :]
+#         if colorscale == 'sequence':
+#             color = np.ones(cloud.shape[0])[:, None] * color_sequence[color][None, :]
+#
+#         sizes = np.ones(cloud.shape[0]) * 0.02
+#         #cloud = cloud + np.array([(1 - l) / 2 + i, 0, 0])[None, :]
+#         plotter.add_mesh(pv.PolyData(cloud), point_size=sizes, color=color)
+#         scene.add(s)
+#     scene.camera_position = (-1.2, 1, -2)
+#     scene.up_vector = (0, 1, 0)
+#     scene.light = (60, 60, 60)
+#     scene.render()
+#     if not os.path.exists('images'):
+#         os.mkdir('images')
+#     save_frame(os.path.join('images', name), scene.frame)
 
 

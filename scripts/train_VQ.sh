@@ -23,14 +23,14 @@ python3 main.py --dataset ShapenetFlow  --ae VQVAE --select_class airplane --dir
 
 
 
- python3 main.py --dataset ShapenetFlow  --ae VQVAE --select_class car --dir_path /scratch  --exp car_with_EMD --decoder PCGenC --components 4 --c_reg 0.2  --gf --epochs 1000 --decay_period 900 --cw_dim 512 --eval --load 0
+ python3 main.py --dataset ShapenetFlow  --ae VQVAE --select_class car --dir_path /scratch  --exp car_with_EMD --decoder PCGenC --components 4 --c_reg 0.2  --gf --epochs 1000 --decay_period 900 --w_dim 512 --eval --load 0
 Criterion: 1.5595e+02   Embed Loss: 1.5821e-01  Chamfer: 4.4213e+00     Chamfer Augmented: 3.0604e-02   EMD: 1.5121e+02
 Chamfer: 4.5633e-04     Chamfer Augmented: 1.3980e-02   Chamfer Smooth: -2.9697e+07     EMD: 3.5093e-02
 
 
 Criterion: 1.6230e+02   Embed Loss: 1.4721e-01  Chamfer: 4.4449e+00     Chamfer Augmented: 2.8735e-02   EMD: 1.5641e+02 #Remixing the codes
 Criterion: 1.6119e+02   Embed Loss: 1.4180e-01  Chamfer: 4.3456e+00     Chamfer Augmented: 2.8571e-02   EMD: 1.5551e+02
-(work) nverchev@chef:~/PycharmProjects/PCGen$ python3 main.py  --dataset ShapenetFlow  --ae VQVAE --select_class chair --dir_path /scratch  --exp chair_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 900 --book_size 16 --cw_dim 256 --z_dim 8 --eval --load 0
+(work) nverchev@chef:~/PycharmProjects/PCGen$ python3 main.py  --dataset ShapenetFlow  --ae VQVAE --select_class chair --dir_path /scratch  --exp chair_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 900 --book_size 16 --w_dim 256 --z_dim 8 --eval --load 0
 Loaded:  ./models/LDGCNN_PCGenCGF_Chamfer_VQVAE_chair_with_EMD_dict_16_256/model_epoch1000.pt
 Version  LDGCNN_PCGenCGF_Chamfer_VQVAE_chair_with_EMD_dict_16_256
 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 42/42 [00:03<00:00, 12.39it/s]
@@ -40,7 +40,7 @@ Chamfer: 5.2596e-04     Chamfer Augmented: 1.4356e-02   Chamfer Smooth: -2.8723e
 
 
 Criterion: 1.6186e+02   Embed Loss: 6.4713e-02  Chamfer: 4.7280e+00     Chamfer Augmented: 3.1597e-02   EMD: 1.5649e+02
-(work) nverchev@chef:~/PycharmProjects/PCGen$ python3 main.py  --dataset ShapenetFlow  --ae VQVAE --select_class car --dir_path /scratch  --exp car_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 900 --book_size 16 --cw_dim 256 --z_dim 8 --load 0 --eval
+(work) nverchev@chef:~/PycharmProjects/PCGen$ python3 main.py  --dataset ShapenetFlow  --ae VQVAE --select_class car --dir_path /scratch  --exp car_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 900 --book_size 16 --w_dim 256 --z_dim 8 --load 0 --eval
 Loaded:  ./models/LDGCNN_PCGenCGF_Chamfer_VQVAE_car_with_EMD_dict_16_256/model_epoch1000.pt
 Version  LDGCNN_PCGenCGF_Chamfer_VQVAE_car_with_EMD_dict_16_256
 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 22/22 [00:02<00:00, 10.34it/s]

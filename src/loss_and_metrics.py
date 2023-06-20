@@ -167,7 +167,7 @@ class CWEncoderLoss(nn.Module):
 
     def forward(self, outputs, inputs, targets):
         kld = kld_loss(**outputs)
-        one_hot_idx = inputs[1]
+        one_hot_idx = outputs['one_hot_idx'].clone() #inputs[1]
         sqrt_dist = torch.sqrt(outputs['cw_dist'])
         cw_neg_dist = -sqrt_dist + sqrt_dist.min(2, keepdim=True)[0]
         nll = -(cw_neg_dist.log_softmax(dim=2) * one_hot_idx).sum((1, 2))
@@ -183,14 +183,14 @@ class CWEncoderLoss(nn.Module):
 
 
 # Currently not used, replace VQVAE loo in get_ae_loss to use it
-class DoubleEncoding(VQVAELoss):
+class DoubleEncodingLoss(VQVAELoss):
     def __init__(self, recon_loss, c_commitment, c_embedding, c_kld, vq_ema_update, **not_used):
         super().__init__(recon_loss, c_commitment=c_commitment, c_embedding=c_embedding, vq_ema_update=vq_ema_update)
-        cw_loss = CWEncoderLoss(c_kld)
+        self.cw_loss = CWEncoderLoss(c_kld)
 
     def forward(self, outputs, inputs, targets):
         dict_loss = super().forward(outputs, inputs, targets)
-        second_dict_loss = self.cw_loss.forward(outputs, [None, outputs['cw_idx']], targets)
+        second_dict_loss = self.cw_loss(outputs, [None, outputs['one_hot_idx']], targets)
         criterion = dict_loss.pop('Criterion') + second_dict_loss.pop('Criterion')
         return {'Criterion': criterion,
                 **dict_loss,
@@ -200,6 +200,7 @@ class DoubleEncoding(VQVAELoss):
 def get_ae_loss(model_head, recon_loss, **other_args):
     recon_loss = ReconLoss(recon_loss)
     return (AELoss if model_head in ('AE', 'Oracle') else VQVAELoss)(recon_loss, **other_args)
+    #return (AELoss if model_head in ('AE', 'Oracle') else DoubleEncodingLoss)(recon_loss, **other_args)
 
 
 class AllMetrics:
@@ -218,7 +219,8 @@ class AllMetrics:
             ref_cloud *= scale
         return self.batched_pairwise_similarity(ref_cloud, recon)
 
-    def batched_pairwise_similarity(self, clouds1, clouds2):
+    @staticmethod
+    def batched_pairwise_similarity(clouds1, clouds2):
         pairwise_dist = square_distance(clouds1, clouds2)
         squared, augmented = chamfer(clouds1, clouds2, pairwise_dist)
         emd = match_cost(clouds1.contiguous(), clouds2.contiguous())

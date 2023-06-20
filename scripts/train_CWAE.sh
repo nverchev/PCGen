@@ -1,4 +1,4 @@
-python3 evaluate_samplings.py --dataset ShapenetFlow  --ae VQVAE --select_class car --dir_path /scratch  --exp car_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 900 --book_size 16 --cw_dim 256 --z_dim 16
+python3 evaluate_samplings.py --dataset ShapenetFlow  --ae VQVAE --select_class car --dir_path /scratch  --exp car_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 900 --book_size 16 --w_dim 256 --z_dim 16
 Version  LDGCNN_PCGenCGF_Chamfer_VQVAE_car_with_EMD_dict_16_256
 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 22/22 [00:02<00:00, 10.44it/s]
 Metrics:
@@ -11,7 +11,7 @@ Number of tests: 10 Min: 4.6023e-01 Max: 4.8011e-01 Mean: 4.6903e-01 Std: 7.1250
 Number of tests: 10 Min: 5.6960e-01 Max: 5.8949e-01 Mean: 5.8125e-01 Std: 6.5956e-03
 
 
- python3  evaluate_samplings.py --dataset ShapenetFlow  --ae VQVAE --select_class chair --dir_path /scratch  --exp chair_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 100 --book_size 16 --cw_dim 256 --z_dim 16
+ python3  evaluate_samplings.py --dataset ShapenetFlow  --ae VQVAE --select_class chair --dir_path /scratch  --exp chair_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 100 --book_size 16 --w_dim 256 --z_dim 16
 Version  LDGCNN_PCGenCGF_Chamfer_VQVAE_chair_with_EMD_dict_16_256
 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 42/42 [00:03<00:00, 12.53it/s]
 Metrics:
@@ -26,7 +26,7 @@ Number of tests: 10 Min: 5.7100e-01 Max: 6.1405e-01 Mean: 6.0219e-01 Std: 1.1846
 
 
 
-python3 evaluate_samplings.py --dataset ShapenetFlow  --ae VQVAE --select_class airplane --dir_path /scratch  --exp airplane_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 900 --book_size 16 --cw_dim 256 --z_dim 16
+python3 evaluate_samplings.py --dataset ShapenetFlow  --ae VQVAE --select_class airplane --dir_path /scratch  --exp airplane_with_EMD_dict_16_256 --decoder PCGenC --components 4 --c_reg 1  --gf --epochs 1000 --decay_period 900 --book_size 16 --w_dim 256 --z_dim 16
 Version  LDGCNN_PCGenCGF_Chamfer_VQVAE_airplane_with_EMD_dict_16_256
 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 26/26 [00:02<00:00, 11.08it/s]
 Metrics:

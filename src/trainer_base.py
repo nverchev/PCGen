@@ -270,8 +270,8 @@ class Trainer(metaclass=ABCMeta):
         print('Model saved at: ', paths['model'])
         return
 
-    def load(self, epoch=None):
-        if epoch is not None:
+    def load(self, epoch=-1):
+        if epoch >= 0:
             self.epoch = epoch
         else:
             past_epochs = []  # here it looks for the most recent model
@@ -287,8 +287,8 @@ class Trainer(metaclass=ABCMeta):
                 self.epoch = max(past_epochs)
         paths = self.paths()
 
-        # TODO: remove strict flag
         self.model.load_state_dict(torch.load(paths['model'], map_location=torch.device(self.device)))
+        # TODO: reintroduce optimizer
         # self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
         for json_file_name in ['train_log', 'val_log', 'saved_test_metrics']:
             json_file = json.load(open(paths[json_file_name]))

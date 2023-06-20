@@ -53,14 +53,32 @@ def parser_add_arguments(parser):
                                 'the input for reconstruction and training examples for random generation')
     model_opt.add_argument('--encoder_name', choices=['LDGCNN', 'DGCNN', 'FoldingNet'], help='PC encoder')
     model_opt.add_argument('--decoder_name', choices=['PCGen', 'PCGenC', 'Full', 'FoldingNet', 'TearingNet',
-                                                      'AtlasNetDeformation', 'AtlasNetStructures'], help='PC decoder')
+                                                      'AtlasNetDeformation', 'AtlasNetTranslation', 'PCGenConcat'],
+                           help='PC decoder')
     model_opt.add_argument('--components', type=bounded_num(int, v_min=1),
                            help='components of PCGenC or patches in AtlasNet')
     model_opt.add_argument('--filtering', action=BooleanOptionalAction, help='Laplacian filtering after decoder')
     model_opt.add_argument('--k', type=bounded_num(int, v_min=1),
                            help='number of neighbours of a point (counting the point itself) in (L)DGCNN]')
-    model_opt.add_argument('--cw_dim', type=bounded_num(int, v_min=1), help='codeword length')
+    model_opt.add_argument('--w_dim', type=bounded_num(int, v_min=1), help='codeword length')
 
+    # model options
+    pcgen_opt = parser.add_argument_group('PCGen options', 'Options only valid for the PCGen model')
+    pcgen_opt.add_argument('--sample_dim', type=bounded_num(int, v_min=3), help='Dimensions of the sampling sphere')
+
+    pcgen_opt.add_argument('--hidden_dims', type=bounded_num(int, v_min=1), nargs='+',
+                           help='First dimension is number of channels for mapping the initial sampling, the second'
+                                'is dummy variable later overwritten by w_dim, then channels for each component')
+    pcgen_opt.add_argument('--act', type=str, default='ReLU', help='activation (pytorch name) used in the model')
+    pcgen_opt.add_argument('--decoder_name', choices=['PCGen', 'PCGenC', 'Full', 'FoldingNet', 'TearingNet',
+                                                      'AtlasNetDeformation', 'AtlasNetTranslation', 'PCGenConcat'],
+                           help='PC decoder')
+    model_opt.add_argument('--components', type=bounded_num(int, v_min=1),
+                           help='components of PCGenC or patches in AtlasNet')
+    model_opt.add_argument('--filtering', action=BooleanOptionalAction, help='Laplacian filtering after decoder')
+    model_opt.add_argument('--k', type=bounded_num(int, v_min=1),
+                           help='number of neighbours of a point (counting the point itself) in (L)DGCNN]')
+    model_opt.add_argument('--w_dim', type=bounded_num(int, v_min=1), help='codeword length')
     # optimization options
     optim_opt = parser.add_argument_group('Optimization options', 'Options for the loss, the optimizer, etc')
     optim_opt.add_argument('--recon_loss', choices=['Chamfer', 'ChamferEMD'], help='ChamferEMD adds both')
@@ -107,6 +125,7 @@ def parser_add_vqvae_arguments(parser):
     vqvae_opt.add_argument('--vq_noise', type=bounded_num(float, v_min=0), help='noise when redistributing the codes')
     # Needs to be here because model architecture is defined in the VQVAE model
     vqvae_opt.add_argument('--vae_n_pseudo_inputs', type=bounded_num(int, v_min=1), help='num of pseudo inputs')
+    vqvae_opt.add_argument('--vae_dropout', type=bounded_num(float, v_min=0), help='dropout probability')
 
 
 def parser_add_vae_arguments(parser):
@@ -124,7 +143,7 @@ def parser_add_vae_arguments(parser):
     vae_opt.add_argument('--vae_decay_period', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
     vae_opt.add_argument('--vae_epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
     vae_opt.add_argument('--vae_checkpoint', type=bounded_num(int, v_min=1), help='epochs between checkpoints')
-    vae_opt.add_argument('--vae_dropout', type=bounded_num(float, v_min=0), help='dropout probability')
+#    vae_opt.add_argument('--vae_dropout', type=bounded_num(float, v_min=0), help='dropout probability')
 
 
 def parser_add_viz_arguments(parser, viz_vqvae=False):
@@ -132,6 +151,10 @@ def parser_add_viz_arguments(parser, viz_vqvae=False):
     viz_opt = parser.add_argument_group('Visualization options', 'Shows reconstructions given one or more indices')
     viz_opt.add_argument('--viz', type=bounded_num(int, v_min=0), nargs='+', help='sample indices to visualise')
     viz_opt.add_argument('--interactive_plot', action=BooleanOptionalAction, help='3D plot with plotly')
+    viz_opt.add_argument('--add_viz', choices=['sampling_loop', 'filter', 'components'],
+                         help='sampling_loop highlights a loop in the sampling space of the decoder,'
+                              'filter shows the difference of the reconstruction before and after the filtering,'
+                              'components shows how the different components reconstruct the cloud')
     if viz_vqvae:
         viz_opt.add_argument('--viz_double_encoding', action=BooleanOptionalAction,
                              help='reconstructs samples based on the retrieved codes')
@@ -195,7 +218,7 @@ def parse_args_and_set_seed(task, description='Shared options for training, eval
 
     args = parser.parse_args()
     # constraint of the model
-    args.hidden_dims[1] = args.cw_dim
+    args.hidden_dims[1] = args.w_dim
     if args.model_head != 'Oracle':
         exp_name = [args.name,
                     args.exp,

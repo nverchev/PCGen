@@ -13,12 +13,13 @@ model_head: AE
 encoder_name: LDGCNN
 decoder_name: PCGen
 components: 1
-filtering: true
+filtering: false
 k: 20
-cw_dim: &cw_dim 1024
+w_dim: &w_dim 1024
 
 # PCGen options
-hidden_dims: [256, *cw_dim, 512, 512, 512, 64]
+sample_dim: 16
+hidden_dims: [256, *w_dim, 512, 512, 512, 64]
 act: ReLU
 
 # optimization options
@@ -47,5 +48,7 @@ seed: 0 # 0 when no seed
 # visualization options
 viz: [1, 10, 100, 1000]
 interactive_plot: true
+viz_sampling_bbox: false
+viz_components: false
 
 

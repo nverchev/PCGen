@@ -211,18 +211,18 @@ class CWTrainer(Trainer):
         self._loss = CWEncoderLoss(**block_args)
         return
 
-    def train(self, num_epoch, val_after_train=False):
-        if self.epoch:
-            super().train(num_epoch, val_after_train)
-            return
-        # automatically restarts if first epochs meets inf or nan
-        while True:
-            try:
-                super().train(num_epoch, val_after_train)
-                break
-            except ValueError:
-                self.model._reset_parameters()
-                self.epoch = 0
+    # def train(self, num_epoch, val_after_train=False):
+    #     if self.epoch:
+    #         super().train(num_epoch, val_after_train)
+    #         return
+    #     # automatically restarts if first epochs meets inf or nan
+    #     while True:
+    #         try:
+    #             super().train(num_epoch, val_after_train)
+    #             break
+    #         except ValueError:
+    #             self.model.recursive_reset_parameters()
+    #             self.epoch = 0
 
     def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=0, **kwargs):
         super().test(partition=partition, save_outputs=save_outputs)  # test partition uses val dataset
@@ -242,7 +242,14 @@ class CWTrainer(Trainer):
         print('Model saved at: ', paths['model'])
         return
 
+    torch.inference_mode()
     def helper_inputs(self, inputs, labels):
+        # [scale, *clouds, _] = inputs
+        # self.vqvae_model.train(self.model.training)
+        # cw_q = self.vqvae_model.encoder(clouds[0], None)
+        # _, one_hot_idx = self.vqvae_model.quantise(cw_q)
+        # return {'x': cw_q.detach().clone(), 'data': {'one_hot_idx': one_hot_idx.detach().clone()}}
+
         return {'x': inputs[0]}
 
     def show_latent(self):
@@ -256,7 +263,7 @@ class CWTrainer(Trainer):
 
 def get_trainer(model, loaders, args):
     if args.model_head == 'VQVAE':
-        lr = {'encoder': args.lr, 'decoder': args.lr, 'cw_encoder': 1 * args.lr}
+        lr = {'encoder': args.lr, 'decoder': args.lr, 'cw_encoder': args.lr}
     else:
         lr = args.lr
     optimizer, optim_args = get_opt(args.opt_name, lr, args.wd)
