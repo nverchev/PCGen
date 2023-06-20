@@ -70,15 +70,7 @@ def parser_add_arguments(parser):
                            help='First dimension is number of channels for mapping the initial sampling, the second'
                                 'is dummy variable later overwritten by w_dim, then channels for each component')
     pcgen_opt.add_argument('--act', type=str, default='ReLU', help='activation (pytorch name) used in the model')
-    pcgen_opt.add_argument('--decoder_name', choices=['PCGen', 'PCGenC', 'Full', 'FoldingNet', 'TearingNet',
-                                                      'AtlasNetDeformation', 'AtlasNetTranslation', 'PCGenConcat'],
-                           help='PC decoder')
-    model_opt.add_argument('--components', type=bounded_num(int, v_min=1),
-                           help='components of PCGenC or patches in AtlasNet')
-    model_opt.add_argument('--filtering', action=BooleanOptionalAction, help='Laplacian filtering after decoder')
-    model_opt.add_argument('--k', type=bounded_num(int, v_min=1),
-                           help='number of neighbours of a point (counting the point itself) in (L)DGCNN]')
-    model_opt.add_argument('--w_dim', type=bounded_num(int, v_min=1), help='codeword length')
+
     # optimization options
     optim_opt = parser.add_argument_group('Optimization options', 'Options for the loss, the optimizer, etc')
     optim_opt.add_argument('--recon_loss', choices=['Chamfer', 'ChamferEMD'], help='ChamferEMD adds both')
