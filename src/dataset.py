@@ -203,7 +203,7 @@ class ShapenetAtlasSplit(AugmentDataset):
         path = self.paths[index]
         cloud = np.load(path).astype(np.float32)
         index_pool = np.arange(cloud.shape[0])
-        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=not self.resample)
+        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=self.resample)
         ref_cloud, scale = normalise(cloud[sampling[:self.input_points]])
         clouds = [torch.from_numpy(ref_cloud)]
         if self.resample:
@@ -239,7 +239,7 @@ class ShapenetFlowSplit(AugmentDataset):
         label = self.labels[index]
         scale = self.scales[index]
         index_pool = np.arange(cloud.shape[0])
-        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=not self.resample)
+        sampling = np.random.choice(index_pool, size=(1 + self.resample) * self.input_points, replace=False)
         clouds = [torch.from_numpy(cloud[sampling[:self.input_points]])]
         if self.resample:
             clouds.append(torch.from_numpy(cloud[sampling[self.input_points:]]))
@@ -495,4 +495,12 @@ def get_cw_loaders(t, train_partition, test_partition, batch_size):
     cw_test_loader = torch.utils.data.DataLoader(
         cw_test_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
     return cw_train_loader, cw_test_loader
+
+
+
+
+
+
+
+
 

@@ -15,6 +15,8 @@ def train_eval_model():
     loaders = dict(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
     trainer = get_trainer(model, loaders, args=args)
     test_partition = 'train' if args.eval_train else 'test' if args.final else 'val'
+    if args.model_head == 'Oracle':
+        return trainer.test(partition=test_partition, all_metrics=True, de_normalize=args.de_normalize)
     if args.load:
         trainer.load(args.load_checkpoint)
     else:
