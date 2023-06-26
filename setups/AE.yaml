@@ -49,6 +49,6 @@ seed: 0 # 0 when no seed
 viz: [1, 10, 100, 1000]
 interactive_plot: true
 viz_sampling_bbox: false
-viz_components: false
+add_viz: none
 
 

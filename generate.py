@@ -4,7 +4,7 @@ from src.options import parse_args_and_set_seed
 from src.dataset import EmptyDataset
 from src.model import get_model
 from src.trainer import get_trainer
-from src.viz_pc import show_pc, render_cloud
+from src.viz_pc import render_cloud
 
 
 def generate_random_samples():
@@ -25,27 +25,29 @@ def generate_random_samples():
         att = torch.empty(args.gen, args.m_test, args.components, device=args.device)
     elif args.add_viz == 'filter':
         trainer.model.decoder.filtering = False
+    elif args.add_viz == 'none':
+        trainer.model.decoder.filtering = False
     elif args.add_viz:
         raise ValueError(f'{args.add_vix} is not a recognized argument')
     samples_and_diameters = model.random_sampling(args.gen, s, att)['recon'].cpu()
     samples, *diameters = samples_and_diameters.split(args.m_test, dim=1)
 
-    for i, sample in enumerate(samples):
+    for i, (sample) in enumerate(zip(samples, att)):
         if args.add_viz == 'sampling_loop':
-            if args.interactive_plot:
-                show_pc((sample, diameters[0][i]), colors=[0, 1])
             sample_name = '_'.join(args.select_classes + [str(i)])
-            render_cloud((sample, diameters[0][i]), colors=[0, 1], name=f'{sample_name}.png')
+            render_cloud((sample, diameters[0][i]), colors=[0, 1], name=f'{sample_name}.png', interactive=args.interactive_plot)
         elif args.add_viz == 'components':
-            threshold = 0.6  # boundary points shown in blue
+            threshold = 0.  # boundary points shown in blue
             att_max, att_argmax = att.max(dim=2)
             indices = (att_argmax.cpu() + 1) * (att_max > threshold).bool().cpu()
             pc_list = [samples[indices == component] for component in range(args.components + 1)]
-            if args.interactive_plot:
-                show_pc(pc_list, colors=range(args.components + 1))
             sample_name = '_'.join(args.select_classes + [str(i)])
-            render_cloud(pc_list, colors=range(args.components + 1), name=f'{sample_name}.png')
+            render_cloud(pc_list, colors=range(args.components + 1), name=f'{sample_name}.png', interactive=args.interactive_plot)
         elif args.add_viz == 'filter':
+            pass
+        elif args.add_viz == 'none':
+            sample_name = '_'.join(args.select_classes + [str(i)])
+            render_cloud((sample, ), colors=[0], name=f'{sample_name}.png', interactive=args.interactive_plot)
             pass
 
 

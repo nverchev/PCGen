@@ -288,8 +288,12 @@ class Trainer(metaclass=ABCMeta):
         paths = self.paths()
 
         self.model.load_state_dict(torch.load(paths['model'], map_location=torch.device(self.device)))
-        # TODO: reintroduce optimizer
-        # self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
+        # TODO: improve error handling
+        try:
+            self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
+        except:
+            pass
+
         for json_file_name in ['train_log', 'val_log', 'saved_test_metrics']:
             json_file = json.load(open(paths[json_file_name]))
             # Stop from loading logs of future epochs

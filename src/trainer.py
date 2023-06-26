@@ -9,7 +9,6 @@ from sklearn.decomposition import PCA
 from src.trainer_base import Trainer
 from src.optim import get_opt, CosineSchedule
 from src.loss_and_metrics import get_ae_loss, CWEncoderLoss, AllMetrics
-from src.viz_pc import show_pc
 from src.neighbour_op import square_distance
 from src.loss_and_metrics import chamfer
 
@@ -72,7 +71,7 @@ class AETrainer(Trainer):
         cw_pca = pca.fit_transform(cw.numpy())
         labels = torch.stack(self.test_metadata['test_targets']).cpu().numpy()
         highlight_cw = cw_pca[(highlight_label == labels)]
-        show_pc([torch.FloatTensor(cw_pca), highlight_cw], colors=['blue', 'red'])
+        #show_pc([torch.FloatTensor(cw_pca), highlight_cw], colors=['blue', 'red'])
 
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)

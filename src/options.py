@@ -143,7 +143,7 @@ def parser_add_viz_arguments(parser, viz_vqvae=False):
     viz_opt = parser.add_argument_group('Visualization options', 'Shows reconstructions given one or more indices')
     viz_opt.add_argument('--viz', type=bounded_num(int, v_min=0), nargs='+', help='sample indices to visualise')
     viz_opt.add_argument('--interactive_plot', action=BooleanOptionalAction, help='3D plot with plotly')
-    viz_opt.add_argument('--add_viz', choices=['sampling_loop', 'filter', 'components'],
+    viz_opt.add_argument('--add_viz', choices=['sampling_loop', 'filter', 'components', 'none'],
                          help='sampling_loop highlights a loop in the sampling space of the decoder,'
                               'filter shows the difference of the reconstruction before and after the filtering,'
                               'components shows how the different components reconstruct the cloud')

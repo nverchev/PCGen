@@ -190,8 +190,10 @@ class AE(BaseModel):
         data = {'cw': self.encoder(x, indices)}
         return data
 
-    def decode(self, data, initial_sampling=None, viz_att=None):
-        additional_arguments = [initial_sampling, viz_att] * (self.decoder.__class__.__name__ == 'PCGen')
+    def decode(self, data, initial_sampling=None, viz_att=None, viz_components=None):
+        additional_arguments = []
+        if self.decoder.__class__.__name__ == 'PCGen':
+            additional_arguments.extend([initial_sampling, viz_att, viz_components])
         x = self.decoder(data['cw'], self.m, *additional_arguments)
         data['recon'] = x.transpose(2, 1).contiguous()
         return data
@@ -248,7 +250,7 @@ class VQVAE(AE):
         data.update(self.cw_encoder.encode(data['cw_q'].detach()))
         return data
 
-    def decode(self, data, initial_sampling=None, viz_att=None):
+    def decode(self, data, initial_sampling=None, viz_att=None, viz_components=None):
         if self.double_encoding:
             self.cw_encoder.decode(data)  # looks for the z keyword
             idx = data['idx']
@@ -263,7 +265,7 @@ class VQVAE(AE):
             data['cw'] = TransferGrad().apply(data['cw_q'], data['cw_e'])  # call class method, do not instantiate
             # FIXME decide if keeping this or not
             self.cw_encoder.decode(data)  # looks for the z keyword
-        return super().decode(data, initial_sampling, viz_att)
+        return super().decode(data, initial_sampling, viz_att, viz_components)
 
     @torch.inference_mode()
     def random_sampling(self, batch_size, initial_sampling=None, viz_att=None):

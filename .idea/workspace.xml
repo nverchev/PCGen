@@ -6,8 +6,14 @@
   <component name="ChangeListManager">
     <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_eval_main_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_eval_main_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/generate.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setups/AE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/AE.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setups/VQVAE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/VQVAE.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/decoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/decoder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/options.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/options.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/viz_pc.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/viz_pc.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -86,7 +92,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Python.train_eval_main_model">
+  <component name="RunManager" selected="Python.generate">
     <configuration name="decoder" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -230,7 +236,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/generate.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes car --gen 1 --interactive_plot --add_viz filter" />
+      <option name="PARAMETERS" value="VQVAE --select_classes car --gen 1 --no-interactive_plot --add_viz components" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -337,7 +343,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_eval_main_model.py" />
-      <option name="PARAMETERS" value="AE --exp PCGen --final" />
+      <option name="PARAMETERS" value="AE --exp PCGen8_lr0005 --final --filtering --lr 0.0005  --components 8" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -497,8 +503,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.even_more_3d_viz" />
         <item itemvalue="Python.more_pc_viz" />
+        <item itemvalue="Python.even_more_3d_viz" />
         <item itemvalue="Python.viz_pc" />
         <item itemvalue="Python.encoder" />
         <item itemvalue="Python.decoder" />
@@ -513,13 +519,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1653572494330</updated>
-    </task>
-    <task id="LOCAL-00514" summary="filter detach neighbours">
-      <created>1667751153252</created>
-      <option name="number" value="00514" />
-      <option name="presentableId" value="LOCAL-00514" />
-      <option name="project" value="LOCAL" />
-      <updated>1667751153252</updated>
     </task>
     <task id="LOCAL-00515" summary="filter detach neighbours">
       <created>1667752183932</created>
@@ -857,7 +856,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687278461082</updated>
     </task>
-    <option name="localTasksCounter" value="563" />
+    <task id="LOCAL-00563" summary="Do not resample ShapeNet AtlasNet for training!">
+      <created>1687454627217</created>
+      <option name="number" value="00563" />
+      <option name="presentableId" value="LOCAL-00563" />
+      <option name="project" value="LOCAL" />
+      <updated>1687454627217</updated>
+    </task>
+    <option name="localTasksCounter" value="564" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -886,7 +892,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="faust dataset" />
     <MESSAGE value="filter detach neighbours" />
     <MESSAGE value="tranfer grad filter" />
     <MESSAGE value="improved VAE&#10;new graph filtering" />
@@ -911,7 +916,8 @@
     <MESSAGE value="updated version of the model" />
     <MESSAGE value="Improved viz (work in progress)" />
     <MESSAGE value="bug" />
-    <option name="LAST_COMMIT_MESSAGE" value="bug" />
+    <MESSAGE value="Do not resample ShapeNet AtlasNet for training!" />
+    <option name="LAST_COMMIT_MESSAGE" value="Do not resample ShapeNet AtlasNet for training!" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

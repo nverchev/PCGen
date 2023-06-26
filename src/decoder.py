@@ -333,7 +333,7 @@ class PCGen(nn.Module):
         if self.num_groups > 1:
             self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, act=None)
 
-    def forward(self, w, m, s=None, viz_att=None):
+    def forward(self, w, m, s=None, viz_att=None, viz_components=None):
         batch = w.size()[0]
         device = w.device
         x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
@@ -388,7 +388,7 @@ class PCGenConcat(nn.Module):
         if self.num_groups > 1:
             self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, act=None)
 
-    def forward(self, w, m, s=None, viz_att=None):
+    def forward(self, w, m, s=None, viz_att=None, viz_components=None):
         batch = w.size()[0]
         device = w.device
         x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
@@ -403,15 +403,20 @@ class PCGenConcat(nn.Module):
             group_atts.append(x_group)
             x_group = self.group_final[group](x_group)
             xs.append(x_group)
+        xs = torch.stack(xs, dim=3)
         if self.num_groups > 1:
             x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), tau=8., dim=1).transpose(2, 1)
-            x = (torch.stack(xs, dim=3) * x_att.unsqueeze(1)).sum(3)
+            x = (xs * x_att.unsqueeze(1)).sum(3)
             if viz_att is not None: # accessory information for visualization
                 assert x_att.shape == viz_att.shape, f'Shape tensor_out {viz_att.shape} does not match shape attention' \
                                                f'{x_att.shape}'
                 # side effects
                 viz_att.data = x_att
-
+        if viz_components is not None: # accessory information for visualization
+            assert xs.shape == viz_components.shape, f'Shape tensor_out {viz_components.shape} does not match ' \
+                                                        f'shape compoents {xs.shape}'
+            # side effects
+            viz_components.data = xs
         else:
             x = xs[0]
         if self.filtering:
