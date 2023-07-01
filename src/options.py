@@ -223,5 +223,7 @@ def parse_args_and_set_seed(task, description='Shared options for training, eval
     args.m_training = args.m_test if args.m_test else args.input_points
     args.device = torch.device('cuda:0' if torch.cuda.is_available() and args.cuda else 'cpu')
     if args.seed:
-        torch.manual_seed = np.random.seed = args.seed
+        torch.manual_seed(args.seed)
+        torch.cuda.manual_seed(args.seed)
+        np.random.seed(args.seed)
     return args

@@ -4,15 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
+    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="improving viz (work in progress)">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/generate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setups/AE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/AE.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setups/VQVAE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/VQVAE.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/decoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/decoder.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/options.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/options.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/viz_pc.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/viz_pc.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -92,7 +89,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Python.generate">
+  <component name="RunManager" selected="Python.train_eval_main_model">
     <configuration name="decoder" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -236,7 +233,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/generate.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes car --gen 1 --no-interactive_plot --add_viz components" />
+      <option name="PARAMETERS" value="VQVAE --select_classes chair --gen 1 --interactive_plot --add_viz filter --seed 3407" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -343,7 +340,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_eval_main_model.py" />
-      <option name="PARAMETERS" value="AE --exp PCGen8_lr0005 --final --filtering --lr 0.0005  --components 8" />
+      <option name="PARAMETERS" value="AE --exp TearingNet_lr0001 --final  --lr 0.0001 --decoder TearingNet" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -519,13 +516,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1653572494330</updated>
-    </task>
-    <task id="LOCAL-00515" summary="filter detach neighbours">
-      <created>1667752183932</created>
-      <option name="number" value="00515" />
-      <option name="presentableId" value="LOCAL-00515" />
-      <option name="project" value="LOCAL" />
-      <updated>1667752183932</updated>
     </task>
     <task id="LOCAL-00516" summary="filter detach neighbours">
       <created>1667780044599</created>
@@ -863,7 +853,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687454627217</updated>
     </task>
-    <option name="localTasksCounter" value="564" />
+    <task id="LOCAL-00564" summary="improving viz (work in progress)">
+      <created>1687785177122</created>
+      <option name="number" value="00564" />
+      <option name="presentableId" value="LOCAL-00564" />
+      <option name="project" value="LOCAL" />
+      <updated>1687785177122</updated>
+    </task>
+    <option name="localTasksCounter" value="565" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -892,7 +889,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="filter detach neighbours" />
     <MESSAGE value="tranfer grad filter" />
     <MESSAGE value="improved VAE&#10;new graph filtering" />
     <MESSAGE value="major rewriting to accomodate new metrics" />
@@ -917,7 +913,8 @@
     <MESSAGE value="Improved viz (work in progress)" />
     <MESSAGE value="bug" />
     <MESSAGE value="Do not resample ShapeNet AtlasNet for training!" />
-    <option name="LAST_COMMIT_MESSAGE" value="Do not resample ShapeNet AtlasNet for training!" />
+    <MESSAGE value="improving viz (work in progress)" />
+    <option name="LAST_COMMIT_MESSAGE" value="improving viz (work in progress)" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -928,9 +925,29 @@
           <option name="timeStamp" value="9" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/train_eval_main_model.py</url>
-          <line>53</line>
-          <option name="timeStamp" value="13" />
+          <url>file://$PROJECT_DIR$/generate.py</url>
+          <line>57</line>
+          <option name="timeStamp" value="22" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/generate.py</url>
+          <line>28</line>
+          <option name="timeStamp" value="23" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/generate.py</url>
+          <line>19</line>
+          <option name="timeStamp" value="26" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/decoder.py</url>
+          <line>180</line>
+          <option name="timeStamp" value="30" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/decoder.py</url>
+          <line>169</line>
+          <option name="timeStamp" value="31" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

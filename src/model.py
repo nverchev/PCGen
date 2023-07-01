@@ -268,7 +268,7 @@ class VQVAE(AE):
         return super().decode(data, initial_sampling, viz_att, viz_components)
 
     @torch.inference_mode()
-    def random_sampling(self, batch_size, initial_sampling=None, viz_att=None):
+    def random_sampling(self, batch_size, initial_sampling=None, viz_att=None, viz_components=None):
         self.eval()
         if self.cw_encoder.pseudo_mu is None:
             self.cw_encoder.update_pseudo_latent()
@@ -282,7 +282,7 @@ class VQVAE(AE):
         #pseudo_z = torch.from_numpy(self.gm.sample(batch_size)[0]).float().to('cuda:0')
         data = {'z': pseudo_z.contiguous()}
         with self.double_encoding:
-            out = self.decode(data, initial_sampling, viz_att)
+            out = self.decode(data, initial_sampling, viz_att, viz_components)
         return out
 
     def get_quantised_code(self, idx, book):
