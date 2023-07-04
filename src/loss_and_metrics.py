@@ -30,8 +30,7 @@ def chamfer(t1, t2, dist):
 
 # # Works with distance in torch
 # def chamfer(t1, t2, dist):
-#     return torch.min(dist, axis=-1)[0].mean() \
-#            +  torch.min(dist, axis=-2)[0].mean()
+#     return torch.min(dist, axis=-1)[0].sum(1) + torch.min(dist, axis=-2)[0].sum(1)
 
 
 #  def chamfer_smooth(inputs, recon, pairwise_dist):

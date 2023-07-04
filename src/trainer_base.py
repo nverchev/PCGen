@@ -95,7 +95,7 @@ class Trainer(metaclass=ABCMeta):
         self.test_metadata, self.test_outputs = None, None  # store last test evaluation
         self.saved_test_metrics = {}  # saves metrics of last evaluation
         self.model_pardir = model_pardir
-        json.dump(self.settings, open(self.paths()['settings'], 'w'), default=vars, indent=4)
+
 
     @property
     def optimizer_settings(self):  # settings shown depend on epoch
@@ -265,8 +265,10 @@ class Trainer(metaclass=ABCMeta):
         paths = self.paths(new_exp_name)
         torch.save(self.model.state_dict(), paths['model'])
         torch.save(self.optimizer.state_dict(), paths['optim'])
-        for json_file_name in ['train_log', 'val_log', 'saved_test_metrics'] + (['settings'] if new_exp_name else []):
-            json.dump(self.__getattribute__(json_file_name), open(paths[json_file_name], 'w'))
+        # Not strictly necessary to rewrite the files each time but safe from bugs
+        for json_file_name in ['train_log', 'val_log', 'saved_test_metrics', 'settings']:
+            with open(paths[json_file_name], 'w') as json_file:
+                json.dump(self.__getattribute__(json_file_name), json_file, default=vars, indent=4)
         print('Model saved at: ', paths['model'])
         return
 
