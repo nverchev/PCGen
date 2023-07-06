@@ -16,6 +16,8 @@ def generate_random_samples():
     trainer = get_trainer(model, datasets, args=args)
     trainer.load(args.load_checkpoint if args.load_checkpoint else None)
     s = torch.randn(args.gen, args.sample_dim, args.m_test, device=args.device)
+    z_bias = torch.zeros(args.gen, args.z_dim, device=args.device)
+    z_bias[:, args.bias_dim] = args.bias_value
     att = None
     components = None
     if args.add_viz == 'sampling_loop':
@@ -32,7 +34,7 @@ def generate_random_samples():
         pass
     elif args.add_viz:
         raise ValueError(f'{args.add_vix} is not a recognized argument')
-    samples_and_loop = model.random_sampling(args.gen, s, att, components)['recon'].cpu()
+    samples_and_loop = model.random_sampling(args.gen, s, att, components, z_bias)['recon'].cpu()
     samples, *loops = samples_and_loop.split(args.m_test, dim=1)
 
     for i, sample in enumerate(samples):

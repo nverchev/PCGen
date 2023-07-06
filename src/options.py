@@ -62,7 +62,7 @@ def parser_add_arguments(parser):
                            help='number of neighbours of a point (counting the point itself) in (L)DGCNN]')
     model_opt.add_argument('--w_dim', type=bounded_num(int, v_min=1), help='codeword length')
 
-    # model options
+    # PCGen options
     pcgen_opt = parser.add_argument_group('PCGen options', 'Options only valid for the PCGen model')
     pcgen_opt.add_argument('--sample_dim', type=bounded_num(int, v_min=3), help='Dimensions of the sampling sphere')
 
@@ -156,6 +156,8 @@ def parser_add_gen_arguments(parser):
     # generation options
     gen_opt = parser.add_argument_group('Generation options', 'Options to generate random samplings')
     gen_opt.add_argument('--gen', type=bounded_num(int, v_min=0), help='number of generated samples')
+    gen_opt.add_argument('--bias_dim', type=bounded_num(int, v_min=0), help='add a bias to latent dim')
+    gen_opt.add_argument('--bias_value', type=float, help='value of the bias in latent dim')
 
 
 def parser_add_gen_eval_arguments(parser):

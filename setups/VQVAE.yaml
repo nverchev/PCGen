@@ -73,6 +73,8 @@ viz: [1, 10, 100, 200]
 interactive_plot: true
 viz_double_encoding: false
 add_viz: none
+bias_dim: 1
+bias_value: 0
 
 # generation options
 gen: 3

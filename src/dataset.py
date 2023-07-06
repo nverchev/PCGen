@@ -313,7 +313,7 @@ class ShapeNetDatasetAtlas:
             folders = [folder for folder in folders if os.path.split(folder)[1] in select_classes]
             assert folders, 'class is not in dataset'
         for folder in folders:
-            files = glob2.glob(os.path.join(folder, '*'))
+            files = sorted(glob2.glob(os.path.join(folder, '*')))
             first_split = int(len(files) * (1 - self.val_ratio - self.test_ratio))
             second_split = int(len(files) * (1 - self.test_ratio))
             self.paths.setdefault('train', []).extend(files[:first_split])
