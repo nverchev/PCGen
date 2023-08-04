@@ -166,7 +166,8 @@ class CWEncoderLoss(nn.Module):
 
     def forward(self, outputs, inputs, targets):
         kld = kld_loss(**outputs)
-        one_hot_idx = outputs['one_hot_idx'].clone() #inputs[1]
+        one_hot_idx = outputs['one_hot_idx'].clone()
+        #one_hot_idx = inputs[1]
         sqrt_dist = torch.sqrt(outputs['cw_dist'])
         cw_neg_dist = -sqrt_dist + sqrt_dist.min(2, keepdim=True)[0]
         nll = -(cw_neg_dist.log_softmax(dim=2) * one_hot_idx).sum((1, 2))

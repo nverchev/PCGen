@@ -6,8 +6,6 @@ from src.neighbour_op import get_graph_features, graph_max_pooling, get_local_co
 IN_CHAN = 3
 
 
-
-
 class WEncoder(nn.Module):
 
     def __init__(self, w_dim, z_dim, embedding_dim, dropout):

@@ -7,10 +7,18 @@
     <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/generate.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setups/AE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/AE.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/setups/VQVAE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/VQVAE.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/encoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/encoder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/loss_and_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/loss_and_metrics.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/options.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/options.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/trainer_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer_base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/viz_pc.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/viz_pc.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train_second_encoding.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_second_encoding.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/visualize_reconstructions.py" beforeDir="false" afterPath="$PROJECT_DIR$/visualize_reconstructions.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,10 +62,10 @@
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/nverchev/PycharmProjects/PCGen/train_second_encoding.py&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/nverchev/PycharmProjects/PCGen/models/VQVAE_car/settings.json&quot;,
     &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;pyconsole&quot;,
-    &quot;two.files.diff.last.used.file&quot;: &quot;/home/nverchev/PycharmProjects/PCGen/models/LDGCNN_PCGen_Chamfer_NoVAE_final_dense_after_encoder/settings.json&quot;
+    &quot;two.files.diff.last.used.file&quot;: &quot;/home/nverchev/PycharmProjects/PCGen/models/VQVAE_car/settings.json&quot;
   },
   &quot;keyToStringList&quot;: {
     &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
@@ -89,7 +97,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Python.train_eval_main_model">
+  <component name="RunManager" selected="Python.visualize_reconstructions">
     <configuration name="decoder" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -132,6 +140,27 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="evaluate_samplings" type="PythonConfigurationType" factoryName="Python">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate_samplings.py" />
+      <option name="PARAMETERS" value="VQVAE --select_classes chair" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="evaluate_samplings_airplane" type="PythonConfigurationType" factoryName="Python">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -154,27 +183,6 @@
       <method v="2">
         <option name="RunConfigurationTask" enabled="true" run_configuration_name="evaluate_samplings_car" run_configuration_type="PythonConfigurationType" />
       </method>
-    </configuration>
-    <configuration name="evaluate_samplings_car" type="PythonConfigurationType" factoryName="Python">
-      <module name="PCGen" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate_samplings.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes car --exp double_encoding" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
     </configuration>
     <configuration name="evaluate_samplings_chair" type="PythonConfigurationType" factoryName="Python">
       <module name="PCGen" />
@@ -233,7 +241,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/generate.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes chair --gen 1 --interactive_plot --add_viz none --seed 3407 --bias_value -50 --bias_dim 2" />
+      <option name="PARAMETERS" value="VQVAE --gen 5 --no-interactive_plot --seed 3407 --select_classes car --add_viz none" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -327,7 +335,7 @@
         <option name="RunConfigurationTask" enabled="true" run_configuration_name="train_eval (1)" run_configuration_type="PythonConfigurationType" />
       </method>
     </configuration>
-    <configuration name="train_eval_main_model" type="PythonConfigurationType" factoryName="Python" singleton="false" nameIsGenerated="true">
+    <configuration name="train_eval_main_model" type="PythonConfigurationType" factoryName="Python" singleton="false">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -340,13 +348,36 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_eval_main_model.py" />
-      <option name="PARAMETERS" value="AE --exp PCGen8_sorted --final --decoder PCGen --components 8 --filter --lr 0.0005 --load" />
+      <option name="PARAMETERS" value="AE --exp PCGen_sorted --final --components 1 --filtering" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
       <option name="REDIRECT_INPUT" value="false" />
       <option name="INPUT_FILE" value="" />
       <method v="2" />
+    </configuration>
+    <configuration name="train_eval_main_model_chair" type="PythonConfigurationType" factoryName="Python" singleton="false">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_eval_main_model.py" />
+      <option name="PARAMETERS" value="VQVAE --exp w_dim_256 --select_classes chair --lr 0.0005 --w_dim 256" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2">
+        <option name="RunConfigurationTask" enabled="true" run_configuration_name="train_eval_main_model_airplane" run_configuration_type="PythonConfigurationType" />
+      </method>
     </configuration>
     <configuration name="train_eval_main_model_concat" type="PythonConfigurationType" factoryName="Python" singleton="false">
       <module name="PCGen" />
@@ -407,7 +438,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_second_encoding.py" />
-      <option name="PARAMETERS" value="VQVAE" />
+      <option name="PARAMETERS" value="VQVAE --select_classes chair  --vae_dropout 0.1" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -449,7 +480,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/visualize_reconstructions.py" />
-      <option name="PARAMETERS" value="AE --exp PCGen8 --final --decoder PCGen --components 8 --viz 50 2150 3200 3850 4700 7600 --no-filtering --seed 123" />
+      <option name="PARAMETERS" value="AE --exp PCGen4 --final --decoder PCGen --components 4 --viz 50 2150 3200 3850 4700 7600 --seed 123 --add_viz components --no-interactive_plot" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -479,17 +510,18 @@
       <method v="2" />
     </configuration>
     <list>
+      <item itemvalue="Python.train_eval_main_model" />
+      <item itemvalue="Python.evaluate_samplings" />
       <item itemvalue="Python.train_both_models" />
       <item itemvalue="Python.profile_model" />
       <item itemvalue="Python.generate" />
-      <item itemvalue="Python.train_eval_main_model" />
+      <item itemvalue="Python.train_eval_main_model_chair" />
       <item itemvalue="Python.train_eval_main_model_concat" />
       <item itemvalue="Python.trainer" />
       <item itemvalue="Python.train_second_encoding" />
       <item itemvalue="Python.visualize_reconstructions" />
       <item itemvalue="Python.train_main_model_2" />
       <item itemvalue="Python.train_eval (2)" />
-      <item itemvalue="Python.evaluate_samplings_car" />
       <item itemvalue="Python.evaluate_samplings_airplane" />
       <item itemvalue="Python.evaluate_samplings_chair" />
       <item itemvalue="Python.even_more_3d_viz" />
@@ -516,13 +548,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1653572494330</updated>
-    </task>
-    <task id="LOCAL-00518" summary="filter detach neighbours">
-      <created>1667859810375</created>
-      <option name="number" value="00518" />
-      <option name="presentableId" value="LOCAL-00518" />
-      <option name="project" value="LOCAL" />
-      <updated>1667859810375</updated>
     </task>
     <task id="LOCAL-00519" summary="filter detach neighbours">
       <created>1667863023657</created>
@@ -860,7 +885,14 @@
       <option name="project" value="LOCAL" />
       <updated>1688474700486</updated>
     </task>
-    <option name="localTasksCounter" value="567" />
+    <task id="LOCAL-00567" summary="Sorted AtlasNetFlow">
+      <created>1688659879690</created>
+      <option name="number" value="00567" />
+      <option name="presentableId" value="LOCAL-00567" />
+      <option name="project" value="LOCAL" />
+      <updated>1688659879691</updated>
+    </task>
+    <option name="localTasksCounter" value="568" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -889,7 +921,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="tranfer grad filter" />
     <MESSAGE value="improved VAE&#10;new graph filtering" />
     <MESSAGE value="major rewriting to accomodate new metrics" />
     <MESSAGE value="Correcting bugs and gmm in Decoder" />
@@ -914,7 +945,8 @@
     <MESSAGE value="bug" />
     <MESSAGE value="Do not resample ShapeNet AtlasNet for training!" />
     <MESSAGE value="improving viz (work in progress)" />
-    <option name="LAST_COMMIT_MESSAGE" value="improving viz (work in progress)" />
+    <MESSAGE value="Sorted AtlasNetFlow" />
+    <option name="LAST_COMMIT_MESSAGE" value="Sorted AtlasNetFlow" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -923,26 +955,6 @@
           <url>file://$PROJECT_DIR$/../test/venv/lib/python3.11/site-packages/pyvista/utilities/errors.py</url>
           <line>409</line>
           <option name="timeStamp" value="9" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/generate.py</url>
-          <line>59</line>
-          <option name="timeStamp" value="22" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/decoder.py</url>
-          <line>180</line>
-          <option name="timeStamp" value="30" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/decoder.py</url>
-          <line>169</line>
-          <option name="timeStamp" value="31" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/visualize_reconstructions.py</url>
-          <line>30</line>
-          <option name="timeStamp" value="35" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

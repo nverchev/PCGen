@@ -182,9 +182,9 @@ class AE(BaseModel):
         self.decoder = get_decoder(decoder_name)(**args)
         self.settings = {'encode_h_dim': self.encoder.h_dim, 'decode_h_dim': self.decoder.h_dim}
 
-    def forward(self, x, indices):
+    def forward(self, x, indices, initial_sampling=None, viz_att=None, viz_components=None):
         data = self.encode(x, indices)
-        return self.decode(data)
+        return self.decode(data, initial_sampling, viz_att, viz_components)
 
     def encode(self, x, indices):
         data = {'cw': self.encoder(x, indices)}
@@ -240,10 +240,6 @@ class VQVAE(AE):
             self.ema_counts.data = self.decay * self.ema_counts + self.gain * one_hot_idx.sum(0)
 
         return cw_embed, one_hot_idx
-
-    def forward(self, x, indices):
-        data = self.encode(x, indices)
-        return self.decode(data)
 
     def encode(self, x, indices):
         data = {'cw_q': self.encoder(x, indices)}

@@ -60,13 +60,13 @@ vae_load: false
 vae_batch_size: 128
 vae_n_pseudo_inputs: 400
 vae_opt_name: Adam
-vae_lr: 0.001
+vae_lr: 0.01
 vae_wd: 0.00
 vae_min_decay: 0.01
-vae_decay_period: 250
-vae_epochs: 300
+vae_decay_period: 450
+vae_epochs: 500
 vae_checkpoint: 10
-vae_dropout: 0.0
+vae_dropout: 0.1
 
 # visualization options
 viz: [1, 10, 100, 200]

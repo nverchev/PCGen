@@ -71,7 +71,7 @@ class AETrainer(Trainer):
         cw_pca = pca.fit_transform(cw.numpy())
         labels = torch.stack(self.test_metadata['test_targets']).cpu().numpy()
         highlight_cw = cw_pca[(highlight_label == labels)]
-        #show_pc([torch.FloatTensor(cw_pca), highlight_cw], colors=['blue', 'red'])
+        # show_pc([torch.FloatTensor(cw_pca), highlight_cw], colors=['blue', 'red'])
 
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)
@@ -106,7 +106,7 @@ class VQVAETrainer(AETrainer):
         return
 
     def evaluate_generated_set(self, partition, repeat_chamfer=10, repeat_emd=0, batch_size=32, oracle=False):
-        #self.gmm_sampling()
+        # self.gmm_sampling()
         loader = self.test_loader if partition == 'test' else self.val_loader
         test_dataset = []
         for batch_idx, (inputs, targets, index) in enumerate(loader):
@@ -127,11 +127,15 @@ class VQVAETrainer(AETrainer):
                 train_ds = self.train_loader.dataset
                 sample_train = np.random.choice(range(len(train_ds)), size=test_l, replace=True)
                 generated_dataset = [train_ds[i][0][1] for i in sample_train]
+
                 print('Training Dataset has been sampled.')
             else:
                 while len(generated_dataset) < test_l:
                     batch = min(batch_size, test_l - len(generated_dataset))
                     samples = self.model.random_sampling(batch)['recon'].detach().cpu()
+                    samples -= samples.mean(dim=1, keepdim=True)
+                    std = torch.max(torch.sqrt(torch.sum(samples ** 2, dim=2)), dim=1)[0].view(-1, 1, 1)
+                    samples /= std
                     generated_dataset.extend(samples)
                 print('Random Dataset has been generated.')
             assert len(test_dataset) == len(generated_dataset)
@@ -210,19 +214,6 @@ class CWTrainer(Trainer):
         self._loss = CWEncoderLoss(**block_args)
         return
 
-    # def train(self, num_epoch, val_after_train=False):
-    #     if self.epoch:
-    #         super().train(num_epoch, val_after_train)
-    #         return
-    #     # automatically restarts if first epochs meets inf or nan
-    #     while True:
-    #         try:
-    #             super().train(num_epoch, val_after_train)
-    #             break
-    #         except ValueError:
-    #             self.model.recursive_reset_parameters()
-    #             self.epoch = 0
-
     def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=0, **kwargs):
         super().test(partition=partition, save_outputs=save_outputs)  # test partition uses val dataset
         with self.vqvae_trainer.model.double_encoding:
@@ -241,15 +232,14 @@ class CWTrainer(Trainer):
         print('Model saved at: ', paths['model'])
         return
 
-    torch.inference_mode()
+    @torch.inference_mode()
     def helper_inputs(self, inputs, labels):
-        # [scale, *clouds, _] = inputs
-        # self.vqvae_model.train(self.model.training)
-        # cw_q = self.vqvae_model.encoder(clouds[0], None)
-        # _, one_hot_idx = self.vqvae_model.quantise(cw_q)
-        # return {'x': cw_q.detach().clone(), 'data': {'one_hot_idx': one_hot_idx.detach().clone()}}
-
-        return {'x': inputs[0]}
+        [scale, *clouds, _] = inputs
+        self.vqvae_model.train(self.model.training)
+        cw_q = self.vqvae_model.encoder(clouds[0], None)
+        _, one_hot_idx = self.vqvae_model.quantise(cw_q)
+        return {'x': cw_q.detach().clone(), 'data': {'one_hot_idx': one_hot_idx.detach().clone()}}
+        #return {'x': inputs[0]}
 
     def show_latent(self):
         mu = torch.stack(self.vqvae_trainer.test_outputs['mu'])
@@ -257,7 +247,7 @@ class CWTrainer(Trainer):
         cw_pca = pca.fit_transform(mu.numpy())
         pseudo_mu = self.model.pseudo_mu
         pseudo_mu_pca = pca.transform(pseudo_mu.detach().cpu().numpy())
-        show_pc([torch.FloatTensor(cw_pca), torch.FloatTensor(pseudo_mu_pca)], colors=['blue', 'red'])
+        # show_pc([torch.FloatTensor(cw_pca), torch.FloatTensor(pseudo_mu_pca)], colors=['blue', 'red'])
 
 
 def get_trainer(model, loaders, args):

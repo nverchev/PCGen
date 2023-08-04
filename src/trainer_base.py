@@ -268,7 +268,9 @@ class Trainer(metaclass=ABCMeta):
         # Not strictly necessary to rewrite the files each time but safe from bugs
         for json_file_name in ['train_log', 'val_log', 'saved_test_metrics', 'settings']:
             with open(paths[json_file_name], 'w') as json_file:
-                json.dump(self.__getattribute__(json_file_name), json_file, default=vars, indent=4)
+                file_content = self.__getattribute__(json_file_name)
+                if file_content:
+                    json.dump(file_content, json_file, default=vars, indent=4)
         print('Model saved at: ', paths['model'])
         return
 

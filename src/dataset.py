@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import os
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from src.utils import download_zip, index_k_neighbours, load_h5_modelnet, load_h5_dfaust
 import json
 import glob2
@@ -469,19 +469,20 @@ def get_loaders(dataset_name, batch_size, final, data_dir, **dataset_settings):
             shuffle=True, pin_memory=pin_memory)
         val_loader = None
         test_dataset = dataset.split('test')
-        test_loader = torch.utils.data.DataLoader(
+        test_loader = DataLoader(
             test_dataset, batch_size=batch_size, drop_last=False, shuffle=False, pin_memory=pin_memory)
     else:
         train_dataset = dataset.split('train')
         val_dataset = dataset.split('val')
-        train_loader = torch.utils.data.DataLoader(
+        train_loader = DataLoader(
             train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
-        val_loader = torch.utils.data.DataLoader(
+        val_loader = DataLoader(
             val_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
         test_loader = None
 
     del dataset
     return train_loader, val_loader, test_loader
+
 
 def get_cw_loaders(t, train_partition, test_partition, batch_size):
     pin_memory = torch.cuda.is_available()
@@ -490,9 +491,9 @@ def get_cw_loaders(t, train_partition, test_partition, batch_size):
     cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['one_hot_idx'], t.test_metadata['targets'])
     t.test(partition=test_partition, m=4, save_outputs=True)
     cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['one_hot_idx'], t.test_metadata['targets'])
-    cw_train_loader = torch.utils.data.DataLoader(
+    cw_train_loader = DataLoader(
         cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
-    cw_test_loader = torch.utils.data.DataLoader(
+    cw_test_loader = DataLoader(
         cw_test_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
     return cw_train_loader, cw_test_loader
 
