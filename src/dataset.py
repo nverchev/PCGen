@@ -149,6 +149,9 @@ class PiercedCoinsDataset(Dataset):
         plate = torch.from_numpy(coin)
         return [1, plate, self.neighbours], n_holes, index
 
+    def split(self, split):
+        return self
+
 
 class AugmentDataset(Dataset):
     def __init__(self, rotation, translation, **kwargs):
