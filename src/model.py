@@ -166,6 +166,10 @@ class BaseModel(nn.Module):
     def forward(self, x, indices):
         return NotImplementedError
 
+    def recursive_reset_parameters(self):
+        self.apply(lambda x: x.reset_parameters() if hasattr(x, 'reset_parameters') else x)
+
+
 
 class Oracle(BaseModel):
 
