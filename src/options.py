@@ -37,7 +37,7 @@ def parser_add_arguments(parser):
                             choices=['Modelnet40', 'ShapenetAtlas', 'Coins', 'Faust', 'ShapenetFlow'])
     loader_opt.add_argument('--select_classes', nargs='+', choices=['airplane', 'car', 'chair'],
                             help='select specific classes of the dataset ShapenetFlow')
-    loader_opt.add_argument('--input_points', type=bounded_num(float, v_min=0),
+    loader_opt.add_argument('--input_points', type=bounded_num(int, v_min=4),
                             help='(maximum) points of the training dataset')
     loader_opt.add_argument('--translation', action=BooleanOptionalAction, help='random translating training inputs')
     loader_opt.add_argument('--rotation', action=BooleanOptionalAction, help='random rotating training inputs')

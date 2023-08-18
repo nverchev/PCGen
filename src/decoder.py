@@ -309,8 +309,8 @@ class AtlasNetV2Translation(AtlasNetv2):
 #             x = graph_filtering(x)
 #         return x
 
-
-class PCGen(nn.Module):
+class PCGenBase(nn.Module):
+    concat = False
 
     def __init__(self, w_dim, m_training, components, sample_dim, filtering=True, **model_settings):
         super().__init__()
@@ -321,9 +321,13 @@ class PCGen(nn.Module):
         self.num_groups = components
         self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=self.act)
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
-                                           act=nn.Hardtanh(inplace=True))
+                                           **{'act': nn.Hardtanh(inplace=True)} if not self.concat else {})
         self.group_conv = nn.ModuleList()
         self.group_final = nn.ModuleList()
+
+        # PCGenConcat inherits the class and needs twice the channels here
+        if self.concat:
+            self.h_dim[1] = 2 * self.h_dim[1]
         for _ in range(self.num_groups):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
@@ -340,7 +344,7 @@ class PCGen(nn.Module):
         x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
         x = self.map_sample1(x)
         x = self.map_sample2(x)
-        x = w.unsqueeze(2) * x
+        x = self.join_operation(x, w)
         xs = []
         group_atts = []
         for group in range(self.num_groups):
@@ -354,12 +358,12 @@ class PCGen(nn.Module):
             x = (xs * x_att.unsqueeze(1)).sum(3)
             if viz_att is not None:  # accessory information for visualization
                 assert x_att.shape == viz_att.shape, f'Shape tensor_out {viz_att.shape} does not match shape attention' \
-                                               f'{x_att.shape}'
+                                                     f'{x_att.shape}'
                 # side effects
                 viz_att.data = x_att
             if viz_components is not None:  # accessory information for visualization
                 assert xs.shape == viz_components.shape, f'Shape tensor_out {viz_components.shape} does not match ' \
-                                                            f'shape components {xs.shape}'
+                                                         f'shape components {xs.shape}'
                 # side effects
                 viz_components.data = xs
         else:
@@ -368,65 +372,25 @@ class PCGen(nn.Module):
             x = graph_filtering(x)
         return x
 
+    @staticmethod
+    def join_operation(x, w):
+        return NotImplementedError
 
-class PCGenConcat(nn.Module):
 
-    def __init__(self, w_dim, m_training, components, sample_dim, filtering=True, **model_settings):
-        super().__init__()
-        self.h_dim = model_settings['hidden_dims']
-        self.act = getattr(nn, model_settings['act'])(inplace=True)
-        self.filtering = filtering
-        self.sample_dim = sample_dim
-        self.num_groups = components
-        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=self.act)
-        self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act=self.act)
-        self.group_conv = nn.ModuleList()
-        self.group_final = nn.ModuleList()
-        # cat takes twice the channels
-        self.h_dim[1] = 2 * self.h_dim[1]
-        for _ in range(self.num_groups):
-            modules = []
-            for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-                modules.append(PointsConvLayer(in_dim, out_dim, act=self.act))
-            self.group_conv.append(nn.Sequential(*modules))
-            self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
-        if self.num_groups > 1:
-            self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, act=None)
+class PCGen(PCGenBase):
 
-    def forward(self, w, m, s=None, viz_att=None, viz_components=None):
-        batch = w.size()[0]
-        device = w.device
-        x = s if s is not None else torch.randn(batch, self.sample_dim, m, device=device)
-        x = x / torch.linalg.vector_norm(x, dim=1, keepdim=True)
-        x = self.map_sample1(x)
-        x = self.map_sample2(x)
-        x = torch.cat((w.unsqueeze(2).expand_as(x), x), dim=1)
-        xs = []
-        group_atts = []
-        for group in range(self.num_groups):
-            x_group = self.group_conv[group](x)
-            group_atts.append(x_group)
-            x_group = self.group_final[group](x_group)
-            xs.append(x_group)
-        xs = torch.stack(xs, dim=3)
-        if self.num_groups > 1:
-            x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), tau=8., dim=1).transpose(2, 1)
-            x = (xs * x_att.unsqueeze(1)).sum(3)
-            if viz_att is not None: # accessory information for visualization
-                assert x_att.shape == viz_att.shape, f'Shape tensor_out {viz_att.shape} does not match shape attention' \
-                                               f'{x_att.shape}'
-                # side effects
-                viz_att.data = x_att
-        if viz_components is not None: # accessory information for visualization
-            assert xs.shape == viz_components.shape, f'Shape tensor_out {viz_components.shape} does not match ' \
-                                                        f'shape compoents {xs.shape}'
-            # side effects
-            viz_components.data = xs
-        else:
-            x = xs[0]
-        if self.filtering:
-            x = graph_filtering(x)
-        return x
+    @staticmethod
+    def join_operation(x, w):
+        return w.unsqueeze(2) * x
+
+
+class PCGenConcat(PCGenBase):
+    concat = True
+
+    @staticmethod
+    def join_operation(x, w):
+        return torch.cat((w.unsqueeze(2).expand_as(x), x), dim=1)
+
 
 def get_decoder(decoder_name):
     decoder_dict = {

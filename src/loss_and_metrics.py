@@ -1,4 +1,4 @@
-# Distances and functions
+import warnings
 import numpy as np
 import torch
 from torch import nn
@@ -223,8 +223,12 @@ class AllMetrics:
     def batched_pairwise_similarity(clouds1, clouds2):
         pairwise_dist = square_distance(clouds1, clouds2)
         squared, augmented = chamfer(clouds1, clouds2, pairwise_dist)
-        emd = match_cost(clouds1.contiguous(), clouds2.contiguous())
-        # emd = torch.sqrt(self.emd_dist(clouds1, clouds2, 0.005, 50)[0]).mean(1)
+        if clouds1.device.type == 'cpu':
+            warnings.warn('Emd only supports cuda tensors', category=RuntimeWarning)
+            emd = torch.zeros(1, 1)
+        else:
+            emd = match_cost(clouds1.contiguous(), clouds2.contiguous())
+            # emd = torch.sqrt(self.emd_dist(clouds1, clouds2, 0.005, 50)[0]).mean(1)
         if clouds1.shape == clouds2.shape:
             squared /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
             emd /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal

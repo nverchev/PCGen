@@ -13,7 +13,7 @@ def render_cloud(clouds, name, colorscale='sequence', interactive=True, arrows=N
     orange = np.array([0.9, 0.6, 0.0])
     color_sequence = [blue, red, green, violet, orange]
     plotter = pv.Plotter(lighting='three_lights', window_size=(1024, 1024), notebook=False, off_screen=not interactive)
-    plotter.camera_position = pv.CameraPosition((-3, -2, 1), focal_point=(0, 0, 0), viewup=(0, 0, 1))
+    plotter.camera_position = pv.CameraPosition((-3., -2.1, 1.1), focal_point=(0, 0, 0), viewup=(0, 0, 1))
     for i in [-1, 1]:
         light_point = (i, 1, 0)
         light = pv.Light(position=light_point, focal_point=(0, 0, 0), intensity=.2, positional=True)

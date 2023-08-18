@@ -71,25 +71,30 @@ class CWDataset(Dataset):
 
 
 class PiercedCoinsDataset(Dataset):
-    def __init__(self, half_thickness=0.1, n_points=2048, k=20, **other_settings):
+    def __init__(self, half_thickness=0.1, input_points=2048, k=20, **other_settings):
         self.half_thickness = half_thickness
         self.width = 2 * self.half_thickness
         self.radius = np.sqrt(1 - self.half_thickness ** 2)
-        self.n_points = n_points
-        self.coin = self.create_coin().astype(np.single)
-        self.neighbours = torch.from_numpy(index_k_neighbours([self.coin], k)).long()
+        self.n_points = input_points
+
+        # calculating neighbours at runtime improves the performance (because of the insertion of the holes probably)
+        # self.coin = self.create_coin().astype(np.single)
+        # self.neighbours = torch.from_numpy(index_k_neighbours([self.coin], k)).long()
 
     def create_coin(self):
+        #rng = np.random.RandomState(123)
+        # does not reset the rng
+        rng = np.random
         sides = round(self.n_points * 2 * self.radius / (2 * self.radius + 4 * self.half_thickness))
-        thetas = 2 * np.pi * np.random.rand(sides)
-        rs = np.sqrt(np.random.rand(sides))
+        thetas = 2 * np.pi * rng.rand(sides)
+        rs = np.sqrt(rng.rand(sides))
         exps = rs * np.exp(thetas * 1j)
         x1, y1 = exps.real, exps.imag
-        z1 = np.random.choice([self.half_thickness, -self.half_thickness], size=sides, replace=True)
-        thetas = 2 * np.pi * np.random.rand(self.n_points - sides)
+        z1 = rng.choice([self.half_thickness, -self.half_thickness], size=sides, replace=True)
+        thetas = 2 * np.pi * rng.rand(self.n_points - sides)
         exps = np.exp(thetas * 1j)
         x2, y2 = exps.real, exps.imag
-        z2 = (2 * np.random.rand(self.n_points - sides) - 1) * self.half_thickness
+        z2 = (2 * rng.rand(self.n_points - sides) - 1) * self.half_thickness
         x, y, z = np.hstack([x1, x2]), np.hstack([y1, y2]), np.hstack([z1, z2])
         return np.stack([x, y, z], axis=1)
 
@@ -132,11 +137,12 @@ class PiercedCoinsDataset(Dataset):
         return np.hstack([x, y, z])
 
     def __len__(self):
-        return 4096
+        return 4096 * 4
 
     def __getitem__(self, index):
         n_holes = np.random.randint(low=1, high=4)
-        coin = self.coin.copy()
+        #coin = self.coin.copy()
+        coin = self.create_coin().astype(np.single)
         pts = []
         for _ in range(n_holes):
             while True:
@@ -146,8 +152,8 @@ class PiercedCoinsDataset(Dataset):
                 pts.append(pt)
                 self.create_hole(coin, pt)
                 break
-        plate = torch.from_numpy(coin)
-        return [1, plate, self.neighbours], n_holes, index
+        coin = torch.from_numpy(coin)
+        return [1, coin, 0], n_holes, index
 
     def split(self, split):
         return self

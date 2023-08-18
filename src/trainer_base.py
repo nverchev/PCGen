@@ -182,7 +182,7 @@ class Trainer(metaclass=ABCMeta):
                 epoch_seen += indices.shape[0]
                 inputs, targets = self.recursive_to([inputs, targets], self.device)
                 inputs_aux = self.helper_inputs(inputs, targets)
-                with autocast(device_type=self.device.type, dtype=torch.float16, enabled=self.amp):
+                with autocast(device_type=self.device.type, enabled=self.amp):
                     outputs = self.model(**inputs_aux)
                     if torch.is_inference_mode_enabled():
                         batch_log = self.metrics(outputs, inputs, targets)
@@ -296,15 +296,14 @@ class Trainer(metaclass=ABCMeta):
         try:
             self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
         except:
-            pass
+            warnings.warn('Optimizer has not been loaded')
 
-        for json_file_name in ['train_log', 'val_log', 'saved_test_metrics']:
+        for json_file_name in ['train_log', 'val_log']:
             json_file = json.load(open(paths[json_file_name]))
             # Stop from loading logs of future epochs
-            if json_file_name in ['train_log', 'val_log']:
-                for epoch in list(json_file):
-                    if int(epoch) > self.epoch:
-                        json_file.pop(epoch)
+            for epoch in list(json_file):
+                if int(epoch) > self.epoch:
+                    json_file.pop(epoch)
             self.__setattr__(json_file_name, defaultdict(dict, json_file))
         print('Loaded: ', paths['model'])
         return

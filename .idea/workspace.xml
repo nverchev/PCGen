@@ -6,8 +6,14 @@
   <component name="ChangeListManager">
     <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/generate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/train_CWAE.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/train_CWAE.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/decoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/decoder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/loss_and_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/loss_and_metrics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/options.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/options.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/trainer_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer_base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/viz_pc.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/viz_pc.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/visualize_reconstructions.py" beforeDir="false" afterPath="$PROJECT_DIR$/visualize_reconstructions.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,7 +34,6 @@
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-    <option name="UPDATE_TYPE" value="REBASE" />
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/main.py" root0="FORCE_HIGHLIGHTING" />
@@ -40,6 +45,10 @@
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 3
+}</component>
   <component name="ProjectId" id="29hk294pV2u0dfY0J1hxx1Bx5hD" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
@@ -86,8 +95,8 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Python.evaluate_samplings">
-    <configuration name="decoder" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.train_eval_main_model_Coins">
+    <configuration name="dataset" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -99,7 +108,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/decoder.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/dataset.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -230,7 +239,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/generate.py" />
-      <option name="PARAMETERS" value="VQVAE --gen 5 --no-interactive_plot --seed 3407 --select_classes car --add_viz none" />
+      <option name="PARAMETERS" value="VQVAE --gen 5 --no-interactive_plot --seed 3407 --select_classes chair --add_viz components" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -324,27 +333,6 @@
         <option name="RunConfigurationTask" enabled="true" run_configuration_name="train_eval (1)" run_configuration_type="PythonConfigurationType" />
       </method>
     </configuration>
-    <configuration name="train_eval_main_model" type="PythonConfigurationType" factoryName="Python" singleton="false">
-      <module name="PCGen" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_eval_main_model.py" />
-      <option name="PARAMETERS" value="AE --exp AtlasNetDF --decoder AtlasNetDeformation  --lr 0.00001  --filtering" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="train_eval_main_model_1" type="PythonConfigurationType" factoryName="Python" singleton="false">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -367,6 +355,27 @@
       <method v="2">
         <option name="RunConfigurationTask" enabled="true" run_configuration_name="train_eval_main_model" run_configuration_type="PythonConfigurationType" />
       </method>
+    </configuration>
+    <configuration name="train_eval_main_model_Coins" type="PythonConfigurationType" factoryName="Python" singleton="false">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_eval_main_model.py" />
+      <option name="PARAMETERS" value="AE --decoder PCGen --dataset Coins --exp TearingNet_Coins --lr 0.00005 --input_points 4096" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
     <configuration name="train_eval_main_model_chair" type="PythonConfigurationType" factoryName="Python" singleton="false">
       <module name="PCGen" />
@@ -492,7 +501,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/visualize_reconstructions.py" />
-      <option name="PARAMETERS" value="AE --exp PCGen4 --final --decoder PCGen --components 4 --viz 50 2150 3200 3850 4700 7600 --seed 123 --add_viz components --no-interactive_plot" />
+      <option name="PARAMETERS" value="AE --exp PCGen8 --final --filter --decoder PCGen --components 8 --viz 560 561 562 563 564 565 566 567 568 569 570 571 572 573 574 575 576 577 578 579 --seed 3407 --add_viz none --no-interactive_plot --input_points 2500" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -522,7 +531,7 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.train_eval_main_model" />
+      <item itemvalue="Python.train_eval_main_model_Coins" />
       <item itemvalue="Python.train_eval_main_model_1" />
       <item itemvalue="Python.evaluate_samplings" />
       <item itemvalue="Python.train_both_models" />
@@ -537,19 +546,19 @@
       <item itemvalue="Python.train_eval (2)" />
       <item itemvalue="Python.evaluate_samplings_airplane" />
       <item itemvalue="Python.evaluate_samplings_chair" />
+      <item itemvalue="Python.dataset" />
       <item itemvalue="Python.even_more_3d_viz" />
       <item itemvalue="Python.more_pc_viz" />
       <item itemvalue="Python.viz_pc" />
       <item itemvalue="Python.encoder" />
-      <item itemvalue="Python.decoder" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.viz_pc" />
+        <item itemvalue="Python.dataset" />
         <item itemvalue="Python.more_pc_viz" />
         <item itemvalue="Python.even_more_3d_viz" />
-        <item itemvalue="Python.viz_pc" />
         <item itemvalue="Python.encoder" />
-        <item itemvalue="Python.decoder" />
       </list>
     </recent_temporary>
   </component>
@@ -905,7 +914,7 @@
       <option name="project" value="LOCAL" />
       <updated>1688659879691</updated>
     </task>
-    <option name="localTasksCounter" value="569" />
+    <option name="localTasksCounter" value="570" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -934,7 +943,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="major rewriting to accomodate new metrics" />
     <MESSAGE value="Correcting bugs and gmm in Decoder" />
     <MESSAGE value="updating the encoder" />
     <MESSAGE value="current best" />
@@ -959,7 +967,8 @@
     <MESSAGE value="improving viz (work in progress)" />
     <MESSAGE value="Sorted AtlasNetFlow" />
     <MESSAGE value="add_viz recon" />
-    <option name="LAST_COMMIT_MESSAGE" value="add_viz recon" />
+    <MESSAGE value="not much" />
+    <option name="LAST_COMMIT_MESSAGE" value="not much" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
