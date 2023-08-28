@@ -193,6 +193,7 @@ class AtlasNetv2(nn.Module):
         super().__init__()
         self.w_dim = w_dim
         self.filtering = filtering
+        self.laplacian = model_settings['laplacian_filter']
         self.num_patches = components if components else 10
         self.embedding_dim = self.w_dim + self.patch_embed_dim
         self.h_dim = [128]
@@ -221,7 +222,7 @@ class AtlasNetv2(nn.Module):
             outs.append(self.decoder[i](y))
         x = torch.cat(outs, 2).contiguous()
         if self.filtering:
-            x = graph_filtering(x)
+            x = graph_filtering(x, self.laplacian)
         return x
 
 
@@ -230,7 +231,7 @@ class AtlasNetv2Deformation(AtlasNetv2):
     patch_embed_dim = 10
 
     def __init__(self, w_dim, m_training, components, filtering, **model_settings):
-        super().__init__(w_dim, m_training, components, filtering)
+        super().__init__(w_dim, m_training, components, filtering, **model_settings)
         self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
 
     def get_patch_deformation(self):
@@ -246,7 +247,7 @@ class AtlasNetV2Translation(AtlasNetv2):
     patch_embed_dim = 10
 
     def __init__(self, w_dim, m_training, components, filtering, **model_settings):
-        super().__init__(w_dim, m_training, components, filtering)
+        super().__init__(w_dim, m_training, components, filtering, **model_settings)
         self.m_patch = m_training // self.num_patches
         self.grid = nn.Parameter(torch.rand(self.num_patches, 2, m_training // self.num_patches))
         self.grid.data = F.pad(self.grid, (0, 0, 0, self.patch_embed_dim - 2))
@@ -261,7 +262,7 @@ class AtlasNetV2Translation(AtlasNetv2):
             outs.append(self.decoder[i](y))
         x = torch.cat(outs, 2).contiguous()
         if self.filtering:
-            x = graph_filtering(x)
+            x = graph_filtering(x, self.laplacian)
         return x
 
 
@@ -314,7 +315,11 @@ class PCGenBase(nn.Module):
 
     def __init__(self, w_dim, m_training, components, sample_dim, filtering=True, **model_settings):
         super().__init__()
+        # We keep the following variable in the instantiation for compatibility with other decoders
+        # w_dim ==  model_settings['hidden_dims'][1]
+        # m_training given at runtime
         self.h_dim = model_settings['hidden_dims']
+        self.laplacian = model_settings['laplacian_filter']
         self.act = getattr(nn, model_settings['act'])(inplace=True)
         self.filtering = filtering
         self.sample_dim = sample_dim
@@ -354,27 +359,83 @@ class PCGenBase(nn.Module):
             xs.append(x_group)
         xs = torch.stack(xs, dim=3)
         if self.num_groups > 1:
-            x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), tau=8., dim=1).transpose(2, 1)
-            x = (xs * x_att.unsqueeze(1)).sum(3)
+            x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), tau=8., dim=1)
+            x = (xs * x_att.transpose(2, 1).unsqueeze(1)).sum(3)
             if viz_att is not None:  # accessory information for visualization
-                assert x_att.shape == viz_att.shape, f'Shape tensor_out {viz_att.shape} does not match shape attention' \
-                                                     f'{x_att.shape}'
+                assert x_att.shape == viz_att.shape, (f'Shape tensor_out {viz_att.shape} does not match shape '
+                                                      f'attention {x_att.shape}')
                 # side effects
                 viz_att.data = x_att
             if viz_components is not None:  # accessory information for visualization
-                assert xs.shape == viz_components.shape, f'Shape tensor_out {viz_components.shape} does not match ' \
-                                                         f'shape components {xs.shape}'
+                assert xs.shape == viz_components.shape, (f'Shape tensor_out {viz_components.shape} does '
+                                                          f'not match shape components {xs.shape}')
                 # side effects
                 viz_components.data = xs
         else:
             x = xs.squeeze(3)
         if self.filtering:
-            x = graph_filtering(x)
+            x = graph_filtering(x, self.laplacian)
         return x
 
     @staticmethod
     def join_operation(x, w):
-        return NotImplementedError
+        raise NotImplementedError
+
+    # Currently does not help inference time (there is also an unresolved bug)
+    # def make_parallel(self):
+    #     modules = []
+    #     for point_conv_list in zip(*self.group_conv):
+    #         in_dim = point_conv_list[0].in_dim
+    #         out_dim = point_conv_list[0].out_dim
+    #         point_conv_group = PointsConvLayer(in_dim * self.num_groups, out_dim * self.num_groups, act=self.act)
+    #         point_conv_group.dense = self.from_list_to_groups_conv([point_conv.dense for point_conv in point_conv_list])
+    #         point_conv_group.bn = self.from_list_to_groups_bn([point_conv.bn for point_conv in point_conv_list])
+    #         modules.append(point_conv_group)
+    #     self.group_conv = nn.Sequential(*modules)
+    #     group_conv_dense = self.from_list_to_groups_conv([point_conv.dense for point_conv in self.group_final])
+    #     self.group_final = PointsConvLayer(self.h_dim[-1] * self.num_groups, OUT_CHAN * self.num_groups,
+    #                                        batch_norm=False, act=None)
+    #     self.group_final.dense = group_conv_dense
+    #     self.parallel = True
+    #
+    # @staticmethod
+    # def from_list_to_groups_conv(lin_list):
+    #     assert all(isinstance(lin, nn.Conv1d) for lin in lin_list)
+    #     assert all(lin.kernel_size == (1,) for lin in lin_list)
+    #     groups = len(lin_list)
+    #     concat_weights = torch.cat([lin.weight for lin in lin_list])
+    #     group_lin = nn.Conv1d(concat_weights.shape[0], concat_weights.shape[1], kernel_size=1, groups=groups)
+    #     group_lin.weight = nn.Parameter(concat_weights)
+    #     if lin_list[0].bias is None:
+    #         group_lin.bias = None
+    #     else:
+    #         concat_bias = torch.concat([lin.bias for lin in lin_list])
+    #         group_lin.bias = nn.Parameter(concat_bias)
+    #     return group_lin
+    #
+    # @staticmethod
+    # def from_list_to_groups_bn(bn_list):
+    #     assert all(isinstance(bn, nn.BatchNorm1d) for bn in bn_list)
+    #     device = bn_list[0].running_mean.device
+    #     concat_mean = torch.concat([bn.running_mean for bn in bn_list])
+    #     concat_var = torch.concat([bn.running_var for bn in bn_list])
+    #     concat_bias = torch.concat([bn.bias for bn in bn_list])
+    #     group_bn = nn.BatchNorm1d(concat_mean.shape[0]).to(device)
+    #     group_bn.running_mean = concat_mean.to(device)
+    #     group_bn.concat_var = concat_var.to(device)
+    #     group_bn.bias = nn.Parameter(concat_bias.to(device))
+    #     return group_bn
+
+    # parallel forward bit of code
+    # xs = x.repeat(1, self.num_groups, 1)
+    # xs = self.group_conv(xs)
+    # group_att = xs
+    # xs = self.group_final(xs).reshape(-1, self.num_groups, OUT_CHAN, m)
+    # if self.num_groups > 1:
+    #     x_att = F.gumbel_softmax(self.att(group_att), tau=8., dim=1).unsqueeze(2)
+    #     x = (xs * x_att).sum(1)
+    # else:
+    #     x = xs
 
 
 class PCGen(PCGenBase):
@@ -400,6 +461,6 @@ def get_decoder(decoder_name):
         'AtlasNetDeformation': AtlasNetv2Deformation,
         'AtlasNetTranslation': AtlasNetV2Translation,
         'PCGen': PCGen,
-        'PCGenConcat': PCGenConcat
+        'PCGenConcat': PCGenConcat,
     }
     return decoder_dict[decoder_name]

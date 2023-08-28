@@ -61,6 +61,8 @@ def parser_add_arguments(parser):
     model_opt.add_argument('--k', type=bounded_num(int, v_min=1),
                            help='number of neighbours of a point (counting the point itself) in (L)DGCNN]')
     model_opt.add_argument('--w_dim', type=bounded_num(int, v_min=1), help='codeword length')
+    model_opt.add_argument('--laplacian_filter', action=BooleanOptionalAction, help='True for Laplacian filtering, '
+                                                                                    'False for the proposed one')
 
     # PCGen options
     pcgen_opt = parser.add_argument_group('PCGen options', 'Options only valid for the PCGen model')

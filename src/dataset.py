@@ -123,6 +123,7 @@ class PiercedCoinsDataset(Dataset):
                                np.stack(
                                    [hole2[:, 0], self.width + pt[:, 1], hole2[:, 1] - pt[:, 1] - self.half_thickness],
                                    axis=1))
+
         hole[hole1_index] = close_side1
         hole[hole2_index] = close_side2
         coin[hole_index] = hole

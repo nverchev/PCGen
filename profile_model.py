@@ -20,7 +20,7 @@ def profile_model():
     flops, macs, params = get_model_profile(model=model,
                                             args=dummy_input,
                                             print_profile=True,
-                                            detailed=True,
+                                            detailed=False,
                                             module_depth=2,
                                             top_modules=2,
                                             warm_up=10,

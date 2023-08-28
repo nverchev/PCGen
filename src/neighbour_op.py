@@ -9,36 +9,52 @@ pykeops.set_verbose(False)
 
 
 def square_distance(t1, t2):
+    if t1.device.type == 'cuda':
+        return pykeops_square_distance(t1, t2)
+    else:
+        return cpu_square_distance(t1, t2)
+
+
+def pykeops_square_distance(t1, t2):
     t1 = LazyTensor(t1[:, :, None, :])
     t2 = LazyTensor(t2[:, None, :, :])
     dist = ((t1 - t2) ** 2).sum(-1)
     return dist
 
-#
-# def square_distance(t1, t2):
-#     # [batch, points, features]
-#     t2 = t2.transpose(-1, -2)
-#     dist = -2 * torch.matmul(t1, t2)
-#     dist += torch.sum(t1 ** 2, -1, keepdim=True)
-#     dist += torch.sum(t2 ** 2, -2, keepdim=True)
-#     return dist
-#
-# def self_square_distance(t1):
-#     t2 = t1.transpose(-1, -2)
-#     square_component = torch.sum(t1 ** 2, -2, keepdim=True)
-#     dist = -2 * torch.matmul(t2, t1)
-#     dist += square_component
-#     dist += square_component.transpose(-1, -2)
-#     return dist
-#
-#
-# def knn(x, k):
-#     d_ij = self_square_distance(x)
-#     return d_ij.topk(k=k, largest=False, dim=-1)[1]
+
+def cpu_square_distance(t1, t2):
+    # [batch, points, features]
+    t2 = t2.transpose(-1, -2)
+    dist = -2 * torch.matmul(t1, t2)
+    dist += torch.sum(t1 ** 2, -1, keepdim=True)
+    dist += torch.sum(t2 ** 2, -2, keepdim=True)
+    return dist
+
+
+def self_square_distance(t1):
+    t2 = t1.transpose(-1, -2)
+    square_component = torch.sum(t1 ** 2, -2, keepdim=True)
+    dist = -2 * torch.matmul(t2, t1)
+    dist += square_component
+    dist += square_component.transpose(-1, -2)
+    return dist
+
 
 def knn(x, k):
+    if x.device.type == 'cuda':
+        return pykeops_knn(x, k)
+    else:
+        return cpu_knn(x, k)
+
+
+def cpu_knn(x, k):
+    d_ij = self_square_distance(x)
+    return d_ij.topk(k=k, largest=False, dim=-1)[1]
+
+
+def pykeops_knn(x, k):
     x = x.transpose(2, 1).contiguous()
-    d_ij = square_distance(x, x)
+    d_ij = pykeops_square_distance(x, x)
     indices = d_ij.argKmin(k, dim=2)
     return indices
 
@@ -76,7 +92,7 @@ def get_graph_features(x, k=20, indices=None):
     return indices, feature
 
 
-def graph_filtering(x, k=4):
+def graph_filtering(x, laplacian, k=4):
     neighbours = get_neighbours(x, k=k, indices=None)[1]
     neighbours = neighbours[..., 1:]  # closest neighbour is point itself
     diff = x.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours
@@ -86,14 +102,8 @@ def graph_filtering(x, k=4):
     weights = torch.exp(-norm_dist)
     x_weight = weights.sum(2).unsqueeze(1).expand(-1, 3, -1)
     weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours
-    x = (1 + x_weight) * x - weighted_neighbours.sum(-1)
-    # diff = x.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours
-    # dist = torch.sqrt((diff ** 2).sum(1))
-    # sigma = torch.clamp(dist[..., 0:1].mean(1, keepdim=True), min=0.005)
-    # norm_dist = dist / sigma
-    # weights = 0.5*torch.exp(-norm_dist)
-    # x_weight = weights.sum(2).unsqueeze(1).expand(-1, 3, -1)
-    # weighted_neighbours = weights.unsqueeze(1).expand(-1, 3, -1, -1) * neighbours
-    # x = (1 + x_weight) * x - weighted_neighbours.sum(-1)
-    # x = x + (x * x_weight - weighted_neighbours.sum(-1)).detach()
+    if laplacian:
+        x = (1 - x_weight) * x + weighted_neighbours.sum(-1)
+    else:
+        x = (1 + x_weight) * x - weighted_neighbours.sum(-1)
     return x

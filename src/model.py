@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from src.encoder import get_encoder, WEncoder
 from src.decoder import get_decoder, WDecoder
-from src.loss_and_metrics import square_distance
+from src.neighbour_op import square_distance
 from src.layer import TransferGrad, LinearLayer
 from src.utils import UsuallyFalse
 
@@ -230,7 +230,7 @@ class VQVAE(AE):
         x = x.view(batch * self.dim_codes, 1, self.embedding_dim)
         book = self.codebook.repeat(batch, 1, 1)
         dist = square_distance(x, book)
-        idx = dist.argmin(axis=2)
+        idx = dist.argmin(axis=2).view(-1, 1 ,1)
         cw_embed = self.get_quantised_code(idx, book)
         one_hot_idx = torch.zeros(batch, self.dim_codes, self.book_size, device=x.device)
         one_hot_idx = one_hot_idx.scatter_(2, idx.view(batch, self.dim_codes, 1), 1)

@@ -14,6 +14,8 @@ def render_cloud(clouds, name, colorscale='sequence', interactive=True, arrows=N
     color_sequence = [blue, red, green, violet, orange]
     plotter = pv.Plotter(lighting='three_lights', window_size=(1024, 1024), notebook=False, off_screen=not interactive)
     plotter.camera_position = pv.CameraPosition((-3., -2.1, 1.1), focal_point=(0, 0, 0), viewup=(0, 0, 1))
+    #plotter.camera_position = pv.CameraPosition((2, 4, 0), focal_point=(0, 0, 0), viewup=(0, 0, 1))
+
     for i in [-1, 1]:
         light_point = (i, 1, 0)
         light = pv.Light(position=light_point, focal_point=(0, 0, 0), intensity=.2, positional=True)
@@ -54,10 +56,11 @@ def infer_and_visualize(model, args, n_clouds, mode='recon', z_bias=None, input_
     att = None
     components = None
     if args.add_viz == 'sampling_loop':
-        bbox1 = torch.eye(args.sample_dim, device=args.device)
-        bbox2 = -torch.eye(args.sample_dim, device=args.device)
-        bbox = torch.cat((bbox1, bbox2.flip(1)), dim=1).unsqueeze(0).expand(n_clouds, -1, -1)
-        s = torch.cat([s] + [t * bbox + (1 - t) * bbox.roll(1, dims=2) for t in torch.linspace(0, 1, 30)], dim=2)
+        bbox1 = torch.eye(args.sample_dim, device=args.device, dtype=torch.float32)
+        bbox2 = -torch.eye(args.sample_dim, device=args.device, dtype=torch.float32)
+        bbox = torch.cat((bbox1, bbox2), dim=1).unsqueeze(0).expand(n_clouds, -1, -1)
+        s = torch.cat([s] + [t * bbox.roll(1, dims=2) + (1 - t) * bbox for t in torch.arange(0, 1, 0.03)], dim=2)
+        model.decoder.filtering = False
     elif args.add_viz == 'components':
         att = torch.empty(n_clouds, args.m_test, args.components, device=args.device)
         components = torch.empty(n_clouds, 3, args.m_test, args.components)

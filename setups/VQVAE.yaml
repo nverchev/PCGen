@@ -16,6 +16,8 @@ components: 4
 filtering: true
 k: 20
 w_dim: &w_dim 512
+laplacian_filter: false
+
 
 # PCGen options
 sample_dim: 16

@@ -10,7 +10,7 @@ from src.trainer_base import Trainer
 from src.optim import get_opt, CosineSchedule
 from src.loss_and_metrics import get_ae_loss, CWEncoderLoss, AllMetrics
 from src.neighbour_op import square_distance
-from src.loss_and_metrics import chamfer
+from src.loss_and_metrics import pykeops_chamfer, cpu_chamfer
 
 # match cost is the emd version used in other works as a baseline
 from structural_losses import match_cost
@@ -173,8 +173,8 @@ class VQVAETrainer(AETrainer):
                 clouds1 = torch.stack(all_shapes[j:j + batch_size]).to(device)
                 clouds2 = cloud.unsqueeze(0).expand_as(clouds1).to(device)
                 if metric == 'Chamfer':
-                    pairwise_dist = square_distance(clouds1, clouds2)
-                    dist = chamfer(clouds1, clouds2, pairwise_dist)[0] / cloud.shape[0]
+                    chamfer = pykeops_chamfer if device.type == 'cuda' else cpu_chamfer
+                    dist = chamfer(clouds1, clouds2)[0] / cloud.shape[0]
                 else:
                     dist = match_cost(clouds1.contiguous(), clouds2.contiguous()) / cloud.shape[0]
                 dist_array[i, j:j + len(clouds1)] = dist.cpu()

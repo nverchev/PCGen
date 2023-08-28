@@ -299,7 +299,9 @@ class Trainer(metaclass=ABCMeta):
             warnings.warn('Optimizer has not been loaded')
 
         for json_file_name in ['train_log', 'val_log']:
-            json_file = json.load(open(paths[json_file_name]))
+            with open(paths[json_file_name], 'r') as log_file:
+                file_str = log_file.read()
+                json_file = json.loads(file_str) if file_str else {}
             # Stop from loading logs of future epochs
             for epoch in list(json_file):
                 if int(epoch) > self.epoch:

@@ -32,9 +32,8 @@ class LinearLayer(nn.Module):
         self.groups = groups
         self.batch_norm = batch_norm
         self.bias = True
-        if batch_norm:
-            self.bn = self.get_bn_layer()
-            self.bias = False
+        self.bn = self.get_bn_layer() if batch_norm else None
+        self.bias = False if batch_norm else True
         self.dense = self.get_dense_layer()
         self.act = act
         self.init(act)
