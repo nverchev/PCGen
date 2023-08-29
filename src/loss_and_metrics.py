@@ -73,19 +73,19 @@ class ReconLoss:
         squared = self.chamfer(inputs, recon)
         dict_recon = {'Chamfer': squared.sum(0)}
         if self.recon_loss_name == 'Chamfer' or self.device.type == 'cpu':
-            recon = squared.mean(0)  # Sum over points, mean over samples
+            recon_loss = squared.mean(0)  # Sum over points, mean over samples
         elif self.recon_loss_name == 'ChamferEMD':
             #emd = torch.sqrt(self.emd_dist(inputs, recon, 0.005, 50)[0]).sum(1)  # mean over samples
             emd = match_cost(inputs.contiguous(), recon.contiguous())
-            recon = emd.mean(0) + squared.mean(0)  # Sum over points, mean over samples
+            recon_loss = emd.mean(0) + squared.mean(0)  # Sum over points, mean over samples
             dict_recon['EMD'] = emd.sum(0)
         else:
             assert self.recon_loss_name == 'Sinkhorn', f'Loss {self.recon_loss_name} not known'
             sk_loss = self.sinkhorn(inputs, recon)
-            recon = sk_loss.mean(0)
+            recon_loss = sk_loss.mean(0)
             dict_recon['Sinkhorn'] = sk_loss.sum(0)
 
-        dict_recon['recon'] = recon
+        dict_recon['recon'] = recon_loss
         return dict_recon
 
 
@@ -183,8 +183,8 @@ class CWEncoderLoss(nn.Module):
 #                 **second_dict_loss}
 
 
-def get_ae_loss(model_head, recon_loss, **args):
-    return (AELoss if model_head in ('AE', 'Oracle') else VQVAELoss)(recon_loss_name=recon_loss, **args)
+def get_ae_loss(model_head, **args):
+    return (AELoss if model_head in ('AE', 'Oracle') else VQVAELoss)( **args)
     #return (AELoss if model_head in ('AE', 'Oracle') else DoubleEncodingLoss)(recon_loss, **other_args)
 
 

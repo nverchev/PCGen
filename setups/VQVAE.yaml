@@ -25,7 +25,7 @@ hidden_dims: [256, *w_dim, 512, 512, 512, 64]
 act: ReLU
 
 # optimization options
-recon_loss: 'ChamferEMD'
+recon_loss_name: 'ChamferEMD'
 m_training: 0
 opt_name: Adam
 lr: 0.001

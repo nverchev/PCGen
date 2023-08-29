@@ -174,7 +174,7 @@ class VQVAETrainer(AETrainer):
                 clouds2 = cloud.unsqueeze(0).expand_as(clouds1).to(device)
                 if metric == 'Chamfer':
                     chamfer = pykeops_chamfer if device.type == 'cuda' else cpu_chamfer
-                    dist = chamfer(clouds1, clouds2)[0] / cloud.shape[0]
+                    dist = chamfer(clouds1, clouds2) / cloud.shape[0]
                 else:
                     dist = match_cost(clouds1.contiguous(), clouds2.contiguous()) / cloud.shape[0]
                 dist_array[i, j:j + len(clouds1)] = dist.cpu()

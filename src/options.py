@@ -75,7 +75,7 @@ def parser_add_arguments(parser):
 
     # optimization options
     optim_opt = parser.add_argument_group('Optimization options', 'Options for the loss, the optimizer, etc')
-    optim_opt.add_argument('--recon_loss', choices=['Chamfer', 'ChamferEMD'], help='ChamferEMD adds both')
+    optim_opt.add_argument('--recon_loss_name', choices=['Chamfer', 'ChamferEMD'], help='ChamferEMD adds both')
     optim_opt.add_argument('--m_training', type=bounded_num(int, v_min=4),
                            help='points generated in training, 0 for input number of points')
     optim_opt.add_argument('--opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],

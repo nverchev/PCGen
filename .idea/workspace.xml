@@ -4,24 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="cpu">
-      <change afterPath="$PROJECT_DIR$/scripts/AE" afterDir="false" />
+    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/profile_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/profile_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/train_CWAE.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/train_CWAE.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/setups/AE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/AE.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/setups/VQVAE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/VQVAE.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/decoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/decoder.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/layer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/layer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/loss_and_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/loss_and_metrics.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/neighbour_op.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/neighbour_op.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/options.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/options.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/trainer_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer_base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/viz_pc.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/viz_pc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_both_models.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -103,7 +92,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Python.train_second_encoding">
+  <component name="RunManager" selected="Python.evaluate_samplings">
     <configuration name="dataset" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -138,7 +127,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate_samplings.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes airplane --emd_tests 10" />
+      <option name="PARAMETERS" value="VQVAE --select_classes airplane --emd_tests 0 --exp w_dim_256 --w_dim 256" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -192,27 +181,6 @@
         <option name="RunConfigurationTask" enabled="true" run_configuration_name="evaluate_samplings_airplane" run_configuration_type="PythonConfigurationType" />
       </method>
     </configuration>
-    <configuration name="even_more_3d_viz" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="PCGen" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/even_more_3d_viz.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="generate" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -226,7 +194,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/generate.py" />
-      <option name="PARAMETERS" value="VQVAE --gen 5 --no-interactive_plot --seed 3407 --select_classes chair --add_viz components" />
+      <option name="PARAMETERS" value="VQVAE --gen 5 --no-interactive_plot --seed 3407 --select_classes airplane --exp w_dim_256 --w_dim 256 --add_viz components" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -269,6 +237,27 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/profile_model.py" />
       <option name="PARAMETERS" value="VQVAE --batch_size 32" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="scratch" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="PCGen" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch.py" />
+      <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -333,7 +322,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_eval_main_model.py" />
-      <option name="PARAMETERS" value="VQVAE --decoder_name PCGen --components 1 --dataset Coins --exp test --lr 0.0005 --no-cuda" />
+      <option name="PARAMETERS" value="VQVAE --decoder_name PCGen --components 1 --dataset Coins --exp test --lr 0.0005" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -446,7 +435,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_second_encoding.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes chair --vae_dropout 0.1 --no-cuda" />
+      <option name="PARAMETERS" value="VQVAE --select_classes airplane --exp w_dim_256 --w_dim 256 --vae_dropout 0.0" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -554,19 +543,19 @@
       <item itemvalue="Python.train_eval (2)" />
       <item itemvalue="Python.evaluate_samplings_airplane" />
       <item itemvalue="Python.evaluate_samplings_chair" />
+      <item itemvalue="Python.scratch" />
       <item itemvalue="Python.vizualisation" />
       <item itemvalue="Python.dataset" />
-      <item itemvalue="Python.even_more_3d_viz" />
       <item itemvalue="Python.more_pc_viz" />
       <item itemvalue="Python.viz_pc" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.scratch" />
         <item itemvalue="Python.vizualisation" />
         <item itemvalue="Python.viz_pc" />
         <item itemvalue="Python.dataset" />
         <item itemvalue="Python.more_pc_viz" />
-        <item itemvalue="Python.even_more_3d_viz" />
       </list>
     </recent_temporary>
   </component>
@@ -922,7 +911,7 @@
       <option name="project" value="LOCAL" />
       <updated>1688659879691</updated>
     </task>
-    <option name="localTasksCounter" value="571" />
+    <option name="localTasksCounter" value="572" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -951,8 +940,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="updating the encoder" />
-    <MESSAGE value="current best" />
     <MESSAGE value="Major Rewriting:&#10;Better options,&#10;Default YAML files,&#10;removed main.py" />
     <MESSAGE value="it works with decay_steps == 0" />
     <MESSAGE value="better options, continuous plotting of curves" />
@@ -976,7 +963,9 @@
     <MESSAGE value="add_viz recon" />
     <MESSAGE value="not much" />
     <MESSAGE value="fixed PCGen Concat&#10;fixed Coin Dataset&#10;better error handling&#10;position camera viz&#10;fixed input_point option" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed PCGen Concat&#10;fixed Coin Dataset&#10;better error handling&#10;position camera viz&#10;fixed input_point option" />
+    <MESSAGE value="cpu" />
+    <MESSAGE value="Cpu only more or less operational (emd still not possible)" />
+    <option name="LAST_COMMIT_MESSAGE" value="Cpu only more or less operational (emd still not possible)" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -985,11 +974,6 @@
           <url>file://$PROJECT_DIR$/../test/venv/lib/python3.11/site-packages/pyvista/utilities/errors.py</url>
           <line>409</line>
           <option name="timeStamp" value="9" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/src/model.py</url>
-          <line>231</line>
-          <option name="timeStamp" value="12" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

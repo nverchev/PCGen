@@ -360,7 +360,8 @@ class PCGenBase(nn.Module):
         xs = torch.stack(xs, dim=3)
         if self.num_groups > 1:
             x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), tau=8., dim=1)
-            x = (xs * x_att.transpose(2, 1).unsqueeze(1)).sum(3)
+            x_att = x_att.transpose(2, 1)
+            x = (xs * x_att.unsqueeze(1)).sum(3)
             if viz_att is not None:  # accessory information for visualization
                 assert x_att.shape == viz_att.shape, (f'Shape tensor_out {viz_att.shape} does not match shape '
                                                       f'attention {x_att.shape}')
