@@ -1,15 +1,15 @@
 import os
-import sys
 import numpy as np
 import torch
 import json
+import visdom
+import webbrowser
 from sklearn import svm, metrics
 from sklearn.mixture import GaussianMixture
 from sklearn.decomposition import PCA
 from src.trainer_base import Trainer
 from src.optim import get_opt, CosineSchedule
 from src.loss_and_metrics import get_ae_loss, CWEncoderLoss, AllMetrics
-from src.neighbour_op import square_distance
 from src.loss_and_metrics import pykeops_chamfer, cpu_chamfer
 
 # match cost is the emd version used in other works as a baseline
@@ -242,12 +242,22 @@ class CWTrainer(Trainer):
         #return {'x': inputs[0]}
 
     def show_latent(self):
-        mu = torch.stack(self.vqvae_trainer.test_outputs['mu'])
+        if not self.web_open:
+            self.vis = visdom.Visdom(env=self.exp_name)
+            webbrowser.open('http://localhost:8097')
+            self.web_open = True
+        test_mu = torch.stack(self.vqvae_trainer.test_outputs['mu'])
         pca = PCA(3)
-        cw_pca = pca.fit_transform(mu.numpy())
+        test_mu_pca = pca.fit_transform(test_mu.numpy())
+        test_labels = np.ones(test_mu_pca.shape[0])
         pseudo_mu = self.model.pseudo_mu
         pseudo_mu_pca = pca.transform(pseudo_mu.detach().cpu().numpy())
-        # show_pc([torch.FloatTensor(cw_pca), torch.FloatTensor(pseudo_mu_pca)], colors=['blue', 'red'])
+        pseudo_labels = 2 * np.ones(pseudo_mu_pca.shape[0])
+        mu_pca = np.vstack((test_mu_pca, pseudo_mu_pca))
+        labels = np.hstack((test_labels, pseudo_labels))
+        title = 'Continuous Latent Space'
+        self.vis.scatter(X=mu_pca, Y=labels, win=title,
+                         opts=dict(title=title, markersize=1, legend=['Validation', 'Pseudo-Inputs']))
 
 
 def get_trainer(model, loaders, args):

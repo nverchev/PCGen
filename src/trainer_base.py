@@ -1,12 +1,14 @@
+
+import os
+import warnings
+import json
 import numpy as np
 import torch
 from torch.cuda.amp import GradScaler
 from torch import autocast
-import os
-import warnings
-import json
 from tqdm import tqdm
-import matplotlib.pyplot as plt
+import visdom
+import webbrowser
 from abc import ABCMeta, abstractmethod
 from collections import UserDict, defaultdict
 import sys
@@ -95,7 +97,8 @@ class Trainer(metaclass=ABCMeta):
         self.test_metadata, self.test_outputs = None, None  # store last test evaluation
         self.saved_test_metrics = {}  # saves metrics of last evaluation
         self.model_pardir = model_pardir
-
+        self.vis = None
+        self.web_open = False
 
     @property
     def optimizer_settings(self):  # settings shown depend on epoch
@@ -230,27 +233,22 @@ class Trainer(metaclass=ABCMeta):
     def helper_inputs(self, inputs, labels):
         return {'x': inputs}
 
-    def plot_loss_metric(self, plot_train=True, plot_val=True, loss_metric='Criterion', start=0, update=False):
-        plt.cla()
-        ax = plt.gca()
-        if self.train_log and plot_train:
-            epoch_keys = [epoch for epoch in self.train_log.keys() if int(epoch) >= start]
-            epochs = [int(epoch) for epoch in epoch_keys]
-            values = [self.train_log[epoch][loss_metric] for epoch in epoch_keys]
-            ax.plot(epochs, values, label='train', color='blue')
-        if self.val_log and plot_val:
-            epoch_keys = [epoch for epoch in self.val_log.keys() if int(epoch) >= start]
-            epochs = [int(epoch) for epoch in epoch_keys]
-            values = [self.val_log[epoch][loss_metric] for epoch in epoch_keys]
-            ax.plot(epochs, values, label='val', color='green')
-        ax.set_xlabel('Epochs')
-        ax.set_ylabel(loss_metric)
-        ax.set_title(f'{self.exp_name}')
-        ax.legend()
-        if update:
-            plt.pause(0.1)
-        else:
-            plt.show()
+    def plot_learning_curves(self, loss_metric='Criterion', start=0, win='Learning Curves'):
+        if not self.web_open:
+            self.vis = visdom.Visdom(env=self.exp_name)
+            webbrowser.open('http://localhost:8097')
+            self.web_open = True
+        epochs = np.array([int(epoch) for epoch in self.train_log.keys()][start:])
+        legend = ['Training']
+        values_train = [self.train_log[epoch][loss_metric] for epoch in self.train_log.keys()][start:]
+        curves = np.array(values_train)
+        if self.val_log:
+            values_val = [self.val_log[epoch][loss_metric] for epoch in self.val_log.keys()][start:]
+            epochs = np.column_stack((epochs, epochs))
+            curves = np.column_stack((curves, values_val))
+            legend.append('Validation')
+        layout = dict(xlabel='Epoch', ylabel=loss_metric, title=win, legend=legend, update='replace')
+        self.vis.line(X=epochs, Y=curves, win=win, opts=layout)
         return
 
     # Change device recursively to tensors inside a list or a dictionary
@@ -292,11 +290,12 @@ class Trainer(metaclass=ABCMeta):
         paths = self.paths()
 
         self.model.load_state_dict(torch.load(paths['model'], map_location=torch.device(self.device)))
-        # TODO: improve error handling
+
         try:
             self.optimizer.load_state_dict(torch.load(paths['optim'], map_location=torch.device(self.device)))
-        except:
-            warnings.warn('Optimizer has not been loaded')
+        except ValueError as err:
+            warnings.warn('Optimizer has not been correctly loaded:')
+            print(err)
 
         for json_file_name in ['train_log', 'val_log']:
             with open(paths[json_file_name], 'r') as log_file:

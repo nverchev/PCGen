@@ -49,11 +49,12 @@ def train_eval_model():
         if not args.final:
             trainer.test(partition='val')
         if args.training_plot:
-            trainer.plot_loss_metric(start=trainer.epoch - 10 * args.checkpoint, loss_metric='Chamfer', update=True)
+            start = max(trainer.epoch - 10 * args.checkpoint, 0)
+            trainer.plot_learning_curves(start=start, loss_metric='Chamfer', win='PC Encoding')
         trainer.save()
     trainer.test(partition=test_partition, all_metrics=True, de_normalize=args.de_normalize)
     if args.training_plot:
-        trainer.plot_loss_metric(start=args.checkpoint, loss_metric='Chamfer')
+        trainer.plot_learning_curves(start=args.checkpoint, loss_metric='Chamfer', win='PC Encoding')
 
 
 if __name__ == '__main__':
