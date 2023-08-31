@@ -2,8 +2,7 @@ import os
 import numpy as np
 import torch
 import json
-import visdom
-import webbrowser
+import warnings
 from sklearn import svm, metrics
 from sklearn.mixture import GaussianMixture
 from sklearn.decomposition import PCA
@@ -98,12 +97,12 @@ class VQVAETrainer(AETrainer):
         print(torch.histc(idx))
         return
 
-    def gmm_sampling(self):
-        with self.model.double_encoding:
-            self.test(partition='train', save_outputs=True)
-        z = torch.stack(self.test_outputs['z']).detach().numpy()
-        self.model.gm = GaussianMixture(32).fit(z)
-        return
+    # def gmm_sampling(self):
+    #     with self.model.double_encoding:
+    #         self.test(partition='train', save_outputs=True)
+    #     z = torch.stack(self.test_outputs['z']).detach().numpy()
+    #     self.model.gm = GaussianMixture(32).fit(z)
+    #     return
 
     def evaluate_generated_set(self, partition, repeat_chamfer=10, repeat_emd=0, batch_size=32, oracle=False):
         # self.gmm_sampling()
@@ -127,7 +126,6 @@ class VQVAETrainer(AETrainer):
                 train_ds = self.train_loader.dataset
                 sample_train = np.random.choice(range(len(train_ds)), size=test_l, replace=True)
                 generated_dataset = [train_ds[i][0][1] for i in sample_train]
-
                 print('Training Dataset has been sampled.')
             else:
                 while len(generated_dataset) < test_l:
@@ -239,13 +237,10 @@ class CWTrainer(Trainer):
         cw_q = self.vqvae_model.encoder(clouds[0], None)
         _, one_hot_idx = self.vqvae_model.quantise(cw_q)
         return {'x': cw_q.detach().clone(), 'data': {'one_hot_idx': one_hot_idx.detach().clone()}}
-        #return {'x': inputs[0]}
 
     def show_latent(self):
-        if not self.web_open:
-            self.vis = visdom.Visdom(env=self.exp_name)
-            webbrowser.open('http://localhost:8097')
-            self.web_open = True
+        if not self.activate_visdom():
+            return
         test_mu = torch.stack(self.vqvae_trainer.test_outputs['mu'])
         pca = PCA(3)
         test_mu_pca = pca.fit_transform(test_mu.numpy())

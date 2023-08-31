@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import torch
+# Using pyvista instead of plotly because of its ray casting. No current integration with visdom.
 import pyvista as pv
 from src.neighbour_op import graph_filtering
 

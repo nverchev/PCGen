@@ -54,7 +54,7 @@ def train_eval_model():
         trainer.save()
     trainer.test(partition=test_partition, all_metrics=True, de_normalize=args.de_normalize)
     if args.training_plot:
-        trainer.plot_learning_curves(start=args.checkpoint, loss_metric='Chamfer', win='PC Encoding')
+        trainer.plot_learning_curves(loss_metric='Chamfer', win='PC Encoding')
 
 
 if __name__ == '__main__':

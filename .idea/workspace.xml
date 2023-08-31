@@ -6,10 +6,13 @@
   <component name="ChangeListManager">
     <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/AE" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/AE.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setups/AE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/AE.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/setups/VQVAE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/VQVAE.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/loss_and_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/loss_and_metrics.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/trainer_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer_base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/viz_pc.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/viz_pc.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/train_eval_main_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_eval_main_model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/train_second_encoding.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_second_encoding.py" afterDir="false" />
     </list>
@@ -323,7 +326,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_eval_main_model.py" />
-      <option name="PARAMETERS" value="VQVAE --decoder_name PCGen --components 1 --dataset Coins --exp test" />
+      <option name="PARAMETERS" value="VQVAE --load --exp w_dim_256 --w_dim 256" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -436,7 +439,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_second_encoding.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes airplane --exp w_dim_256 --w_dim 256 --vae_dropout 0.0 --vae_lr 0.02 --c_kld 3" />
+      <option name="PARAMETERS" value="VQVAE --select_classes airplane --exp w_dim_256 --w_dim 256 --vae_dropout 0.0" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -912,7 +915,7 @@
       <option name="project" value="LOCAL" />
       <updated>1688659879691</updated>
     </task>
-    <option name="localTasksCounter" value="573" />
+    <option name="localTasksCounter" value="574" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -941,7 +944,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="it works with decay_steps == 0" />
     <MESSAGE value="better options, continuous plotting of curves" />
     <MESSAGE value="build to gitignore" />
     <MESSAGE value="strip path to model and dataset" />
@@ -966,7 +968,8 @@
     <MESSAGE value="cpu" />
     <MESSAGE value="Cpu only more or less operational (emd still not possible)" />
     <MESSAGE value="correcting bugs previous commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="correcting bugs previous commit" />
+    <MESSAGE value="Visdom integration" />
+    <option name="LAST_COMMIT_MESSAGE" value="Visdom integration" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -38,11 +38,12 @@ def train_second_encoding():
         while args.vae_epochs > cw_trainer.epoch:
             cw_trainer.train(args.vae_checkpoint, val_after_train=True)
             if args.training_plot:
+                # setting start > 0 is a quicker and automatic alternative than zooming the plotly plot
                 start = max(cw_trainer.epoch - 10 * args.checkpoint, 0)
                 cw_trainer.plot_learning_curves(start=start, win='W Encoding')
         cw_trainer.save()
         if args.training_plot:
-            cw_trainer.plot_learning_curves(start=10 * args.vae_checkpoint, win='W Encoding')
+            cw_trainer.plot_learning_curves(win='W Encoding')
     cw_trainer.test(test_partition, all_metrics=True, de_normalize=args.de_normalize, save_outputs=True)
     cw_trainer.show_latent()
 

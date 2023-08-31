@@ -233,22 +233,33 @@ class Trainer(metaclass=ABCMeta):
     def helper_inputs(self, inputs, labels):
         return {'x': inputs}
 
-    def plot_learning_curves(self, loss_metric='Criterion', start=0, win='Learning Curves'):
+    def activate_visdom(self):
         if not self.web_open:
             self.vis = visdom.Visdom(env=self.exp_name)
-            webbrowser.open('http://localhost:8097')
-            self.web_open = True
-        epochs = np.array([int(epoch) for epoch in self.train_log.keys()][start:])
-        legend = ['Training']
+            if self.vis.check_connection():
+                webbrowser.open('http://localhost:8097')
+                self.web_open = True
+            else:
+                return False
+        return True
+
+    def plot_learning_curves(self, loss_metric='Criterion', start=0, win='Learning Curves'):
+        if not self.activate_visdom():
+            warnings.warn('Impossible to display the learning curves on the server. Check the connection.')
+            return
+        epochs_train = [int(epoch) for epoch in self.train_log.keys()][start:]
         values_train = [self.train_log[epoch][loss_metric] for epoch in self.train_log.keys()][start:]
-        curves = np.array(values_train)
+        layout = dict(xlabel='Epoch', ylabel=loss_metric, title=win, update='replace', showlegend=True)
+        self.vis.line(X=epochs_train, Y=values_train, win=win, opts=layout, name='Training')
         if self.val_log:
-            values_val = [self.val_log[epoch][loss_metric] for epoch in self.val_log.keys()][start:]
-            epochs = np.column_stack((epochs, epochs))
-            curves = np.column_stack((curves, values_val))
-            legend.append('Validation')
-        layout = dict(xlabel='Epoch', ylabel=loss_metric, title=win, legend=legend, update='replace')
-        self.vis.line(X=epochs, Y=curves, win=win, opts=layout)
+            epochs_val = []
+            values_val = []
+            for str_epoch in self.val_log.keys():
+                int_epoch = int(str_epoch)
+                if int_epoch >= start:
+                    epochs_val.append(int_epoch)
+                    values_val.append(self.val_log[str_epoch][loss_metric])
+            self.vis.line(X=epochs_val, Y=values_val, win=win, opts=layout, update='append', name='Validation')
         return
 
     # Change device recursively to tensors inside a list or a dictionary

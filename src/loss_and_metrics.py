@@ -168,24 +168,8 @@ class CWEncoderLoss(nn.Module):
         }
 
 
-# Currently not used, replace VQVAE loo in get_ae_loss to use it
-# class DoubleEncodingLoss(VQVAELoss):
-#     def __init__(self, recon_loss, c_commitment, c_embedding, c_kld, vq_ema_update, **not_used):
-#         super().__init__(recon_loss, c_commitment=c_commitment, c_embedding=c_embedding, vq_ema_update=vq_ema_update)
-#         self.cw_loss = CWEncoderLoss(c_kld)
-#
-#     def forward(self, outputs, inputs, targets):
-#         dict_loss = super().forward(outputs, inputs, targets)
-#         second_dict_loss = self.cw_loss(outputs, [None, outputs['one_hot_idx']], targets)
-#         criterion = dict_loss.pop('Criterion') + second_dict_loss.pop('Criterion')
-#         return {'Criterion': criterion,
-#                 **dict_loss,
-#                 **second_dict_loss}
-
-
 def get_ae_loss(model_head, **args):
     return (AELoss if model_head in ('AE', 'Oracle') else VQVAELoss)( **args)
-    #return (AELoss if model_head in ('AE', 'Oracle') else DoubleEncodingLoss)(recon_loss, **other_args)
 
 
 class AllMetrics:
@@ -201,7 +185,10 @@ class AllMetrics:
             scale = scale.view(-1, 1, 1).expand_as(recon)
             recon *= scale
             ref_cloud *= scale
-        return self.batched_pairwise_similarity(ref_cloud, recon)
+        dict_metrics = self.batched_pairwise_similarity(ref_cloud, recon)
+        if self.de_normalize:
+            dict_metrics = {'Denorm ' + k: v for k, v in dict_metrics.items()}
+        return dict_metrics
 
     @staticmethod
     def batched_pairwise_similarity(clouds1, clouds2):
