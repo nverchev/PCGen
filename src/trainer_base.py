@@ -98,7 +98,6 @@ class Trainer(metaclass=ABCMeta):
         self.saved_test_metrics = {}  # saves metrics of last evaluation
         self.model_pardir = model_pardir
         self.vis = None
-        self.web_open = False
 
     @property
     def optimizer_settings(self):  # settings shown depend on epoch
@@ -233,18 +232,13 @@ class Trainer(metaclass=ABCMeta):
     def helper_inputs(self, inputs, labels):
         return {'x': inputs}
 
-    def activate_visdom(self):
-        if not self.web_open:
+    def check_visdom_connection(self):
+        if self.vis is None:
             self.vis = visdom.Visdom(env=self.exp_name)
-            if self.vis.check_connection():
-                webbrowser.open('http://localhost:8097')
-                self.web_open = True
-            else:
-                return False
-        return True
+        return self.vis.check_connection()
 
     def plot_learning_curves(self, loss_metric='Criterion', start=0, win='Learning Curves'):
-        if not self.activate_visdom():
+        if not self.check_visdom_connection():
             warnings.warn('Impossible to display the learning curves on the server. Check the connection.')
             return
         epochs_train = [int(epoch) for epoch in self.train_log.keys()][start:]

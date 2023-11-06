@@ -15,7 +15,7 @@ decoder_name: PCGen
 components: 4
 filtering: true
 k: 20
-w_dim: &w_dim 512
+w_dim: &w_dim 256
 laplacian_filter: false
 
 
@@ -28,7 +28,7 @@ act: ReLU
 recon_loss_name: 'ChamferEMD'
 m_training: 0
 opt_name: Adam
-lr: 0.001
+lr: 0.01
 wd: 0.
 min_decay: 0.01
 decay_steps: 900
@@ -57,16 +57,16 @@ vq_ema_update: false
 vq_noise: 1.
 
 # second encoding options
-c_kld: 2.5
+c_kld: 3
 vae_load: false
 vae_batch_size: 128
 vae_n_pseudo_inputs: 400
 vae_opt_name: Adam
-vae_lr: 0.03
-vae_wd: 0.00
+vae_lr: 0.01
+vae_wd: 0.000
 vae_min_decay: 0.01
-vae_decay_period: 150
-vae_epochs: 250
+vae_decay_period: 200
+vae_epochs: 300
 vae_checkpoint: 10
 vae_dropout: 0.0
 

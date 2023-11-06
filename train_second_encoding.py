@@ -28,11 +28,6 @@ def train_second_encoding():
     model.load_state_dict(model_state, strict=False)
     vqvae_trainer = get_trainer(model, loaders, args)
     vqvae_trainer.epoch = args.epochs
-    # cw_train_loader, cw_val_loader = get_cw_loaders(vqvae_trainer, train_partition='train',
-    #                                                 test_partition='val', batch_size=args.vae_batch_size)
-    # cw_loaders = dict(train_loader=cw_train_loader, val_loader=cw_val_loader, test_loader=None)
-    # cw_trainer = get_cw_trainer(vqvae_trainer, cw_loaders, args)
-
     cw_trainer = get_cw_trainer(vqvae_trainer, loaders, args)
     if not args.vae_load:
         while args.vae_epochs > cw_trainer.epoch:
@@ -40,10 +35,10 @@ def train_second_encoding():
             if args.training_plot:
                 # setting start > 0 is a quicker and automatic alternative than zooming the plotly plot
                 start = max(cw_trainer.epoch - 10 * args.checkpoint, 0)
-                cw_trainer.plot_learning_curves(start=start, win='W Encoding')
+                cw_trainer.plot_learning_curves(start=start, win='w-encoding')
         cw_trainer.save()
         if args.training_plot:
-            cw_trainer.plot_learning_curves(win='W Encoding')
+            cw_trainer.plot_learning_curves(win='w-encoding')
     cw_trainer.test(test_partition, all_metrics=True, de_normalize=args.de_normalize, save_outputs=True)
     cw_trainer.show_latent()
 

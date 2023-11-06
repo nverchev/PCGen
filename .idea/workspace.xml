@@ -6,14 +6,13 @@
   <component name="ChangeListManager">
     <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/AE" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/AE.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setups/AE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/AE.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/setups/VQVAE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/VQVAE.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/loss_and_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/loss_and_metrics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/neighbour_op.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/neighbour_op.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/options.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/options.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/trainer_base.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer_base.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/viz_pc.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/viz_pc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_eval_main_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_eval_main_model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/train_second_encoding.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_second_encoding.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -61,7 +60,7 @@
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/nverchev/PycharmProjects/PCGen/models/VQVAE_car/settings.json&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/nverchev/PycharmProjects/BayesNetworks&quot;,
     &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.ide.settings.new.ui&quot;,
     &quot;two.files.diff.last.used.file&quot;: &quot;/home/nverchev/PycharmProjects/PCGen/models/VQVAE_car/settings.json&quot;
@@ -75,11 +74,11 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/models" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/experiments" />
       <recent name="$PROJECT_DIR$/external" />
       <recent name="$PROJECT_DIR$/external/metrics/pytorch_structural_losses" />
-      <recent name="$PROJECT_DIR$/models/LDGCNN_PCGen_Chamfer_VQVAE_test_large_cw" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/external/pytorch_structural_losses" />
@@ -96,7 +95,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Python.train_second_encoding">
+  <component name="RunManager" selected="Python.evaluate_samplings">
     <configuration name="dataset" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -131,7 +130,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate_samplings.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes airplane --emd_tests 0 --exp w_dim_256 --w_dim 256" />
+      <option name="PARAMETERS" value="VQVAE --select_classes chair --emd_tests 10" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -198,7 +197,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/generate.py" />
-      <option name="PARAMETERS" value="VQVAE --gen 5 --no-interactive_plot --seed 3407 --select_classes airplane --exp w_dim_256 --w_dim 256 --add_viz components" />
+      <option name="PARAMETERS" value="VQVAE --gen 5 --interactive_plot --seed 0 --select_classes airplane --exp w_dim_256 --w_dim 256 --add_viz none" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -326,7 +325,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_eval_main_model.py" />
-      <option name="PARAMETERS" value="VQVAE --load --exp w_dim_256 --w_dim 256" />
+      <option name="PARAMETERS" value="VQVAE --load" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -426,7 +425,7 @@
         <option name="RunConfigurationTask" enabled="false" run_configuration_name="train_main_model" run_configuration_type="PythonConfigurationType" />
       </method>
     </configuration>
-    <configuration name="train_second_encoding" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+    <configuration name="train_second_encoding" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -439,7 +438,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_second_encoding.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes airplane --exp w_dim_256 --w_dim 256 --vae_dropout 0.0" />
+      <option name="PARAMETERS" value="VQVAE --select_classes chair" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -481,7 +480,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/visualize_reconstructions.py" />
-      <option name="PARAMETERS" value="AE --decoder PCGen --final --components 1 --exp PCGen --no-interactive_plot --viz 4 555 1762 1988 2435 3827 6348 7541 --seed 3407" />
+      <option name="PARAMETERS" value="AE --decoder PCGen --final --exp PCGen4 --components 4 --interactive_plot --viz 1940 --seed 3407 --add_viz filter" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -541,12 +540,12 @@
       <item itemvalue="Python.train_eval_main_model_chair" />
       <item itemvalue="Python.train_eval_main_model_concat" />
       <item itemvalue="Python.trainer" />
-      <item itemvalue="Python.train_second_encoding" />
       <item itemvalue="Python.visualize_reconstructions" />
       <item itemvalue="Python.train_main_model_2" />
       <item itemvalue="Python.train_eval (2)" />
       <item itemvalue="Python.evaluate_samplings_airplane" />
       <item itemvalue="Python.evaluate_samplings_chair" />
+      <item itemvalue="Python.train_second_encoding" />
       <item itemvalue="Python.scratch" />
       <item itemvalue="Python.vizualisation" />
       <item itemvalue="Python.dataset" />
@@ -555,11 +554,11 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.scratch" />
+        <item itemvalue="Python.train_second_encoding" />
         <item itemvalue="Python.vizualisation" />
         <item itemvalue="Python.viz_pc" />
+        <item itemvalue="Python.scratch" />
         <item itemvalue="Python.dataset" />
-        <item itemvalue="Python.more_pc_viz" />
       </list>
     </recent_temporary>
   </component>
@@ -915,7 +914,7 @@
       <option name="project" value="LOCAL" />
       <updated>1688659879691</updated>
     </task>
-    <option name="localTasksCounter" value="574" />
+    <option name="localTasksCounter" value="575" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -944,7 +943,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="better options, continuous plotting of curves" />
     <MESSAGE value="build to gitignore" />
     <MESSAGE value="strip path to model and dataset" />
     <MESSAGE value="Shapenet Flow does not replace when sampling" />
@@ -969,7 +967,8 @@
     <MESSAGE value="Cpu only more or less operational (emd still not possible)" />
     <MESSAGE value="correcting bugs previous commit" />
     <MESSAGE value="Visdom integration" />
-    <option name="LAST_COMMIT_MESSAGE" value="Visdom integration" />
+    <MESSAGE value="fixed Visdom bugs" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed Visdom bugs" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

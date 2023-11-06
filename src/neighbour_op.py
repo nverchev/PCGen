@@ -92,7 +92,7 @@ def get_graph_features(x, k=20, indices=None):
     return indices, feature
 
 
-def graph_filtering(x, laplacian, k=4):
+def graph_filtering(x, laplacian=False, k=4):
     neighbours = get_neighbours(x, k=k, indices=None)[1]
     neighbours = neighbours[..., 1:]  # closest neighbour is point itself
     diff = x.unsqueeze(-1).expand(-1, -1, -1, k - 1) - neighbours

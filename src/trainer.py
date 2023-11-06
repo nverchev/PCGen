@@ -63,15 +63,6 @@ class AETrainer(Trainer):
         json.dump(self.saved_accuracies, open(accuracy_path, 'w'))
         return self.acc
 
-    def latent_visualisation(self, highlight_label):
-        from sklearn.decomposition import PCA
-        cw = torch.stack(self.test_outputs['cw'])
-        pca = PCA(3)
-        cw_pca = pca.fit_transform(cw.numpy())
-        labels = torch.stack(self.test_metadata['test_targets']).cpu().numpy()
-        highlight_cw = cw_pca[(highlight_label == labels)]
-        # show_pc([torch.FloatTensor(cw_pca), highlight_cw], colors=['blue', 'red'])
-
     def loss(self, output, inputs, targets):
         return self._loss(output, inputs, targets)
 
@@ -239,7 +230,8 @@ class CWTrainer(Trainer):
         return {'x': cw_q.detach().clone(), 'data': {'one_hot_idx': one_hot_idx.detach().clone()}}
 
     def show_latent(self):
-        if not self.activate_visdom():
+        if not self.check_visdom_connection():
+            warnings.warn('Impossible to show latent space on visdom. Check the connection.')
             return
         test_mu = torch.stack(self.vqvae_trainer.test_outputs['mu'])
         pca = PCA(3)
@@ -252,7 +244,7 @@ class CWTrainer(Trainer):
         labels = np.hstack((test_labels, pseudo_labels))
         title = 'Continuous Latent Space'
         self.vis.scatter(X=mu_pca, Y=labels, win=title,
-                         opts=dict(title=title, markersize=1, legend=['Validation', 'Pseudo-Inputs']))
+                         opts=dict(title=title, markersize=5, legend=['Validation', 'Pseudo-Inputs']))
 
 
 def get_trainer(model, loaders, args):

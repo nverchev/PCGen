@@ -104,7 +104,7 @@ def parser_add_arguments(parser):
     util_opt.add_argument('--checkpoint', type=bounded_num(int, v_min=1),
                           help='epochs between checkpoints (should divide epochs)')
     util_opt.add_argument('--cuda', action=BooleanOptionalAction, help='run on Cuda')
-    util_opt.add_argument('--seed', type=bounded_num(int, v_min=1), help='torch/numpy seed (0 no seed)')
+    util_opt.add_argument('--seed', type=bounded_num(int, v_min=0), help='torch/numpy seed (0 no seed)')
 
 
 def parser_add_vqvae_arguments(parser):
