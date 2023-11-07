@@ -15,7 +15,7 @@ def render_cloud(clouds, name, colorscale='sequence', interactive=True, arrows=N
     color_sequence = [blue, red, green, violet, orange]
     plotter = pv.Plotter(lighting='three_lights', window_size=(1024, 1024), notebook=False, off_screen=not interactive)
     plotter.camera_position = pv.CameraPosition((-3., -2.1, 1.1), focal_point=(0, 0, 0), viewup=(0, 0, 1))
-    plotter.camera_position = pv.CameraPosition((2, 4, 0), focal_point=(0, 0, 0), viewup=(0, 0, 1))
+    #plotter.camera_position = pv.CameraPosition((2, 4, 0), focal_point=(0, 0, 0), viewup=(0, 0, 1))
 
     for i in [-1, 1]:
         light_point = (i, 1, 0)
@@ -33,7 +33,7 @@ def render_cloud(clouds, name, colorscale='sequence', interactive=True, arrows=N
         n = cloud.shape[0]
         cloud = pv.PolyData(cloud[:, [0, 2, 1]].numpy())
         geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
-        cloud["radius"] = .01 * np.ones(n)
+        cloud["radius"] = .05 * np.ones(n)
         glyphed = cloud.glyph(scale='radius', geom=geom, orient=False)
         plotter.add_mesh(glyphed, color=color, point_size=15, render_points_as_spheres=True, smooth_shading=True)
         if arrows is not None:

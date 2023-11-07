@@ -1,9 +1,10 @@
+import functools
 import torch
 import torch.nn as nn
 from torch.autograd import Function
 
 negative_slope = 0.2
-act = nn.LeakyReLU(negative_slope=0.2, inplace=True)
+Act = functools.partial(nn.LeakyReLU, negative_slope=0.2)
 
 
 class View(nn.Module):
@@ -25,7 +26,7 @@ class MaxChannel(nn.Module):
 # Input (Batch, Features)
 class LinearLayer(nn.Module):
 
-    def __init__(self, in_dim, out_dim, act=act, batch_norm=True, groups=1):
+    def __init__(self, in_dim, out_dim, Act=Act, batch_norm=True, groups=1):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
@@ -35,8 +36,8 @@ class LinearLayer(nn.Module):
         self.bn = self.get_bn_layer() if batch_norm else None
         self.bias = False if batch_norm else True
         self.dense = self.get_dense_layer()
-        self.act = act
-        self.init(act)
+        self.act = None if Act is None else Act(inplace=True)
+        self.init(self.act)
 
     def init(self, act):
         if act is None:

@@ -46,7 +46,7 @@ class WDecoder(nn.Module):
             nn.Dropout1d(dropout),
             PointsConvLayer(self.dim_codes * self.h_dim[0], self.dim_codes * self.h_dim[1], groups=self.dim_codes),
             nn.Dropout1d(dropout),
-            PointsConvLayer(self.dim_codes * self.h_dim[1], w_dim, groups=self.dim_codes, batch_norm=False, act=None))
+            PointsConvLayer(self.dim_codes * self.h_dim[1], w_dim, groups=self.dim_codes, batch_norm=False, Act=None))
 
     def forward(self, x):
         x = self.decode(x.repeat(1, self.dim_codes).unsqueeze(2))
@@ -61,9 +61,9 @@ class FullyConnected(nn.Module):
         self.h_dim = [256] * 2
         self.filtering = filtering
         self.m = m_training
-        modules = [LinearLayer(w_dim, self.h_dim[0], batch_norm=False, act=nn.ReLU(inplace=True)),
-                   LinearLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act=nn.ReLU(inplace=True)),
-                   LinearLayer(self.h_dim[1], OUT_CHAN * self.m, batch_norm=False, act=None)]
+        modules = [LinearLayer(w_dim, self.h_dim[0], batch_norm=False, Act=nn.ReLU),
+                   LinearLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, Act=nn.ReLU),
+                   LinearLayer(self.h_dim[1], OUT_CHAN * self.m, batch_norm=False, Act=None)]
         self.mlp = nn.Sequential(*modules)
 
     def forward(self, w, m):  # for this model, m is fixed
@@ -203,10 +203,10 @@ class AtlasNetv2(nn.Module):
     def get_mlp_adj(self):
         dim = self.embedding_dim
         dims = [dim, dim // 2, dim // 4]
-        modules = [PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True))]
+        modules = [PointsConvLayer(dim, dim, Act=nn.ReLU)]
         for in_dim, out_dim in zip(dims[0:-1], dims[1:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, act=nn.ReLU(inplace=True)))
-        modules.append(PointsConvLayer(dims[-1], OUT_CHAN, batch_norm=False, act=nn.Tanh()))
+            modules.append(PointsConvLayer(in_dim, out_dim, Act=nn.ReLU))
+        modules.append(PointsConvLayer(dims[-1], OUT_CHAN, batch_norm=False, Act=nn.Tanh))
         return nn.Sequential(*modules)
 
     def forward(self, w, m):
@@ -236,9 +236,9 @@ class AtlasNetv2Deformation(AtlasNetv2):
 
     def get_patch_deformation(self):
         dim = self.h_dim[0]
-        modules = [PointsConvLayer(2, dim, act=nn.ReLU(inplace=True)),
-                   PointsConvLayer(dim, dim, act=nn.ReLU(inplace=True)),
-                   PointsConvLayer(dim, self.patch_embed_dim, batch_norm=False, act=nn.Tanh())]
+        modules = [PointsConvLayer(2, dim, Act=nn.ReLU),
+                   PointsConvLayer(dim, dim, Act=nn.ReLU),
+                   PointsConvLayer(dim, self.patch_embed_dim, batch_norm=False, Act=nn.Tanh)]
         return nn.Sequential(*modules)
 
 
@@ -320,13 +320,13 @@ class PCGenBase(nn.Module):
         # m_training given at runtime
         self.h_dim = model_settings['hidden_dims']
         self.laplacian = model_settings['laplacian_filter']
-        self.act = getattr(nn, model_settings['act'])(inplace=True)
+        self.Act = getattr(nn, model_settings['act'])
         self.filtering = filtering
         self.sample_dim = sample_dim
         self.num_groups = components
-        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act=self.act)
+        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, Act=self.Act)
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
-                                           **{'act': nn.Hardtanh(inplace=True)} if not self.concat else {})
+                                           **{'Act': nn.Hardtanh} if not self.concat else {})
         self.group_conv = nn.ModuleList()
         self.group_final = nn.ModuleList()
 
@@ -336,11 +336,11 @@ class PCGenBase(nn.Module):
         for _ in range(self.num_groups):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-                modules.append(PointsConvLayer(in_dim, out_dim, act=self.act))
+                modules.append(PointsConvLayer(in_dim, out_dim, Act=self.Act))
             self.group_conv.append(nn.Sequential(*modules))
-            self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act=None))
+            self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, Act=None))
         if self.num_groups > 1:
-            self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, act=None)
+            self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, Act=None)
 
     def forward(self, w, m, s=None, viz_att=None, viz_components=None):
         batch = w.size()[0]
