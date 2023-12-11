@@ -5,15 +5,14 @@ from torch import nn
 import torch.nn.functional as F
 import geomloss
 from src.neighbour_op import pykeops_square_distance, cpu_square_distance
-from emd import emdModule
+# from emd import emdModule
 from structural_losses import match_cost
 
 
 # Chamfer Distance
 def pykeops_chamfer(t1, t2):
     # The following code is currently not supported for backprop
-    # return dist.min(axis = 2).mean(0).sum()\
-    #      + dist.min(axis = 1).mean(0).sum()
+    # return (dist.min(axis = 2) + dist.min(axis = 1)).sum(axis=(1, 2)
     # We use the retrieved index on torch
     dist = pykeops_square_distance(t1, t2)
     idx1 = dist.argmin(axis=1).expand(-1, -1, t1.shape[2])
@@ -27,7 +26,7 @@ def pykeops_chamfer(t1, t2):
     # forward + reverse
     squared = squared1 + squared2
     # augmented = torch.maximum(augmented1, augmented2)
-    return squared#, augmented
+    return squared  # , augmented
 
 
 # Works with distance in torch
@@ -36,11 +35,11 @@ def cpu_chamfer(t1, t2):
     return torch.min(dist, dim=-1)[0].sum(1) + torch.min(dist, dim=-2)[0].sum(1)
 
 
-def gaussian_ll(x, mean, log_var):
-    return -0.5 * (log_var + torch.pow(x - mean, 2) / torch.exp(log_var))
+def gaussian_ll(x, mu, log_var):
+    return -0.5 * (log_var + torch.pow(x - mu, 2) / torch.exp(log_var))
 
 
-def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var, d_mu=(), d_log_var=(), prior_log_var=(), **not_used):
+def kld_loss(mu, log_var, z, pseudo_mu, pseudo_log_var, d_mu=(), d_log_var=(), prior_log_var=(), **_):
     posterior_ll = gaussian_ll(z, mu, log_var).sum(1)  # sum dimensions
     k = pseudo_mu.shape[0]
     b = mu.shape[0]
@@ -71,19 +70,19 @@ class ReconLoss:
 
     def __call__(self, inputs, recon):
         squared = self.chamfer(inputs, recon)
-        dict_recon = {'Chamfer': squared.sum(0)}
+        dict_recon = {'Chamfer': squared}
         if self.recon_loss_name == 'Chamfer' or self.device.type == 'cpu':
-            recon_loss = squared.mean(0)  # Sum over points, mean over samples
+            recon_loss = squared
         elif self.recon_loss_name == 'ChamferEMD':
-            #emd = torch.sqrt(self.emd_dist(inputs, recon, 0.005, 50)[0]).sum(1)  # mean over samples
+            # emd = torch.sqrt(self.emd_dist(inputs, recon, 0.005, 50)[0]).sum(1)
             emd = match_cost(inputs.contiguous(), recon.contiguous())
-            recon_loss = emd.mean(0) + squared.mean(0)  # Sum over points, mean over samples
-            dict_recon['EMD'] = emd.sum(0)
+            recon_loss = emd + squared
+            dict_recon['EMD'] = emd
         else:
             assert self.recon_loss_name == 'Sinkhorn', f'Loss {self.recon_loss_name} not known'
             sk_loss = self.sinkhorn(inputs, recon)
-            recon_loss = sk_loss.mean(0)
-            dict_recon['Sinkhorn'] = sk_loss.sum(0)
+            recon_loss = sk_loss
+            dict_recon['Sinkhorn'] = sk_loss
 
         dict_recon['recon'] = recon_loss
         return dict_recon
@@ -114,17 +113,17 @@ class AELoss(nn.Module):
 #     def forward(self, outputs, inputs, targets):
 #         recon_loss_dict = super().forward(outputs, inputs, targets)
 #         kld = kld_loss(*[outputs[key] for key in ['mu', 'log_var']])
-#         reg = self.c_kld * kld.mean(0)
+#         reg = self.c_kld * kld
 #         criterion = recon_loss_dict.pop('Criterion') + reg
 #         return {'Criterion': criterion,
 #                 **recon_loss_dict,
 #                 'reg': reg,
-#                 'KLD': kld.sum(0),
+#                 'KLD': kld,
 #                 }
 
 
 class VQVAELoss(AELoss):
-    def __init__(self, recon_loss_name, c_commitment, c_embedding, vq_ema_update, device, **not_used):
+    def __init__(self, recon_loss_name, c_commitment, c_embedding, vq_ema_update, device, **_):
         super().__init__(recon_loss_name, device)
         self.c_commitment = c_commitment
         self.c_embedding = c_embedding
@@ -147,29 +146,29 @@ class VQVAELoss(AELoss):
 
 
 class CWEncoderLoss(nn.Module):
-    def __init__(self, c_kld, **not_used):
+    def __init__(self, c_kld, **_):
         super().__init__()
         self.c_kld = c_kld
 
-    def forward(self, outputs, inputs, targets):
+    def forward(self, outputs, *_):
         kld = kld_loss(**outputs)
         one_hot_idx = outputs['one_hot_idx'].clone()
         sqrt_dist = torch.sqrt(outputs['cw_dist'])
         cw_neg_dist = -sqrt_dist + sqrt_dist.min(2, keepdim=True)[0]
         nll = -(cw_neg_dist.log_softmax(dim=2) * one_hot_idx).sum((1, 2))
-        criterion = nll.mean(0) + self.c_kld * kld.mean(0)
+        criterion = nll + self.c_kld * kld
         one_hot_predictions = F.one_hot(outputs['cw_dist'].argmin(2), num_classes=one_hot_idx.shape[2])
         accuracy = (one_hot_idx * one_hot_predictions).sum(2).mean(1)
         return {
             'Criterion': criterion,
-            'KLD': kld.sum(0),
-            'NLL': nll.sum(0),
-            'Accuracy': accuracy.sum(0)
+            'KLD': kld,
+            'NLL': nll,
+            'Accuracy': accuracy
         }
 
 
 def get_ae_loss(model_head, **args):
-    return (AELoss if model_head in ('AE', 'Oracle') else VQVAELoss)( **args)
+    return (AELoss if model_head in ('AE', 'Oracle') else VQVAELoss)(**args)
 
 
 class AllMetrics:
@@ -204,7 +203,7 @@ class AllMetrics:
             squared /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
             emd /= clouds1.shape[1]  # Chamfer is normalised by ref and recon number of points when equal
         dict_recon_metrics = {
-            'Chamfer': squared.sum(0),
-            'EMD': emd.sum(0)
+            'Chamfer': squared,
+            'EMD': emd
         }
         return dict_recon_metrics

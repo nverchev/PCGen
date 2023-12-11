@@ -1,87 +1,53 @@
-import os
 import numpy as np
 import torch
 import json
 import warnings
-from sklearn import svm, metrics
-from sklearn.mixture import GaussianMixture
+# from sklearn.mixture import GaussianMixture
 from sklearn.decomposition import PCA
-from src.trainer_base import Trainer
-from src.optim import get_opt, CosineSchedule
-from src.loss_and_metrics import get_ae_loss, CWEncoderLoss, AllMetrics
-from src.loss_and_metrics import pykeops_chamfer, cpu_chamfer
-
+from custom_trainer import Trainer, get_scheduler
+from src.loss_and_metrics import get_ae_loss, CWEncoderLoss, AllMetrics, pykeops_chamfer, cpu_chamfer
+from src.dataset import get_datasets
+from src.model import get_model
 # match cost is the emd version used in other works as a baseline
 from structural_losses import match_cost
 
 
 class AETrainer(Trainer):
-    clf = svm.SVC(kernel='linear')
     saved_accuracies = {}
 
-    def __init__(self, model, block_args):
+    def __init__(self, model, **block_args):
         super().__init__(model, **block_args)
-        self.acc = None
-        self.cf = None  # confusion matrix
-        self._loss = get_ae_loss(**block_args)
-        self._metrics = self._loss
+        self.metrics = self.loss
         return
 
-    def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=False, **kwargs):
+    def test(self, partition='val', save_outputs=False, all_metrics=False, de_normalize=False, **_):
         if all_metrics:
-            self._metrics = lambda x, y, z: AllMetrics(de_normalize)(x, y)
+            self.metrics = lambda x, y, z: AllMetrics(de_normalize)(x, y)
         super().test(partition=partition, save_outputs=save_outputs)
         return
 
     def update_m_training(self, m):
         self.model.m_training = m
 
-    def class_metric(self, final=False):
-        # No rotation here
-        self.train_loader.dataset.rotation = False
-        self.test(partition='train', save_outputs=self.test_outputs)
-        self.train_loader.dataset.rotation = True
-        x_train = np.array([cw.numpy() for cw in self.test_outputs['cw']])
-        y_train = np.array([cw.numpy() for cw in self.test_metadata['test_targets']])
-        shuffle = np.random.permutation(y_train.shape[0])
-        x_train = x_train[shuffle]
-        y_train = y_train[shuffle]
-        print('Fitting the classifier ...')
-        self.clf.fit(x_train, y_train)
-        partition = 'test' if final else 'val'
-        self.test(partition=partition)
-        x_test = np.array([cw.numpy() for cw in self.test_outputs['cw']])
-        y_test = np.array([cw.numpy() for cw in self.test_metadata['test_targets']])
-        y_hat = self.clf.predict(x_test)
-        self.acc = (y_hat == y_test).sum() / y_hat.shape[0]
-        print('Accuracy: ', self.acc)
-        self.cf = metrics.confusion_matrix(y_hat, y_test, normalize='true')
-        print('Mean Accuracy;', np.diag(self.cf).astype(float).mean())
-        directory = os.path.join(self.model_pardir, self.exp_name)
-        accuracy_path = os.path.join(directory, 'svm_accuracies.json')
-        self.saved_accuracies[self.epoch] = self.acc
-        json.dump(self.saved_accuracies, open(accuracy_path, 'w'))
-        return self.acc
+    def loss_dict(self, outputs, inputs, targets, **_):
+        return self.loss(outputs, inputs, targets)
 
-    def loss(self, output, inputs, targets):
-        return self._loss(output, inputs, targets)
-
-    def helper_inputs(self, inputs, labels):
+    def helper_inputs(self, inputs):
         # inputs length vary on the dataset, when resampling two different re-samplings of the shape are given
         indices = inputs[-1]
         if torch.all(indices == 0):
             indices = None
         input_shape = inputs[1]
-        return {'x': input_shape, 'indices': indices}
+        return [input_shape], {'indices': indices}
 
-    def metrics(self, output, inputs, targets):
-        return self._metrics(output, inputs, targets)
+    def metric_dict(self, outputs, inputs, targets, **_):
+        return self.metrics(outputs, inputs, targets)
 
 
 class VQVAETrainer(AETrainer):
 
-    def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=True, **kwargs):
-        super().test(partition, all_metrics, de_normalize, save_outputs=True, **kwargs)
+    def test(self, partition='val', save_outputs=True, all_metrics=False, de_normalize=False, **kwargs):
+        super().test(partition, save_outputs, all_metrics, de_normalize, **kwargs)
         idx = torch.stack(self.test_outputs['one_hot_idx']).float()
         idx = idx.mean(0)  # average dataset values
         self.print_statistics('Index Usage', idx)
@@ -177,8 +143,8 @@ class VQVAETrainer(AETrainer):
         coverage = np.unique(coverage_closest).shape[0] / test_l
         mmd_array = dist_array[:test_l, test_l:]  # ref_sample, gen_sample
         mmd = mmd_array.min(axis=1).mean()
-        print(f'Coverage score ({metric}): {coverage:.4e}')
         print(f'Minimum Matching Distance score ({metric}): {mmd:.4e}')
+        print(f'Coverage score ({metric}): {coverage:.4e}')
         print(f'1-NNA score ({metric}): {nna:.4e}')
         return mmd, coverage, nna
 
@@ -187,33 +153,32 @@ class VQVAETrainer(AETrainer):
         if not len(test_outcomes):
             print(f'No test performed for "{name}"')
             return
-        to = np.array(test_outcomes)
+        test_outcomes = np.array(test_outcomes)
         print(name)
-        print(f'Number of tests: {len(to):} Min: {to.min(initial=None):.4e} Max: {to.max(initial=None):.4e} '
-              f'Mean: {to.mean():.4e} Std: {to.std():.4e}')
+        print(f'Number of tests: {len(test_outcomes):} Min: {test_outcomes.min():.4e} Max: {test_outcomes.max():.4e} '
+              f'Mean: {test_outcomes.mean():.4e} Std: {test_outcomes.std():.4e}')
 
 
 class CWTrainer(Trainer):
 
-    def __init__(self, vqvae_trainer, block_args):
+    def __init__(self, vqvae_trainer, **block_args):
         self.vqvae_trainer = vqvae_trainer
         self.vqvae_model = vqvae_trainer.model
         self.vqvae_epoch = vqvae_trainer.epoch
         super().__init__(vqvae_trainer.model.cw_encoder, **block_args)
-        self._loss = CWEncoderLoss(**block_args)
         return
 
-    def test(self, partition, all_metrics=False, de_normalize=False, save_outputs=0, **kwargs):
+    def test(self, partition='val', save_outputs=False, all_metrics=False, de_normalize=False, **_):
         super().test(partition=partition, save_outputs=save_outputs)  # test partition uses val dataset
         with self.vqvae_trainer.model.double_encoding:
-            self.vqvae_trainer.test(partition, all_metrics, de_normalize, save_outputs, **kwargs)  # test on val
+            self.vqvae_trainer.test(partition, all_metrics, de_normalize, save_outputs)  # test on val
 
-    def loss(self, output, inputs, targets):
-        return self._loss(output, inputs, targets)
+    def loss_dict(self, output, inputs, targets, **_):
+        return self.loss(output, inputs, targets)
 
     def save(self, new_exp_name=None):
         self.model.eval()
-        paths = self.vqvae_trainer.paths(new_exp_name, epoch=self.vqvae_epoch)
+        paths = self.vqvae_trainer.paths(new_exp_name or self.exp_name, self.vqvae_epoch, self.model_pardir)
         self.vqvae_model.cw_encoder.load_state_dict(self.model.state_dict())
         if new_exp_name:
             json.dump(self.settings, open(paths['settings'], 'w'))
@@ -222,12 +187,12 @@ class CWTrainer(Trainer):
         return
 
     @torch.inference_mode()
-    def helper_inputs(self, inputs, labels):
-        [scale, *clouds, _] = inputs
+    def helper_inputs(self, inputs):
+        [_, *clouds, _] = inputs
         self.vqvae_model.train(self.model.training)
         cw_q = self.vqvae_model.encoder(clouds[0], None)
         _, one_hot_idx = self.vqvae_model.quantise(cw_q)
-        return {'x': cw_q.detach().clone(), 'data': {'one_hot_idx': one_hot_idx.detach().clone()}}
+        return [cw_q.detach().clone()], {'data': {'one_hot_idx': one_hot_idx.detach().clone()}}
 
     def show_latent(self):
         if not self.check_visdom_connection():
@@ -247,30 +212,49 @@ class CWTrainer(Trainer):
                          opts=dict(title=title, markersize=5, legend=['Validation', 'Pseudo-Inputs']))
 
 
-def get_trainer(model, loaders, args):
+def get_trainer(args):
+    model = get_model(**vars(args))
+    train_dataset, val_dataset, test_dataset = get_datasets(**vars(args))
     if args.model_head == 'VQVAE':
         lr = {'encoder': args.lr, 'decoder': args.lr, 'cw_encoder': args.lr}
     else:
         lr = args.lr
-    optimizer, optim_args = get_opt(args.opt_name, lr, args.wd)
+    scheduler_cls = get_scheduler(args.scheduler_name)
+    if args.scheduler_name == 'Cosine':
+        scheduler = scheduler_cls(decay_steps=args.decay_steps, min_decay=args.min_decay)
+    else:
+        scheduler = scheduler_cls()
     trainer_args = dict(
-        optimizer=optimizer,
-        optim_args=optim_args,
-        scheduler=CosineSchedule(decay_steps=args.decay_steps, min_decay=args.min_decay),
-        **loaders,
-        **vars(args)
-
-    )
-
-    return (VQVAETrainer if args.model_head == 'VQVAE' else AETrainer)(model, trainer_args)
-
-
-def get_cw_trainer(vqvae_trainer, cw_loaders, args):
-    optimizer, optim_args = get_opt(args.vae_opt_name, args.vae_lr, args.vae_wd)
-    trainer_args = dict(
-        optimizer=optimizer,
-        optim_args=optim_args,
-        **cw_loaders,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+        test_dataset=test_dataset,
+        optim_args={'lr': lr, 'weight_decay': args.wd},
+        scheduler=scheduler,
+        loss=get_ae_loss(**vars(args)),
         **vars(args)
     )
-    return CWTrainer(vqvae_trainer, trainer_args)
+
+    return (VQVAETrainer if args.model_head == 'VQVAE' else AETrainer)(model, **trainer_args)
+
+
+def get_cw_trainer(vqvae_trainer,  args):
+    train_dataset, val_dataset, test_dataset = get_datasets(**vars(args))
+    del args.batch_size  # clashes with the optimizer_cls argument
+    del args.optimizer_cls  # clashes with the optimizer_cls argument
+    scheduler_cls = get_scheduler(args.vae_scheduler_name)
+    if args.scheduler_name == 'Cosine':
+        scheduler = scheduler_cls(decay_steps=args.vae_decay_steps, min_decay=args.vae_min_decay)
+    else:
+        scheduler = scheduler_cls()
+    trainer_args = dict(
+        batch_size=args.vae_batch_size,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+        test_dataset=test_dataset,
+        optimizer_cls=args.vae_optimizer_cls,
+        optim_args={'lr': args.vae_lr, 'weight_decay': args.vae_wd},
+        scheduler=scheduler,
+        loss=CWEncoderLoss(**vars(args)),
+        **vars(args)
+    )
+    return CWTrainer(vqvae_trainer, **trainer_args)

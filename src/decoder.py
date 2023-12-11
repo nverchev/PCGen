@@ -46,7 +46,8 @@ class WDecoder(nn.Module):
             nn.Dropout1d(dropout),
             PointsConvLayer(self.dim_codes * self.h_dim[0], self.dim_codes * self.h_dim[1], groups=self.dim_codes),
             nn.Dropout1d(dropout),
-            PointsConvLayer(self.dim_codes * self.h_dim[1], w_dim, groups=self.dim_codes, batch_norm=False, Act=None))
+            PointsConvLayer(self.dim_codes * self.h_dim[1], w_dim, groups=self.dim_codes,
+                            batch_norm=False, act_cls=None))
 
     def forward(self, x):
         x = self.decode(x.repeat(1, self.dim_codes).unsqueeze(2))
@@ -55,18 +56,18 @@ class WDecoder(nn.Module):
 
 class FullyConnected(nn.Module):
 
-    def __init__(self, w_dim, m_training, filtering, **model_settings):
+    def __init__(self, w_dim, m_training, filtering, **_):
         super().__init__()
         self.w_dim = w_dim
         self.h_dim = [256] * 2
         self.filtering = filtering
         self.m = m_training
-        modules = [LinearLayer(w_dim, self.h_dim[0], batch_norm=False, Act=nn.ReLU),
-                   LinearLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, Act=nn.ReLU),
-                   LinearLayer(self.h_dim[1], OUT_CHAN * self.m, batch_norm=False, Act=None)]
+        modules = [LinearLayer(w_dim, self.h_dim[0], batch_norm=False, act_cls=nn.ReLU),
+                   LinearLayer(self.h_dim[0], self.h_dim[1], batch_norm=False, act_cls=nn.ReLU),
+                   LinearLayer(self.h_dim[1], OUT_CHAN * self.m, batch_norm=False, act_cls=None)]
         self.mlp = nn.Sequential(*modules)
 
-    def forward(self, w, m):  # for this model, m is fixed
+    def forward(self, w, _):  # for this model, m is fixed
         x = self.mlp(w)
         return x.view(-1, OUT_CHAN, self.m)
 
@@ -126,8 +127,8 @@ class FoldingNet(nn.Module):
         delta_y = graph_feature[:, :, :, :-1] - graph_feature[:, :, :, 1:]  # vertical weights
         delta_x = torch.exp(-torch.sum(delta_x ** 2, dim=1) / self.graph_eps_sqr)  # Gaussian weight
         delta_y = torch.exp(-torch.sum(delta_y ** 2, dim=1) / self.graph_eps_sqr)
-        delta_x = (delta_x > self.graph_r) * delta_x
-        delta_y = (delta_y > self.graph_r) * delta_y
+        delta_x = torch.BoolTensor(delta_x > self.graph_r) * delta_x
+        delta_y = torch.BoolTensor(delta_y > self.graph_r) * delta_y
 
         delta_x_left = F.pad(delta_x, pad=[0, 0, 1, 0])
         delta_x_right = F.pad(delta_x, pad=[0, 0, 0, 1])
@@ -138,17 +139,17 @@ class FoldingNet(nn.Module):
         delta = torch.sum(delta, dim=1).unsqueeze(1).expand(-1, 3, -1, -1)
         delta_x = delta_x.unsqueeze(1).expand(-1, 3, -1, -1)
         delta_y = delta_y.unsqueeze(1).expand(-1, 3, -1, -1)
-        pc_filt1 = F.pad((pc_exp[:, :, :-1, :] * delta_x), [0, 0, 1, 0])
-        pc_filt1 += F.pad((pc_exp[:, :, 1:, :] * delta_x), [0, 0, 0, 1])
-        pc_filt1 += F.pad((pc_exp[:, :, :, :-1] * delta_y), [1, 0])
-        pc_filt1 += F.pad((pc_exp[:, :, :, 1:] * delta_y), [0, 1])
-        pc_filt = (1 - self.graph_lam * delta) * pc_exp + self.graph_lam * pc_filt1
-        pc_filt = pc_filt.view(batch_size, 3, -1)
-        return pc_filt
+        pc_filter1 = F.pad((pc_exp[:, :, :-1, :] * delta_x), [0, 0, 1, 0])
+        pc_filter1 += F.pad((pc_exp[:, :, 1:, :] * delta_x), [0, 0, 0, 1])
+        pc_filter1 += F.pad((pc_exp[:, :, :, :-1] * delta_y), [1, 0])
+        pc_filter1 += F.pad((pc_exp[:, :, :, 1:] * delta_y), [0, 1])
+        pc_filter = (1 - self.graph_lam * delta) * pc_exp + self.graph_lam * pc_filter1
+        pc_filter = pc_filter.view(batch_size, 3, -1)
+        return pc_filter
 
 
 class TearingNet(FoldingNet):
-    def __init__(self, w_dim, m_training, filtering, **model_settings):
+    def __init__(self, w_dim, m_training, filtering, **_):
         super().__init__(w_dim, m_training, filtering=filtering)
         self.h_dim.extend([512, 512, 64, 512, 512, 2])
         modules = [nn.Conv2d(self.w_dim + 5, self.h_dim[4], kernel_size=1)]
@@ -186,15 +187,15 @@ class TearingNet(FoldingNet):
 
 # AtlasNet
 class AtlasNetv2(nn.Module):
-    """AtlasNet PatchDeformMLPAdj"""
+    """AtlasNet base class"""
     patch_embed_dim = 2
 
-    def __init__(self, w_dim, m_training, components, filtering, **model_settings):
+    def __init__(self, w_dim, n_components, filtering, laplacian_filter, **_):
         super().__init__()
         self.w_dim = w_dim
         self.filtering = filtering
-        self.laplacian = model_settings['laplacian_filter']
-        self.num_patches = components if components else 10
+        self.laplacian = laplacian_filter
+        self.num_patches = n_components if n_components else 10
         self.embedding_dim = self.w_dim + self.patch_embed_dim
         self.h_dim = [128]
         self.decoder = nn.ModuleList([self.get_mlp_adj() for _ in range(self.num_patches)])
@@ -203,10 +204,10 @@ class AtlasNetv2(nn.Module):
     def get_mlp_adj(self):
         dim = self.embedding_dim
         dims = [dim, dim // 2, dim // 4]
-        modules = [PointsConvLayer(dim, dim, Act=nn.ReLU)]
+        modules = [PointsConvLayer(dim, dim, act_cls=nn.ReLU)]
         for in_dim, out_dim in zip(dims[0:-1], dims[1:]):
-            modules.append(PointsConvLayer(in_dim, out_dim, Act=nn.ReLU))
-        modules.append(PointsConvLayer(dims[-1], OUT_CHAN, batch_norm=False, Act=nn.Tanh))
+            modules.append(PointsConvLayer(in_dim, out_dim, act_cls=nn.ReLU))
+        modules.append(PointsConvLayer(dims[-1], OUT_CHAN, batch_norm=False, act_cls=nn.Tanh))
         return nn.Sequential(*modules)
 
     def forward(self, w, m):
@@ -216,8 +217,7 @@ class AtlasNetv2(nn.Module):
         for i in range(self.num_patches):
             rand_grid = torch.rand(batch, 2, m // self.num_patches, device=device)
             rand_grid = self.patchDeformation[i](rand_grid)
-            y = w.unsqueeze(2).expand(-1, -1, m // self.num_patches
-                                      ).contiguous()
+            y = w.unsqueeze(2).expand(-1, -1, m // self.num_patches).contiguous()
             y = torch.cat((rand_grid, y), 1).contiguous()
             outs.append(self.decoder[i](y))
         x = torch.cat(outs, 2).contiguous()
@@ -230,15 +230,15 @@ class AtlasNetv2Deformation(AtlasNetv2):
     """AtlasNet PatchDeformMLPAdj"""
     patch_embed_dim = 10
 
-    def __init__(self, w_dim, m_training, components, filtering, **model_settings):
-        super().__init__(w_dim, m_training, components, filtering, **model_settings)
+    def __init__(self, w_dim, n_components, filtering, laplacian_filter, **_):
+        super().__init__(w_dim, n_components, filtering, laplacian_filter)
         self.patchDeformation = nn.ModuleList(self.get_patch_deformation() for _ in range(self.num_patches))
 
     def get_patch_deformation(self):
         dim = self.h_dim[0]
-        modules = [PointsConvLayer(2, dim, Act=nn.ReLU),
-                   PointsConvLayer(dim, dim, Act=nn.ReLU),
-                   PointsConvLayer(dim, self.patch_embed_dim, batch_norm=False, Act=nn.Tanh)]
+        modules = [PointsConvLayer(2, dim, act_cls=nn.ReLU),
+                   PointsConvLayer(dim, dim, act_cls=nn.ReLU),
+                   PointsConvLayer(dim, self.patch_embed_dim, batch_norm=False, act_cls=nn.Tanh)]
         return nn.Sequential(*modules)
 
 
@@ -246,8 +246,8 @@ class AtlasNetV2Translation(AtlasNetv2):
     """AtlasNet PointTranslationMLPAdj"""
     patch_embed_dim = 10
 
-    def __init__(self, w_dim, m_training, components, filtering, **model_settings):
-        super().__init__(w_dim, m_training, components, filtering, **model_settings)
+    def __init__(self, w_dim, m_training, n_components, filtering, laplacian_filter, **_):
+        super().__init__(w_dim, n_components, filtering, laplacian_filter)
         self.m_patch = m_training // self.num_patches
         self.grid = nn.Parameter(torch.rand(self.num_patches, 2, m_training // self.num_patches))
         self.grid.data = F.pad(self.grid, (0, 0, 0, self.patch_embed_dim - 2))
@@ -266,81 +266,37 @@ class AtlasNetV2Translation(AtlasNetv2):
         return x
 
 
-# AtlasNet with grouped convolutions. Inference time is halved by 2 but efficient backward pass has
-# not yet been implemented by in pytorch.
-
-# class AtlasNetv2Deformation(nn.Module):
-#     '''Atlas net PatchDeformMLPAdj'''
-#
-#     def __init__(self, w_dim, m, filtering):
-#         super().__init__()
-#         self.w_dim = w_dim
-#         self.m = m
-#         self.filtering = filtering
-#         self.num_patch = 8
-#         self.m_patch = self.m // self.num_patch
-#         self.deform_patch_dim = 8
-#         self.h_dim = [128]
-#
-#         total_in = 2 * self.num_patch
-#         dim = self.h_dim[0] * self.num_patch
-#         total_out = self.deform_patch_dim * self.num_patch
-#         modules = [PointsConvBlock(total_in, dim, act=nn.ReLU(inplace=True), groups=self.num_patch),
-#                    PointsConvBlock(dim, dim, act=nn.ReLU(inplace=True), groups=self.num_patch),
-#                    PointsConvBlock(dim, total_out, batch_norm=False, act=nn.Tanh(), groups=self.num_patch)]
-#         self.patchDeformation = nn.Sequential(*modules)
-#
-#         dim = (self.deform_patch_dim + self.w_dim) * self.num_patch
-#         dims = [dim, dim // 2, dim // 4]
-#         modules = [PointsConvBlock(dim, dim, act=nn.ReLU(inplace=True), groups=self.num_patch)]
-#         for in_dim, out_dim in zip(dims[0:-1], dims[1:]):
-#             modules.append(PointsConvBlock(in_dim, out_dim, act=nn.ReLU(inplace=True), groups=self.num_patch))
-#         modules.append(PointsConvBlock(dims[-1], OUT_CHAN * self.num_patch, batch_norm=False, act=nn.Tanh(), groups=self.num_patch))
-#         self.mlp_adj = nn.Sequential(*modules)
-#
-#     def forward(self, z):
-#         batch = z.size(0)
-#         device = z.device
-#         x = z.view(batch, 1, self.w_dim, 1).expand(-1, self.num_patch, -1, self.m_patch)
-#         rand_grid = torch.rand(batch, self.num_patch * 2, self.m_patch, device=device)
-#         deformed_grid = self.patchDeformation(rand_grid).view(-1, self.num_patch, self.deform_patch_dim, self.m_patch)
-#         x = torch.cat([deformed_grid, x], dim=2).contiguous().view(batch, -1, self.m_patch)
-#         x = self.mlp_adj(x).view(batch, OUT_CHAN, self.m)
-#         if self.filtering:
-#             x = graph_filtering(x)
-#         return x
-
 class PCGenBase(nn.Module):
     concat = False
 
-    def __init__(self, w_dim, m_training, components, sample_dim, filtering=True, **model_settings):
+    def __init__(self, n_components, sample_dim, filtering=True, **model_settings):
         super().__init__()
         # We keep the following variable in the instantiation for compatibility with other decoders
         # w_dim ==  model_settings['hidden_dims'][1]
         # m_training given at runtime
         self.h_dim = model_settings['hidden_dims']
         self.laplacian = model_settings['laplacian_filter']
-        self.Act = getattr(nn, model_settings['act'])
+        self.act_cls = model_settings['act_cls']
         self.filtering = filtering
         self.sample_dim = sample_dim
-        self.num_groups = components
-        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, Act=self.Act)
+        self.n_components = n_components
+        self.map_sample1 = PointsConvLayer(self.sample_dim, self.h_dim[0], batch_norm=False, act_cls=self.act_cls)
         self.map_sample2 = PointsConvLayer(self.h_dim[0], self.h_dim[1], batch_norm=False,
-                                           **{'Act': nn.Hardtanh} if not self.concat else {})
+                                           **{'act_cls': nn.Hardtanh} if not self.concat else {})
         self.group_conv = nn.ModuleList()
         self.group_final = nn.ModuleList()
 
         # PCGenConcat inherits the class and needs twice the channels here
         if self.concat:
             self.h_dim[1] = 2 * self.h_dim[1]
-        for _ in range(self.num_groups):
+        for _ in range(self.n_components):
             modules = []
             for in_dim, out_dim in zip(self.h_dim[1:-1], self.h_dim[2:]):
-                modules.append(PointsConvLayer(in_dim, out_dim, Act=self.Act))
+                modules.append(PointsConvLayer(in_dim, out_dim, act_cls=self.act_cls))
             self.group_conv.append(nn.Sequential(*modules))
-            self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, Act=None))
-        if self.num_groups > 1:
-            self.att = PointsConvLayer(self.h_dim[-1] * self.num_groups, self.num_groups, batch_norm=False, Act=None)
+            self.group_final.append(PointsConvLayer(self.h_dim[-1], OUT_CHAN, batch_norm=False, act_cls=None))
+        if n_components > 1:
+            self.att = PointsConvLayer(self.h_dim[-1] * n_components, n_components, batch_norm=False, act_cls=None)
 
     def forward(self, w, m, s=None, viz_att=None, viz_components=None):
         batch = w.size()[0]
@@ -352,13 +308,13 @@ class PCGenBase(nn.Module):
         x = self.join_operation(x, w)
         xs = []
         group_atts = []
-        for group in range(self.num_groups):
+        for group in range(self.n_components):
             x_group = self.group_conv[group](x)
             group_atts.append(x_group)
             x_group = self.group_final[group](x_group)
             xs.append(x_group)
         xs = torch.stack(xs, dim=3)
-        if self.num_groups > 1:
+        if self.n_components > 1:
             x_att = F.gumbel_softmax(self.att(torch.cat(group_atts, dim=1).contiguous()), tau=8., dim=1)
             x_att = x_att.transpose(2, 1)
             x = (xs * x_att.unsqueeze(1)).sum(3)
@@ -382,14 +338,14 @@ class PCGenBase(nn.Module):
     def join_operation(x, w):
         raise NotImplementedError
 
-    # Currently does not help inference time (there is also an unresolved bug)
+    # Currently does not help inference time (also need debugging)
     # def make_parallel(self):
     #     modules = []
     #     for point_conv_list in zip(*self.group_conv):
     #         in_dim = point_conv_list[0].in_dim
     #         out_dim = point_conv_list[0].out_dim
     #         point_conv_group = PointsConvLayer(in_dim * self.num_groups, out_dim * self.num_groups, act=self.act)
-    #         point_conv_group.dense = self.from_list_to_groups_conv([point_conv.dense for point_conv in point_conv_list])
+    #         point_conv_group.dense=self.from_list_to_groups_conv([point_conv.dense for point_conv in point_conv_list])
     #         point_conv_group.bn = self.from_list_to_groups_bn([point_conv.bn for point_conv in point_conv_list])
     #         modules.append(point_conv_group)
     #     self.group_conv = nn.Sequential(*modules)

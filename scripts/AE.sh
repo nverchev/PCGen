@@ -1,6 +1,7 @@
 #  start the server to show the learning curves (see online for more options)
-python -m visdom.server
+python visdom
 
+# New command line
 # Running best model. Run python train_eval_main_model.py AE --h for more options.
 python train_eval_main_model.py AE --decoder PCGen --final --components 8 --exp PCGen8 --filtering
 python visualize_reconstructions.py AE AE --decoder PCGen --final --components 8 --exp PCGen8 \

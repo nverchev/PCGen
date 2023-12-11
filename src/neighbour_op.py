@@ -1,9 +1,6 @@
-import numpy as np
 import torch
-import torch.nn.functional as F
 import pykeops
 from pykeops.torch import LazyTensor
-from src.layer import TransferGrad
 
 pykeops.set_verbose(False)
 
@@ -34,7 +31,7 @@ def cpu_square_distance(t1, t2):
 def self_square_distance(t1):
     t2 = t1.transpose(-1, -2)
     square_component = torch.sum(t1 ** 2, -2, keepdim=True)
-    dist = -2 * torch.matmul(t2, t1)
+    dist = torch.tensor(-2) * torch.matmul(t2, t1)
     dist += square_component
     dist += square_component.transpose(-1, -2)
     return dist

@@ -55,8 +55,8 @@ def parser_add_arguments(parser):
     model_opt.add_argument('--decoder_name', choices=['PCGen', 'PCGenC', 'Full', 'FoldingNet', 'TearingNet',
                                                       'AtlasNetDeformation', 'AtlasNetTranslation', 'PCGenConcat'],
                            help='PC decoder')
-    model_opt.add_argument('--components', type=bounded_num(int, v_min=1),
-                           help='components of PCGenC or patches in AtlasNet')
+    model_opt.add_argument('--n_components', type=bounded_num(int, v_min=1),
+                           help='number of components of PCGen or patches in AtlasNet')
     model_opt.add_argument('--filtering', action=BooleanOptionalAction, help='Laplacian filtering after decoder')
     model_opt.add_argument('--k', type=bounded_num(int, v_min=1),
                            help='number of neighbours of a point (counting the point itself) in (L)DGCNN]')
@@ -71,17 +71,19 @@ def parser_add_arguments(parser):
     pcgen_opt.add_argument('--hidden_dims', type=bounded_num(int, v_min=1), nargs='+',
                            help='First dimension is number of channels for mapping the initial sampling, the second'
                                 'is dummy variable later overwritten by w_dim, then channels for each component')
-    pcgen_opt.add_argument('--act', type=str, default='ReLU', help='activation (pytorch name) used in the model')
+    pcgen_opt.add_argument('--act', help='name of the Pytorch activation (see https://pytorch.org/docs/stable/nn.html)')
 
     # optimization options
     optim_opt = parser.add_argument_group('Optimization options', 'Options for the loss, the optimizer, etc')
     optim_opt.add_argument('--recon_loss_name', choices=['Chamfer', 'ChamferEMD'], help='ChamferEMD adds both')
     optim_opt.add_argument('--m_training', type=bounded_num(int, v_min=4),
                            help='points generated in training, 0 for input number of points')
-    optim_opt.add_argument('--opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
-                           help='optimizer. SGD_momentum has momentum = 0.9')
+    optim_opt.add_argument('--optim',
+                           help='name of the Pytorch optimizer (see https://pytorch.org/docs/stable/optim.html)')
     optim_opt.add_argument('--lr', type=bounded_num(float, v_min=0), help='learning rate')
     optim_opt.add_argument('--wd', type=bounded_num(float, v_min=0), help='weight decay')
+    optim_opt.add_argument('--scheduler', dest='scheduler_name', choices=['Constant', 'Cosine', 'Exponential'],
+                           help='Decay curve for the learning rate decay')
     optim_opt.add_argument('--min_decay', type=float, help='fraction of the initial lr at the end of train')
     optim_opt.add_argument('--decay_steps', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
     optim_opt.add_argument('--epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
@@ -128,15 +130,18 @@ def parser_add_vae_arguments(parser):
     vae_opt.add_argument('--c_kld', type=bounded_num(float, v_min=0), help='Kullback-Leibler Divergence coefficient')
     vae_opt.add_argument('--vae_load', action=BooleanOptionalAction, help='load weights stored in the larger model')
     vae_opt.add_argument('--vae_batch_size', type=bounded_num(int, v_min=1), help='batch size for the vae')
-
-    vae_opt.add_argument('--vae_opt_name', default='AdamW', choices=['SGD', 'SGD_momentum', 'Adam', 'AdamW'],
-                         help='SGD_momentum has momentum = 0.9')
+    vae_opt.add_argument('--vae_optim',
+                         help='name of the Pytorch optimizer (see https://pytorch.org/docs/stable/optim.html)')
     vae_opt.add_argument('--vae_lr', type=bounded_num(float, v_min=0), help='learning rate')
     vae_opt.add_argument('--vae_wd', type=bounded_num(float, v_min=0), help='weight decay')
+    vae_opt.add_argument('--vae_scheduler', dest='vae_scheduler_name', choices=['Constant', 'Cosine', 'Exponential'],
+                         help='Decay curve for the learning rate decay')
     vae_opt.add_argument('--vae_min_decay', type=float, help='fraction of the initial lr at the end of train')
-    vae_opt.add_argument('--vae_decay_period', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
+    vae_opt.add_argument('--vae_decay_steps', type=bounded_num(int, v_min=0), help='epochs before lr decays stops')
     vae_opt.add_argument('--vae_epochs', type=bounded_num(int, v_min=0), help='number of total training epochs')
     vae_opt.add_argument('--vae_checkpoint', type=bounded_num(int, v_min=1), help='epochs between checkpoints')
+
+
 #    vae_opt.add_argument('--vae_dropout', type=bounded_num(float, v_min=0), help='dropout probability')
 
 
@@ -171,15 +176,14 @@ def parser_add_gen_eval_arguments(parser):
                           help='number of tests for generation metrics based on the Earth Mover distance')
 
 
-def parse_args_and_set_seed(task, description='Shared options for training, evaluating and random generation'):
+def parse_args_with_default_setup(task, description):
     parser = argparse.ArgumentParser(description=description)
     subparsers = parser.add_subparsers(title='Experiment default settings',
-                                       description='Name of a file in the setups folder without extension',
+                                       description='Name of a file in the setups folder (without extension)',
                                        help='create a new YAML file for more default settings',
                                        required=True)
 
     # Defaults for computer specific paths in .gitignore
-    default_parsers = []
     if os.path.exists('datasets_path.txt'):
         with open('datasets_path.txt', 'r') as file:
             data_dir = file.read().strip()
@@ -195,7 +199,7 @@ def parse_args_and_set_seed(task, description='Shared options for training, eval
     for setup_name in os.listdir(os.path.join(os.path.curdir, 'setups')):
         name, ext = os.path.splitext(setup_name)
         assert ext == '.yaml', 'Experiment folder should only contain yaml files'
-        default_parser = subparsers.add_parser(name)
+        default_parser = subparsers.add_parser(name, argument_default=argparse.SUPPRESS)
         with open(os.path.join(os.path.curdir, 'setups', setup_name), 'r') as default_file:
             default_values = yaml.safe_load(default_file)
         parser_add_arguments(default_parser)
@@ -210,9 +214,25 @@ def parse_args_and_set_seed(task, description='Shared options for training, eval
         if task == 'eval_gen':
             parser_add_gen_eval_arguments(default_parser)
         default_parser.set_defaults(name=name, data_dir=data_dir, model_pardir=model_pardir, **default_values)
-        default_parsers.append(default_parser)
+    return parser.parse_args()
 
-    args = parser.parse_args()
+
+def pytorch_optim(opt_name):
+    try:
+        return getattr(torch.optim, opt_name)
+    except AttributeError:
+        raise AttributeError(f'Input opt_name "{opt_name}" is not the name of a pytorch optimizer.')
+
+
+def pytorch_activation(act_name):
+    try:
+        return getattr(torch.nn.modules.activation, act_name)
+    except AttributeError:
+        raise AttributeError(f'Input act_name "{act_name}" is not the name of a pytorch activation.')
+
+
+# defines additional arguments from the values of the optional arguments
+def process_options(args):
     # constraint of the model
     args.hidden_dims[1] = args.w_dim
     if args.model_head != 'Oracle':
@@ -223,11 +243,26 @@ def parse_args_and_set_seed(task, description='Shared options for training, eval
         args.exp_name = '_'.join(filter(bool, exp_name))
     else:
         args.exp_name = '_'.join(filter(bool, ['Oracle'] + args.select_classes))
-    args.m_test = args.m_test if args.m_test else args.input_points
-    args.m_training = args.m_test if args.m_test else args.input_points
     args.device = torch.device('cuda:0' if torch.cuda.is_available() and args.cuda else 'cpu')
+    args.optimizer_cls = pytorch_optim(args.optim)
+    args.act_cls = pytorch_activation(args.act)
+    args.test_partition = 'train' if args.eval_train else 'test' if args.final else 'val'
+    if 'vae_optim' in args:
+        args.vae_optimizer_cls = pytorch_optim(args.vae_optim)
+    return args
+
+
+def set_seed(args):
     if args.seed:
         torch.manual_seed(args.seed)
         torch.cuda.manual_seed(args.seed)
         np.random.seed(args.seed)
+        torch.backends.cudnn.enabled = False
+    return
+
+
+def parse_process_args_and_set_seed(task, description='Shared options for training, evaluating and random generation'):
+    args = parse_args_with_default_setup(task, description)
+    args = process_options(args)
+    set_seed(args)
     return args

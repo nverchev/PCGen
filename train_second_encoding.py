@@ -1,45 +1,29 @@
-import os
-import torch
-from src.options import parse_args_and_set_seed
-from src.dataset import get_loaders, get_cw_loaders
-from src.model import get_model
+from src.options import parse_process_args_and_set_seed
 from src.trainer import get_trainer, get_cw_trainer
 
 
 def train_second_encoding():
-    args = parse_args_and_set_seed(task='train_vae', description='Train second encoding')
+    args = parse_process_args_and_set_seed(task='train_vae', description='Train second encoding')
     assert args.model_head == 'VQVAE', 'Only VQVAE supported'
-    model = get_model(**vars(args))
-    # TODO: write this better
-    args.batch_size = args.vae_batch_size
-    train_loader, val_loader, test_loader = get_loaders(**vars(args))
-    loaders = dict(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
-    test_partition = 'train' if args.eval_train else 'test' if args.final else 'val'
-
-    # TODO: load the model normally from trainer when fixing the architecture (careful with self.epoch)
-    # trainer.load(args.load_checkpoint if args.load_checkpoint else None)
-    load_path = os.path.join('models', args.exp_name, f'model_epoch{args.epochs}.pt')
-    assert os.path.exists(load_path), 'No pretrained experiment in ' + load_path
-    model_state = torch.load(load_path, map_location=args.device)
-    if not args.vae_load:
-        for name in list(model_state):
-            if name[:10] == 'cw_encoder' or name[:10] == 'cw_decoder':
-                model_state.popitem(name)  # temporary feature to experiment with different cw_encoders
-    model.load_state_dict(model_state, strict=False)
-    vqvae_trainer = get_trainer(model, loaders, args)
+    vqvae_trainer = get_trainer(args)
+    vqvae_trainer.load(args.load_checkpoint if args.load_checkpoint else None)
     vqvae_trainer.epoch = args.epochs
-    cw_trainer = get_cw_trainer(vqvae_trainer, loaders, args)
+    cw_trainer = get_cw_trainer(vqvae_trainer, args)
     if not args.vae_load:
         while args.vae_epochs > cw_trainer.epoch:
             cw_trainer.train(args.vae_checkpoint, val_after_train=True)
             if args.training_plot:
                 # setting start > 0 is a quicker and automatic alternative than zooming the plotly plot
                 start = max(cw_trainer.epoch - 10 * args.checkpoint, 0)
-                cw_trainer.plot_learning_curves(start=start, win='w-encoding')
+                cw_trainer.plot_learning_curves(start=start, title='w-encoding')
+                cw_trainer.plot_learning_curves(start=start, title='KLD', loss_or_metric='KLD')
+                cw_trainer.plot_learning_curves(start=start, title='Accuracy', loss_or_metric='Accuracy')
         cw_trainer.save()
         if args.training_plot:
-            cw_trainer.plot_learning_curves(win='w-encoding')
-    cw_trainer.test(test_partition, all_metrics=True, de_normalize=args.de_normalize, save_outputs=True)
+            cw_trainer.plot_learning_curves(title='w-encoding')
+            cw_trainer.plot_learning_curves(title='KLD', loss_or_metric='KLD')
+            cw_trainer.plot_learning_curves(title='Accuracy', loss_or_metric='Accuracy')
+    cw_trainer.test(args.test_partition, all_metrics=True, de_normalize=args.de_normalize, save_outputs=True)
     cw_trainer.show_latent()
 
 

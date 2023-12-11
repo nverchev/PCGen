@@ -2,7 +2,7 @@
 final: false
 dataset_name: ShapenetFlow
 select_classes: [airplane]
-input_points: 2048
+input_points: &input_points 2048
 translation: false
 rotation: false
 resample: true
@@ -12,12 +12,11 @@ batch_size: 16
 model_head: VQVAE
 encoder_name: LDGCNN
 decoder_name: PCGen
-components: 4
+n_components: 4
 filtering: true
 k: 20
 w_dim: &w_dim 256
 laplacian_filter: false
-
 
 # PCGen options
 sample_dim: 16
@@ -26,16 +25,17 @@ act: ReLU
 
 # optimization options
 recon_loss_name: 'ChamferEMD'
-m_training: 0
-opt_name: Adam
+m_training: *input_points
+optim: Adam
 lr: 0.01
-wd: 0.
+wd: 0.00
+scheduler_name: Cosine
 min_decay: 0.01
 decay_steps: 900
 epochs: 1000
 
 # evaluation options
-m_test: 0
+m_test: *input_points
 eval_train: false
 training_plot: true
 de_normalize: true
@@ -61,12 +61,13 @@ c_kld: 3
 vae_load: false
 vae_batch_size: 128
 vae_n_pseudo_inputs: 400
-vae_opt_name: Adam
+vae_optim: Adam
 vae_lr: 0.01
-vae_wd: 0.000
+vae_wd: 0.0
+vae_scheduler_name: Cosine
 vae_min_decay: 0.01
-vae_decay_period: 250
-vae_epochs: 350
+vae_decay_steps: 900
+vae_epochs: 1000
 vae_checkpoint: 10
 vae_dropout: 0.0
 

@@ -18,7 +18,7 @@ class WEncoder(nn.Module):
         self.do1 = nn.Dropout(dropout)
         self.encode = LinearLayer(self.w_dim * self.h_dim[0], self.w_dim)
         self.do2 = nn.Dropout(dropout)
-        self.inference = LinearLayer(w_dim, 2 * z_dim, Act=None)
+        self.inference = LinearLayer(w_dim, 2 * z_dim, act_cls=None)
 
     def forward(self, x):
         x = self.conv(x).view(-1, self.w_dim * self.h_dim[0])
@@ -30,7 +30,7 @@ class WEncoder(nn.Module):
 
 
 class LDGCNN(nn.Module):
-    def __init__(self, w_dim, k, **model_settings):
+    def __init__(self, w_dim, k, **_):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
@@ -39,7 +39,7 @@ class LDGCNN(nn.Module):
         for in_dim, out_dim in zip(self.h_dim[:3], self.h_dim[1:]):
             modules.append(PointsConvLayer(in_dim, out_dim))
         self.points_convs = nn.Sequential(*modules)
-        self.final_conv = PointsConvLayer(sum(self.h_dim), w_dim, Act=None, batch_norm=False)
+        self.final_conv = PointsConvLayer(sum(self.h_dim), w_dim, act_cls=None, batch_norm=False)
 
     def forward(self, x, indices):
         x = x.transpose(2, 1)
@@ -58,7 +58,7 @@ class LDGCNN(nn.Module):
 
 
 class DGCNN(nn.Module):
-    def __init__(self, w_dim, k, **model_settings):
+    def __init__(self, w_dim, k, **_):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 128, 256]
@@ -85,17 +85,17 @@ class DGCNN(nn.Module):
 
 
 class FoldingNet(nn.Module):
-    def __init__(self, w_dim, k, **model_settings):
+    def __init__(self, w_dim, k, **_):
         super().__init__()
         self.k = k
         self.h_dim = [64, 64, 64, 128, 1024, 1024]
-        modules = [PointsConvLayer(IN_CHAN + IN_CHAN ** 2, self.h_dim[0], Act=nn.ReLU, batch_norm=False)]
+        modules = [PointsConvLayer(IN_CHAN + IN_CHAN ** 2, self.h_dim[0], act_cls=nn.ReLU, batch_norm=False)]
         for in_dim, out_dim in zip(self.h_dim[:2], self.h_dim[1:3]):
-            modules.append(PointsConvLayer(in_dim, out_dim, Act=nn.ReLU, batch_norm=False))
+            modules.append(PointsConvLayer(in_dim, out_dim, act_cls=nn.ReLU, batch_norm=False))
         self.point_mlp = nn.Sequential(*modules)
-        self.conv1 = PointsConvLayer(self.h_dim[2], self.h_dim[3], Act=nn.ReLU, batch_norm=False)
-        self.conv2 = PointsConvLayer(self.h_dim[3], self.h_dim[4], Act=nn.ReLU, batch_norm=False)
-        self.features_mlp = nn.Sequential(LinearLayer(self.h_dim[4], self.h_dim[5], Act=nn.ReLU, batch_norm=False),
+        self.conv1 = PointsConvLayer(self.h_dim[2], self.h_dim[3], act_cls=nn.ReLU, batch_norm=False)
+        self.conv2 = PointsConvLayer(self.h_dim[3], self.h_dim[4], act_cls=nn.ReLU, batch_norm=False)
+        self.features_mlp = nn.Sequential(LinearLayer(self.h_dim[4], self.h_dim[5], act_cls=nn.ReLU, batch_norm=False),
                                           nn.Linear(self.h_dim[5], w_dim))
 
     def forward(self, x, indices):

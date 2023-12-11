@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.autograd import Function
 
 negative_slope = 0.2
-Act = functools.partial(nn.LeakyReLU, negative_slope=0.2)
+Act = functools.partial(nn.LeakyReLU, negative_slope=negative_slope)
 
 
 class View(nn.Module):
@@ -19,37 +19,37 @@ class View(nn.Module):
 
 class MaxChannel(nn.Module):
 
-    def forward(self, x, axis=-1):
+    @staticmethod
+    def forward(x, axis=-1):
         return torch.max(x, axis)[0]
 
 
 # Input (Batch, Features)
 class LinearLayer(nn.Module):
 
-    def __init__(self, in_dim, out_dim, Act=Act, batch_norm=True, groups=1):
+    def __init__(self, in_dim, out_dim, act_cls=Act, batch_norm=True, groups=1):
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.groups = groups
         self.batch_norm = batch_norm
-        self.bias = True
-        self.bn = self.get_bn_layer() if batch_norm else None
         self.bias = False if batch_norm else True
         self.dense = self.get_dense_layer()
-        self.act = None if Act is None else Act(inplace=True)
+        self.bn = self.get_bn_layer() if batch_norm else None
+        self.act = None if act_cls is None else act_cls() if act_cls is nn.Tanh else act_cls(inplace=True)
         self.init(self.act)
 
     def init(self, act):
         if act is None:
             # nn.init.xavier_uniform_(self.dense.weight, gain=1)
             pass  # default works better than theoretically approved one
-        elif act._get_name() == 'ReLU':
+        elif act.__class__.__name__ == 'ReLU':
             # nn.init.kaiming_uniform_(self.dense.weight, nonlinearity='relu')
             pass  # default works better than theoretically approved one
-        elif act._get_name() == 'LeakyReLU':
+        elif act.__class__.__name__ == 'LeakyReLU':
             nn.init.kaiming_uniform_(self.dense.weight, a=negative_slope)
             pass
-        elif act._get_name() == 'Hardtanh':
+        elif act.__class__.__name__ == 'Hardtanh':
             # nn.init.xavier_normal_(self.dense.weight, gain=nn.init.calculate_gain('tanh'))
             pass  # default works better than theoretically approved one
 
@@ -86,7 +86,7 @@ class TransferGrad(Function):
 
     @staticmethod
     # transfer the grad from output to input during backprop
-    def forward(ctx, input, output):
+    def forward(ctx, inputs, output):
         return output
 
     @staticmethod

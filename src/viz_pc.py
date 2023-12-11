@@ -15,7 +15,7 @@ def render_cloud(clouds, name, colorscale='sequence', interactive=True, arrows=N
     color_sequence = [blue, red, green, violet, orange]
     plotter = pv.Plotter(lighting='three_lights', window_size=(1024, 1024), notebook=False, off_screen=not interactive)
     plotter.camera_position = pv.CameraPosition((-3., -2.1, 1.1), focal_point=(0, 0, 0), viewup=(0, 0, 1))
-    #plotter.camera_position = pv.CameraPosition((2, 4, 0), focal_point=(0, 0, 0), viewup=(0, 0, 1))
+    # plotter.camera_position = pv.CameraPosition((2, 4, 0), focal_point=(0, 0, 0), viewup=(0, 0, 1))
 
     for i in [-1, 1]:
         light_point = (i, 1, 0)
@@ -34,8 +34,8 @@ def render_cloud(clouds, name, colorscale='sequence', interactive=True, arrows=N
         cloud = pv.PolyData(cloud[:, [0, 2, 1]].numpy())
         geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
         cloud["radius"] = .05 * np.ones(n)
-        glyphed = cloud.glyph(scale='radius', geom=geom, orient=False)
-        plotter.add_mesh(glyphed, color=color, point_size=15, render_points_as_spheres=True, smooth_shading=True)
+        glyphs = cloud.glyph(scale='radius', geom=geom, orient=False)
+        plotter.add_mesh(glyphs, color=color, point_size=15, render_points_as_spheres=True, smooth_shading=True)
         if arrows is not None:
             geom = pv.Arrow(shaft_radius=.1, tip_radius=.2, scale=1)
             cloud["vectors"] = arrows[:, [0, 2, 1]]
@@ -43,8 +43,8 @@ def render_cloud(clouds, name, colorscale='sequence', interactive=True, arrows=N
             arrows_glyph = cloud.glyph(orient="vectors", geom=geom)
             plotter.add_mesh(arrows_glyph, lighting=True, line_width=10, color=red, show_scalar_bar=False,
                              edge_color=red)
-    #plotter.enable_eye_dome_lighting()
-    #plotter.enable_shadows()
+    # plotter.enable_eye_dome_lighting()
+    # plotter.enable_shadows()
     if interactive:
         plotter.set_background(color='white')
         plotter.show()

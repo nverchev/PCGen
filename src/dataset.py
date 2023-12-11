@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 import os
-from torch.utils.data import Dataset, DataLoader
-from src.utils import download_zip, index_k_neighbours, load_h5_modelnet, load_h5_dfaust
+from torch.utils.data import Dataset
+from src.utils import download_zip,  load_h5_modelnet, load_h5_dfaust
 import json
 import glob2
 import openmesh
@@ -16,7 +16,7 @@ def normalise(cloud):
 
 
 def random_rotation(*clouds):
-    theta = 2 * torch.pi * torch.rand(1)
+    theta = torch.tensor(2 * torch.pi) * torch.rand(1)
     s = torch.sin(theta)
     rotation_matrix = torch.eye(2) * torch.cos(theta)
     rotation_matrix[0, 1] = -s
@@ -42,7 +42,7 @@ def random_scale_translate(*clouds):
 
 
 def jitter(cloud, sigma=0.01, clip=0.02):
-    jitter_noise = torch.randn(cloud.shape) * sigma
+    jitter_noise = torch.randn(cloud.shape) * torch.tensor(sigma)
     new_cloud = cloud.clone()
     new_cloud += torch.clamp(jitter_noise, min=-clip, max=clip)
     return new_cloud
@@ -58,7 +58,7 @@ class EmptyDataset(Dataset):
 
 
 class CWDataset(Dataset):
-    def __init__(self, cw_q, one_hot_idx, labels, **other_settings):
+    def __init__(self, cw_q, one_hot_idx, labels, **_):
         self.cw_q = torch.stack(cw_q)
         self.one_hot_idx = torch.stack(one_hot_idx)
         self.labels = torch.stack(labels)
@@ -71,7 +71,7 @@ class CWDataset(Dataset):
 
 
 class PiercedCoinsDataset(Dataset):
-    def __init__(self, half_thickness=0.1, input_points=2048, k=20, **other_settings):
+    def __init__(self, half_thickness=0.1, input_points=2048, **_):
         self.half_thickness = half_thickness
         self.width = 2 * self.half_thickness
         self.radius = np.sqrt(1 - self.half_thickness ** 2)
@@ -82,18 +82,18 @@ class PiercedCoinsDataset(Dataset):
         # self.neighbours = torch.from_numpy(index_k_neighbours([self.coin], k)).long()
 
     def create_coin(self):
-        #rng = np.random.RandomState(123)
+        # rng = np.random.RandomState(123)
         # does not reset the rng
         rng = np.random
         sides = round(self.n_points * 2 * self.radius / (2 * self.radius + 4 * self.half_thickness))
         thetas = 2 * np.pi * rng.rand(sides)
         rs = np.sqrt(rng.rand(sides))
-        exps = rs * np.exp(thetas * 1j)
-        x1, y1 = exps.real, exps.imag
+        circle = rs * np.exp(thetas * 1j)
+        x1, y1 = circle.real, circle.imag
         z1 = rng.choice([self.half_thickness, -self.half_thickness], size=sides, replace=True)
         thetas = 2 * np.pi * rng.rand(self.n_points - sides)
-        exps = np.exp(thetas * 1j)
-        x2, y2 = exps.real, exps.imag
+        circle = np.exp(thetas * 1j)
+        x2, y2 = circle.real, circle.imag
         z2 = (2 * rng.rand(self.n_points - sides) - 1) * self.half_thickness
         x, y, z = np.hstack([x1, x2]), np.hstack([y1, y2]), np.hstack([z1, z2])
         return np.stack([x, y, z], axis=1)
@@ -142,7 +142,7 @@ class PiercedCoinsDataset(Dataset):
 
     def __getitem__(self, index):
         n_holes = np.random.randint(low=1, high=4)
-        #coin = self.coin.copy()
+        # coin = self.coin.copy()
         coin = self.create_coin().astype(np.single)
         pts = []
         for _ in range(n_holes):
@@ -154,9 +154,9 @@ class PiercedCoinsDataset(Dataset):
                 self.create_hole(coin, pt)
                 break
         coin = torch.from_numpy(coin)
-        return [1, coin, 0], n_holes, index
+        return [1, coin, 0], n_holes
 
-    def split(self, split):
+    def split(self, _):
         return self
 
 
@@ -180,7 +180,7 @@ class AugmentDataset(Dataset):
 
 
 class Modelnet40Split(AugmentDataset):
-    def __init__(self, pcd, indices, labels, rotation, translation, **other_settings):
+    def __init__(self, pcd, indices, labels, rotation, translation, **_):
         super().__init__(rotation, translation)
         self.pcd = pcd.astype(np.float32)
         self.indices = indices
@@ -194,11 +194,11 @@ class Modelnet40Split(AugmentDataset):
         cloud = torch.from_numpy(cloud)
         neighbours_indices = torch.from_numpy(neighbours_indices).long()
         clouds = self.augment([cloud])
-        return [1., *clouds, neighbours_indices], label, index
+        return [1., *clouds, neighbours_indices], label
 
 
 class ShapenetAtlasSplit(AugmentDataset):
-    def __init__(self, paths, input_points, labels, resample, rotation, translation, **other_settings):
+    def __init__(self, paths, input_points, labels, resample, rotation, translation, **_):
         super().__init__(rotation, translation)
         self.paths = paths
         self.translation_and_scale = translation
@@ -221,11 +221,11 @@ class ShapenetAtlasSplit(AugmentDataset):
         label = path.split(os.sep)[-2]
         label = self.label_index.index(label)
         clouds = self.augment(clouds)
-        return [scale, *clouds, 0], label, index
+        return [scale, *clouds, 0], label
 
 
 class ShapenetFlowSplit(AugmentDataset):
-    def __init__(self, paths, input_points, labels, resample, rotation, translation, **other_settings):
+    def __init__(self, paths, input_points, labels, resample, rotation, translation, **_):
         super().__init__(rotation, translation)
         self.paths = paths
         self.pcd = []
@@ -254,7 +254,7 @@ class ShapenetFlowSplit(AugmentDataset):
         if self.resample:
             clouds.append(torch.from_numpy(cloud[sampling[self.input_points:]]))
         clouds = self.augment(clouds)
-        return [scale, *clouds, 0], label, index
+        return [scale, *clouds, 0], label
 
 
 class Modelnet40Dataset:
@@ -332,8 +332,7 @@ class ShapeNetDatasetAtlas:
             self.paths.setdefault('test', []).extend(files[second_split:])
 
     def split(self, split):
-        return ShapenetAtlasSplit(self.paths[split], self.input_points, self.classes,
-                                  **self.augmentation_settings)
+        return ShapenetAtlasSplit(self.paths[split], self.input_points, self.classes, **self.augmentation_settings)
 
     def to_numpy(self):
         original_path = os.path.join(self.data_dir, 'customShapeNet')
@@ -401,7 +400,7 @@ class DFaustDataset(Dataset):
         files = glob2.glob(os.path.join(self.data_dir, 'dfaust', '*'))
         assert files, 'registrations are missing and/or the folder has not been created' \
                       '\nregistrations can be downloaded from https://dfaust.is.tue.mpg.de/download.php '
-        self.pcd, self.indices = load_h5_dfaust(files, k)
+        self.pcd, self.indices = load_h5_dfaust(files, input_points, k)
 
     def __len__(self):
         return len(self.pcd)
@@ -415,7 +414,7 @@ class DFaustDataset(Dataset):
             cloud, = random_rotation(cloud)
         if self.translation_and_scale:
             cloud, = random_scale_translate(cloud)
-        return [scale, cloud, neighbours_indices], 0, index
+        return [scale, cloud, neighbours_indices], 0
 
 
 class MPIFaustDataset(Dataset):
@@ -466,52 +465,28 @@ def get_dataset(dataset_name):
     return dataset_dict[dataset_name]
 
 
-def get_loaders(dataset_name, batch_size, final, data_dir, **dataset_settings):
+def get_datasets(dataset_name, final, data_dir, **dataset_settings):
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
     dataset_settings.update(data_dir=data_dir)
-    pin_memory = torch.cuda.is_available()
     dataset = get_dataset(dataset_name)(**dataset_settings)
     if final:
         train_dataset = dataset.split('train_val')
-        train_loader = torch.utils.data.DataLoader(
-            train_dataset, drop_last=True, batch_size=batch_size,
-            shuffle=True, pin_memory=pin_memory)
-        val_loader = None
+        val_dataset = None
         test_dataset = dataset.split('test')
-        test_loader = DataLoader(
-            test_dataset, batch_size=batch_size, drop_last=False, shuffle=False, pin_memory=pin_memory)
     else:
         train_dataset = dataset.split('train')
         val_dataset = dataset.split('val')
-        train_loader = DataLoader(
-            train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
-        val_loader = DataLoader(
-            val_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
-        test_loader = None
+        test_dataset = None
 
     del dataset
-    return train_loader, val_loader, test_loader
+    return train_dataset, val_dataset, test_dataset
 
 
-def get_cw_loaders(t, train_partition, test_partition, batch_size):
-    pin_memory = torch.cuda.is_available()
-    # m=4 because we don't care about the reconstruction and m < 4 creates problems with the filtering
-    t.test(partition=train_partition, m=4, save_outputs=True)
-    cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['one_hot_idx'], t.test_metadata['targets'])
-    t.test(partition=test_partition, m=4, save_outputs=True)
-    cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['one_hot_idx'], t.test_metadata['targets'])
-    cw_train_loader = DataLoader(
-        cw_train_dataset, drop_last=True, batch_size=batch_size, shuffle=True, pin_memory=pin_memory)
-    cw_test_loader = DataLoader(
-        cw_test_dataset, drop_last=False, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
-    return cw_train_loader, cw_test_loader
-
-
-
-
-
-
-
-
-
+# def get_cw_loaders(t, train_partition, test_partition, batch_size):
+#     # m=4 because we don't care about the reconstruction and m < 4 creates problems with the filtering
+#     t.test(partition=train_partition, m=4, save_outputs=True)
+#     cw_train_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['one_hot_idx'], t.test_indices['targets'])
+#     t.test(partition=test_partition, m=4, save_outputs=True)
+#     cw_test_dataset = CWDataset(t.test_outputs['cw_q'], t.test_outputs['one_hot_idx'], t.test_indices['targets'])
+#     return cw_train_dataset, cw_test_dataset

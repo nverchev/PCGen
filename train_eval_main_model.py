@@ -1,22 +1,15 @@
 import os
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
-from src.options import parse_args_and_set_seed
-from src.dataset import get_loaders
-from src.model import get_model
+from src.options import parse_process_args_and_set_seed
 from src.trainer import get_trainer
 
 
 def train_eval_model():
-    args = parse_args_and_set_seed(task='train', description='Train a (loaded) model')
-    model = get_model(**vars(args))
-    train_loader, val_loader, test_loader = get_loaders(**vars(args))
-    loaders = dict(train_loader=train_loader, val_loader=val_loader, test_loader=test_loader)
-    trainer = get_trainer(model, loaders, args=args)
-    test_partition = 'train' if args.eval_train else 'test' if args.final else 'val'
+    args = parse_process_args_and_set_seed(task='train', description='Train or evaluate a model')
+    trainer = get_trainer(args=args)
     if args.model_head == 'Oracle':
-        return trainer.test(partition=test_partition, all_metrics=True, de_normalize=args.de_normalize)
+        return trainer.test(partition=args.test_partition, all_metrics=True, de_normalize=args.de_normalize)
     if args.load:
         trainer.load(args.load_checkpoint)
     else:
@@ -50,11 +43,11 @@ def train_eval_model():
             trainer.test(partition='val')
         if args.training_plot:
             start = max(trainer.epoch - 10 * args.checkpoint, 0)
-            trainer.plot_learning_curves(start=start, loss_metric='Chamfer', win='PC Encoding')
+            trainer.plot_learning_curves(start=start, loss_or_metric='Chamfer', title='PC Encoding')
         trainer.save()
-    trainer.test(partition=test_partition, all_metrics=True, de_normalize=args.de_normalize)
+    trainer.test(partition=args.test_partition, all_metrics=True, de_normalize=args.de_normalize)
     if args.training_plot:
-        trainer.plot_learning_curves(loss_metric='Chamfer', win='PC Encoding')
+        trainer.plot_learning_curves(loss_or_metric='Chamfer', title='PC Encoding')
 
 
 if __name__ == '__main__':

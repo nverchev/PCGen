@@ -10,7 +10,8 @@ try:
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
     requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-except:
+except ImportError:
+    InsecureRequestWarning = None
     pass
 
 
@@ -32,7 +33,7 @@ def index_k_neighbours(pcs, k):
     return np.stack(indices_list, axis=0)
 
 
-def load_h5_modelnet(wild_path, num_points, k):
+def load_h5_modelnet(wild_path, input_points, k):
     pcd = []
     indices = []
     labels = []
@@ -41,7 +42,7 @@ def load_h5_modelnet(wild_path, num_points, k):
             print('Load: ', h5_name)
             # Dataset is already normalized
             pcs = f['data'][:].astype('float32')
-            pcs = pcs[:, :num_points, :]
+            pcs = pcs[:, :input_points, :]
             label = f['label'][:].astype('int64')
             index_k = f'index_{k}'
             if index_k in f.keys():
@@ -59,34 +60,29 @@ def load_h5_modelnet(wild_path, num_points, k):
     return pcd, indices, labels.ravel()
 
 
-def load_h5_dfaust(files, k):
+def load_h5_dfaust(files, input_points, k):
     clouds = []
     indices = []
-
-    def load_file(file):
-        clouds = []
-        indices = []
-        with h5py.File(file, 'r+') as f:
+    for file_path in files:
+        print('Load: ', file_path)
+        clouds_file = []
+        indices_file = []
+        with h5py.File(file_path, 'r+') as f:
             for name, dset in f.items():
                 if name == 'faces' or name.find('index') > -1:
                     continue
-                pcs = dset[:].transpose((2, 0, 1))
+                pc = dset[:][:, :input_points, :].transpose((2, 0, 1))
                 index_k = f'{name}_index_{k}'
                 if index_k in f.keys():
                     index = f[index_k][:].astype(np.short)
                 else:
                     del f[index_k]
-                    index = index_k_neighbours(pcs, k).astype(np.short)
+                    index = index_k_neighbours(pc, k).astype(np.short)
                     f.create_dataset(index_k, data=index)
-                clouds.extend(pcs)
-                indices.extend(index)
-        return clouds, indices
-
-    for file in files:
-        print('Load: ', file)
-        pcs, index = load_file(file)
-        clouds.extend(pcs)
-        indices.extend(index)
+                clouds_file.extend(pc)
+                indices_file.extend(index)
+        clouds.extend(clouds_file)
+        indices.extend(indices_file)
     return clouds, indices
 
 

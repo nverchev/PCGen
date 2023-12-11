@@ -2,7 +2,7 @@
 final: false
 dataset_name: ShapenetAtlas
 select_classes: []
-input_points: 2500
+input_points: &input_points 2500
 translation: false
 rotation: false
 resample: false
@@ -12,12 +12,11 @@ batch_size: 16
 model_head: AE
 encoder_name: LDGCNN
 decoder_name: PCGen
-components: 1
+n_components: 1
 filtering: false
 k: 20
 w_dim: &w_dim 1024
 laplacian_filter: false
-
 
 # PCGen options
 sample_dim: 16
@@ -26,16 +25,17 @@ act: ReLU
 
 # optimization options
 recon_loss_name: 'Chamfer'
-m_training: 0
-opt_name: AdamW
+m_training: *input_points
+optim: AdamW
 lr: 0.0005
 wd: 0.000001
+scheduler_name: Cosine
 min_decay: 0.01
 decay_steps: 250
 epochs: 350
 
 # evaluation options
-m_test: 0
+m_test: *input_points
 eval_train: false
 training_plot: false
 de_normalize: false
