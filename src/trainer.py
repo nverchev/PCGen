@@ -65,7 +65,7 @@ class VQVAETrainer(AETrainer):
         # self.gmm_sampling()
         loader = self.test_loader if partition == 'test' else self.val_loader
         test_dataset = []
-        for batch_idx, (inputs, targets, index) in enumerate(loader):
+        for batch_idx, ((inputs, targets), _) in enumerate(loader):
             test_clouds = inputs[1]
             test_dataset.extend(test_clouds.cpu())
         test_l = len(test_dataset)

@@ -4,35 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/PCGen.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PCGen.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluate_samplings.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_samplings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generate.py" beforeDir="false" afterPath="$PROJECT_DIR$/generate.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/profile_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/profile_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/AE.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/AE.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/results" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/setups/AE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/AE.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/setups/VQVAE.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/setups/VQVAE.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/dataset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/decoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/decoder.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/encoder.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/encoder.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/layer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/layer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/loss_and_metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/loss_and_metrics.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/neighbour_op.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/neighbour_op.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/optim.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/options.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/options.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/trainer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/trainer_base.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/viz_pc.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/viz_pc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_eval_main_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_eval_main_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_second_encoding.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_second_encoding.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/visualize_reconstructions.py" beforeDir="false" afterPath="$PROJECT_DIR$/visualize_reconstructions.py" afterDir="false" />
-    </list>
+    <list default="true" id="c9d55100-7362-4d26-9220-b1153227d552" name="Changes" comment="Code is cleaned up and compatible with module custom_trainer 0.1.2" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -117,7 +89,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Python.generate">
+  <component name="RunManager" selected="Python.evaluate_samplings">
     <configuration name="dataset" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PCGen" />
       <option name="ENV_FILES" value="" />
@@ -154,7 +126,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/evaluate_samplings.py" />
-      <option name="PARAMETERS" value="VQVAE --select_classes chair --emd_tests 10" />
+      <option name="PARAMETERS" value="VQVAE --exp test --select_classes airplane --emd_tests 10" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -963,7 +935,7 @@
       <option name="project" value="LOCAL" />
       <updated>1688659879691</updated>
     </task>
-    <option name="localTasksCounter" value="578" />
+    <option name="localTasksCounter" value="579" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -992,7 +964,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="backward support" />
     <MESSAGE value="Does not overwrite training curve when testing the train ds" />
     <MESSAGE value="dataset!s!_path.txt" />
     <MESSAGE value="math error" />
@@ -1017,7 +988,8 @@
     <MESSAGE value="Readme" />
     <MESSAGE value="Act is now a class that replaces instance act" />
     <MESSAGE value="typo" />
-    <option name="LAST_COMMIT_MESSAGE" value="typo" />
+    <MESSAGE value="Code is cleaned up and compatible with module custom_trainer 0.1.2" />
+    <option name="LAST_COMMIT_MESSAGE" value="Code is cleaned up and compatible with module custom_trainer 0.1.2" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
