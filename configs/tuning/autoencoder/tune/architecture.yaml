@@ -1,0 +1,21 @@
+study_name: architecture
+
+params:
+  autoencoding.architecture.decoder.attention_temperature:
+    suggest: suggest_float
+    settings:
+      low: 1.0
+      high: 16.0
+      log: true
+
+  autoencoding.architecture.bn_momentum:
+    suggest: suggest_float
+    settings:
+      low: 0.05
+      high: 0.5
+
+  autoencoding.architecture.encoder.n_neighbours:
+    suggest: suggest_int
+    settings:
+      low: 10
+      high: 30

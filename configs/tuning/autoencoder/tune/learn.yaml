@@ -1,0 +1,9 @@
+study_name: learn
+
+params:
+  autoencoding.train.learn.lr:
+    suggest: suggest_float
+    settings:
+      low: 1e-04
+      high: 5e-03
+      log: true

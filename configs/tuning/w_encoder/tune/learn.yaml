@@ -1,0 +1,14 @@
+study_name: learn
+
+params:
+  w_autoencoding.train.learn.lr:
+    suggest: suggest_float
+    settings:
+      low: 1e-04
+      high: 1e-02
+      log: true
+
+  w_autoencoding.train.batch_size:
+    suggest: suggest_categorical
+    settings:
+      choices: [64, 128, 256]

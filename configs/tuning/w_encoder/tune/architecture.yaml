@@ -1,0 +1,24 @@
+study_name: architecture
+
+params:
+  w_autoencoding.architecture.encoder_h_dims:
+    suggest: suggest_categorical
+    settings:
+      choices:
+        - [8]
+        - [16]
+        - [8, 16]
+
+  w_autoencoding.architecture.decoder_h_dims:
+    suggest: suggest_categorical
+    settings:
+      choices:
+        - [64, 64]
+        - [128, 64]
+        - [64, 64, 64]
+
+  w_autoencoding.architecture.dropout:
+    suggest: suggest_float
+    settings:
+      low: 0.0
+      high: 0.3

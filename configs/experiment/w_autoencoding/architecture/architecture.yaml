@@ -1,0 +1,6 @@
+encoder_h_dims:
+  - 8
+decoder_h_dims:
+  - 64
+  - 64
+dropout: 0.1

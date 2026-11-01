@@ -1,0 +1,41 @@
+# User settings
+
+seed: null  # null = unset
+
+# Compute
+device: auto  # auto = the available accelerator
+torch_compile: false
+n_workers: 0
+n_subprocesses: 0  # 0 = no DDP
+
+# Checkpointing & Resuming
+load: 0  # 0 = start from scratch, -1 = the latest checkpoint
+run_id: null  # null = the last run
+
+# Plotting
+plot:
+  show: false
+  sample_indices: 
+    - 1
+    - 10
+    - 100
+    - 200
+  overlay: none
+  reconstruction_every: 100
+
+# Generation
+generation:
+  n_generated: 3
+  bias_dim: 1
+  bias_value: 0.0
+
+# Trackers
+trackers:
+  hydra: true
+  tensorboard: true
+  wandb: false
+  sqlalchemy: false
+  csv: true
+  pyvista: true
+  plotly: false
+

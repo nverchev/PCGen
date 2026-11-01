@@ -1,0 +1,5 @@
+model_head: vqvae
+book_size: 16
+embedding_dim: 4
+w_dim: 256
+vq_noise: 1.0

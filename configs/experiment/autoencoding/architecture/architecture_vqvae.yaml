@@ -1,0 +1,18 @@
+encoder:
+  name: ldgcnn
+  n_neighbours: 20
+decoder:
+  name: pcgen
+  n_components: 4
+  filtering: true
+  sample_dim: 16
+  hidden_dims:
+    - 256
+    - ${autoencoding.model.w_dim}
+    - 512
+    - 512
+    - 512
+    - 64
+  attention_temperature: 8.0
+act_cls: SlopedLeakyReLU
+bn_momentum: 0.1

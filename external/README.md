@@ -1,42 +1,30 @@
-Author: Nicolas Vercheval \
-Date: 04/05/2023
+# Structural losses extension
 
-## Earth Mover Distance implementations
-Here are two commonly used implementations of the Earth Mode Distance (EMD) for point clouds.
-Please refer to their documentation for more details.
+CUDA implementation of the approximate Earth Mover's Distance used as a
+baseline in the point cloud generation literature.
 
-### Installing the packages
-The code to install the source code has been simplified and tested with cuda 11.8.
-You can install the packages from their root folder with `pip install .`. 
+The extension computes the earth mover distance of the loss. Without it, the distance falls back to
+an exact matching with `scipy`, which is too slow for training.
 
-### Troubleshooting
-Pytorch comes with a version of cuda as a compute platform: https://pytorch.org/. \
-Make sure that version matches your nvidia drivers.
-You can check the version of your nvidia divers with  `nvcc --version`.\
-If you are using a local env, make sure that the compiler finds the correct path. For example by bashing: 
+## Building
+
+The build compiles against `torch`, so `nvcc` must come from the CUDA toolkit that PyTorch was
+compiled against (check with `nvcc --version`). From the project root:
+
+```bash
+uv sync --extra emd
 ```
-export PATH=/usr/local/cuda/bin:$PATH
-```
-### Example use
-These implementations, differently from the original ones, install the python modules as well. 
-This way you can drop the relative path and use them in other projects as well.
 
-```
-# import torch first
+## Example use
+
+`match_cost` returns the matching cost summed over the points, so dividing by
+their number gives the per-point distance that `src.utils.distances` reports:
+
+```python
 import torch
 from structural_losses import match_cost
-from emd import emdModule
 
-
-def random_point_cloud():
-    return torch.rand(1, 2048, 3).to('cuda:0')
-
-
-t1 = random_point_cloud()
-t2 = random_point_cloud()
-emd_dist = emdModule()
-emd1 = torch.sqrt(emd_dist(t1, t2, 0.01, 200)[0]).mean(1)
-emd2 = match_cost(t1, t2) / t1.shape[1]
-print(emd1)
-print(emd2)
+cloud1 = torch.rand(2, 2048, 3, device='cuda')
+cloud2 = torch.rand(2, 2048, 3, device='cuda')
+emd = match_cost(cloud1.contiguous(), cloud2.contiguous()) / cloud1.shape[1]
 ```

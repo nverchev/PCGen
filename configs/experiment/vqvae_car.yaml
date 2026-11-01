@@ -1,0 +1,15 @@
+defaults:
+  - data: data_vqvae
+  - autoencoding: autoencoder_vqvae
+  - w_autoencoding: w_autoencoding
+  - evaluation: evaluation
+  - user: user
+  - _self_
+
+final: false
+variation: null  # null = the current git branch
+
+data:
+  dataset:
+    select_classes:
+      - car

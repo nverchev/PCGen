@@ -1,0 +1,23 @@
+study_name: embedding
+
+params:
+  autoencoding.train.loss.c_commitment:
+    suggest: suggest_float
+    settings:
+      low: 0.1
+      high: 10.0
+      log: true
+
+  autoencoding.train.loss.c_embedding:
+    suggest: suggest_float
+    settings:
+      low: 0.1
+      high: 10.0
+      log: true
+
+  autoencoding.model.vq_noise:
+    suggest: suggest_float
+    settings:
+      low: 0.1
+      high: 10.0
+      log: true

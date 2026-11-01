@@ -1,0 +1,7 @@
+defaults:
+  - model: model_ae
+  - architecture: architecture_ae
+  - train: train_ae
+  - _self_
+
+name: autoencoder

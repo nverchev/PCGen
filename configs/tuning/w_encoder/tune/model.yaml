@@ -1,0 +1,14 @@
+study_name: model
+
+params:
+  w_autoencoding.model.z_dim:
+    suggest: suggest_categorical
+    settings:
+      choices: [8, 16, 32]
+
+  w_autoencoding.model.n_pseudo_inputs:
+    suggest: suggest_int
+    settings:
+      low: 100
+      high: 800
+      log: true

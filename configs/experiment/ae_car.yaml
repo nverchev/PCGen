@@ -1,0 +1,15 @@
+defaults:
+  - data: data_vqvae
+  - autoencoding: autoencoder_ae_ablation
+  - evaluation: evaluation
+  - user: user
+  - _self_
+
+final: false
+variation: null  # null = the current git branch
+w_autoencoding: null  # null = no codeword phase
+
+data:
+  dataset:
+    select_classes:
+      - car

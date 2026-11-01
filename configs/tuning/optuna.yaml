@@ -1,0 +1,13 @@
+# @package _global_
+
+db_location: optimization_db
+renderer: firefox
+storage: sqlite:///${db_location}/${db_name}.db
+
+tune:
+  use_pruner: false
+  n_trials: 100
+  n_startup_trials: 10
+  n_warmup_steps: 15
+  interval_steps: 1
+  n_min_trials: 10

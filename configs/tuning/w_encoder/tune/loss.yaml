@@ -1,0 +1,9 @@
+study_name: loss
+
+params:
+  w_autoencoding.train.loss.c_kld:
+    suggest: suggest_float
+    settings:
+      low: 0.5
+      high: 10.0
+      log: true

@@ -1,0 +1,5 @@
+recon_loss: chamfer
+c_chamfer: 2048.0  # 2048 = the number of points
+c_emd: 0.0
+c_commitment: 0
+c_embedding: 0

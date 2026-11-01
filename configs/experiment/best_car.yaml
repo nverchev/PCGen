@@ -1,0 +1,7 @@
+# The published models of the paper (2023 run VQVAE_best_car), converted to this code.
+# Same settings as vqvae_car, with the run name of the converted checkpoints.
+defaults:
+  - vqvae_car
+  - _self_
+
+variation: published

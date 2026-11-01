@@ -1,0 +1,7 @@
+optimizer: Adam
+lr: 0.0005
+weight_decay: 0.0
+scheduler:
+  function: cosine
+  min_decay: 0.01
+  decay_steps: 900

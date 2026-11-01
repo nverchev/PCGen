@@ -1,0 +1,4 @@
+name: coins
+select_classes: []
+input_points: 2048
+resample: false

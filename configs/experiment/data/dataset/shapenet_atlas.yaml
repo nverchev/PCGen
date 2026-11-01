@@ -1,0 +1,4 @@
+name: shapenet_atlas
+select_classes: []
+input_points: 2500
+resample: false

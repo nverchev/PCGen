@@ -1,0 +1,12 @@
+defaults:
+  - model: model_ae
+  - architecture: architecture_vqvae
+  - train: train_vqvae
+  - _self_
+
+name: autoencoder
+
+train:
+  loss:
+    c_commitment: 0.0
+    c_embedding: 0.0

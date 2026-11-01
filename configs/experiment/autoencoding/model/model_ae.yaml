@@ -1,0 +1,5 @@
+model_head: ae
+book_size: 0
+embedding_dim: 0
+w_dim: 1024
+vq_noise: 0.0

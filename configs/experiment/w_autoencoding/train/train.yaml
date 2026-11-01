@@ -1,0 +1,8 @@
+defaults:
+  - learn: adam
+  - loss: loss
+  - _self_
+
+batch_size: 128
+n_epochs: 500
+pruning_window: 10  # the validation sets are small: a few hundred clouds per class

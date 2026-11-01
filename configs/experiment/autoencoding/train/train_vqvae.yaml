@@ -1,0 +1,13 @@
+defaults:
+  - learn: adam
+  - loss: loss_vqvae
+  - _self_
+
+batch_size: 16
+n_epochs: 1000
+m_training: ${data.dataset.input_points}
+m_test: ${data.dataset.input_points}
+de_normalize: true
+checkpoint_every: 10
+mixed_precision: null  # null = full precision
+pruning_window: 10  # the validation sets are small: a few hundred clouds per class

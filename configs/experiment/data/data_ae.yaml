@@ -1,0 +1,3 @@
+defaults:
+  - dataset: shapenet_atlas
+  - _self_

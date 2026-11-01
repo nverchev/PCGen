@@ -1,0 +1,9 @@
+defaults:
+  - ../optuna
+  - _self_
+  - tune: learn
+
+db_name: w_encoder_optimization
+config_name: vqvae_airplane
+overrides: []
+n_epochs: 100

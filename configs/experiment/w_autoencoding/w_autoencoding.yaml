@@ -1,0 +1,7 @@
+defaults:
+  - architecture: architecture
+  - model: model
+  - train: train
+  - _self_
+
+name: w_encoder

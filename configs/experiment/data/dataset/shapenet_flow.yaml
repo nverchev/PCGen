@@ -1,0 +1,5 @@
+name: shapenet_flow
+select_classes:
+  - airplane
+input_points: 2048
+resample: true
