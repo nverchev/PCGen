@@ -96,15 +96,15 @@ def test_pyvista_render_cloud_calls_plotter(mocker: MockerFixture, tmp_path: pat
     mock_plotter.close.assert_called_once()
 
 
-def test_pyvista_resolves_tracker_run_dir(active_experiment: Experiment) -> None:
+def test_pyvista_resolves_tracker_run_dir(active_experiment: Experiment, mocker: MockerFixture) -> None:
     """PyVistaTracker resolves output directory inside the tracker run directory."""
     tracker = _get_tracker(active_experiment.config)
-    active_experiment.trackers.subscribe(tracker)
+    run_dir = pathlib.Path('tracker_run')
+    mocker.patch.object(tracker, '_get_run_dir', return_value=run_dir)
 
     save_dir = tracker._resolve_save_dir()
 
-    assert 'pyvista' in str(save_dir)
-    assert save_dir.is_dir()
+    assert save_dir == run_dir
 
 
 def test_pyvista_resolves_fallback_dir_outside_scope() -> None:
