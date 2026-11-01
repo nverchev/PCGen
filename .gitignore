@@ -16,3 +16,4 @@ external/emd/build/
 external/emd/emd.egg-info/
 external/pytorch_structural_losses/build/
 external/pytorch_structural_losses/structural_losses.egg-info/
+uv.lock

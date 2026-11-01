@@ -63,6 +63,16 @@ uv sync --extra emd          # builds the CUDA matching extension, see external/
 
 The extension is optional: without it, the earth mover distance falls back to an exact but slow matching, which is unusable for a whole epoch.
 
+`uv sync` installs the default PyTorch build. To match your machine, check your CUDA version with `nvcc --version`, then add the matching index to `~/.config/uv/uv.toml` before syncing. Replace `cu130` with your version, for example `cu126` for CUDA 12.6, or with `cpu` if you have no GPU:
+
+```toml
+index-strategy = "unsafe-best-match"
+
+[[index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu130"
+```
+
 ### Configure the paths
 
 Paths come from a gitignored `.env`:
